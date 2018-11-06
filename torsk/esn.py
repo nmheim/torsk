@@ -96,4 +96,98 @@ class ESNCell(RNNCellBase):
             self.in_bias, self.res_bias)
 
 
+class ESN(nn.Module):
+    """Complete ESN with output layer. Only supports batch=1 for now!!!
+    
+    Parameters
+    ---------- 
+
+    params : torsk.utils.Params
+        The network hyper-parameters
+
+    Inputs
+    ------
+
+    inputs : Tensor
+        Inputs of shape (seq, batch, input_size)
+    state : Tensor
+        Initial state of the ESN with shape (batch, hidden_size)
+    nr_predictions : int
+        Number of steps to predict into the future
+
+    Outputs
+    -------
+
+    outputs : Tensor
+        Predicitons nr_predictions into the future
+    states' : Tensor
+        Accumulated states of the ESN with shape (seq, batch, hidden_size)
+    """
+
+    def __init__(self, params):
+        super(ESN, self).__init__()
+        if params.input_size != params.output_size:
+            raise ValueError(
+                "Currently input and output dimensions must be the same.")
+        self.esn_cell = ESNCell(params.input_size, params.hidden_size,
+            params.spectral_radius, params.in_weight_init)
+        self.out = nn.Linear(params.hidden_size, params.output_size, bias=False)
+
+    def forward(self, inputs, state, nr_predictions=0):
+        if inputs.size(1) != 1:
+            raise ValueError("Supports only batch size of one -.-")
+        if nr_predictions == 0:
+            return self._forward_states_only(inputs, state)
+        else:
+            return self._forward(inputs, state)
+
+    def _forward_states_only(self, inputs, state):
+        states = []
+        for inp in inputs:
+            state = self.esn_cell(inp, state)
+            states.append(state)
+        return None, torch.cat(states)
+
+    def _forward(self, inputs, state):
+        outputs = []
+        for inp in inputs:
+            state = self.esn_cell(inp, state)
+            output = self.out(state)
+            outputs.append(output)
+        return torch.cat(outputs), None
+
+    def train(self, states, labels):
+        """Train the output layer.
+        Parameters
+        ----------
+
+        states : Tensor
+            A batch of hidden states with shape (batch, hidden_size)
+        labels : Tensor
+            A batch of labels with shape (batch, output_size)
+        """
+        pinv = torch.pinverse(states.t())
+        wout = torch.mm(labels.t(), pinv)
+        self.out.weight = Parameter(wout, requires_grad=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
