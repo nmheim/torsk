@@ -25,7 +25,7 @@ model = ESN(params)
 state = torch.zeros(1, params.hidden_size)
 
 _, states = model(inputs, state)
-model.train(states[10*20:], labels[10*20:])
+model.train(states[10*20:, 0], labels[10*20:])
 
 data = make_sine(periods=10)
 data = data.reshape((data.shape[0], 1, 1))
@@ -35,7 +35,7 @@ labels = torch.tensor(labels, dtype=torch.float32)
 state = torch.zeros(1, params.hidden_size)
 outputs, _ = model(inputs, state, nr_predictions=100)
 
-plt.plot(labels.numpy()[:,0])
+plt.plot(labels.numpy()[:,0], '.')
 plt.plot(outputs.numpy()[:,0])
 #plt.ylim(-1, 1)
 plt.show()

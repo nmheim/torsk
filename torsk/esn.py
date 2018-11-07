@@ -1,11 +1,21 @@
+import pathlib
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 from torch.nn.modules.rnn import RNNCellBase
+from torsk.utils import Params
+
+
+_module_dir = pathlib.Path(__file__).absolute().parent
+
+
+def get_default_params():
+   return Params(_module_dir / 'default_esn_params.json')
 
 
 def connection_mask(dim, density, symmetric):
+    """Creates a square mask with a given density of ones"""
     mask = np.random.uniform(low=0., high=1., size=(dim, dim)) < density
     if symmetric:
         triu = np.triu(mask, k=1)
@@ -17,12 +27,20 @@ def connection_mask(dim, density, symmetric):
 def dense_esn_reservoir(dim, spectral_radius, density, symmetric):
     """Creates a dense square matrix with random non-zero elements according
     to the density parameter and a given spectral radius.
-    Params:
-        dim(int): int that specifies the dimensions of the square matrix
-        spectral_radius(float): spectral radius of the created matrix
-        symmetric(bool): defines if the created matrix is symmetrix or not
-    Returns:
-        square ndarray
+    
+    Parameters
+    ----------
+    dim : int
+        specifies the dimensions of the square matrix
+    spectral_radius : float
+        largest eigenvalue of the created matrix
+    symmetric : bool
+        defines if the created matrix is symmetrix or not
+
+    Returns
+    -------
+    np.ndarray
+        square reservoir matrix
     """
     mask = connection_mask(dim, density, symmetric)
     res  = np.random.uniform(low=-1., high=1., size=(dim, dim))
@@ -41,7 +59,6 @@ class ESNCell(RNNCellBase):
     
     Parameters
     ----------
-
     input_size : int
         Number of input features
     hidden_size : int
@@ -101,13 +118,11 @@ class ESN(nn.Module):
     
     Parameters
     ---------- 
-
     params : torsk.utils.Params
         The network hyper-parameters
 
     Inputs
     ------
-
     inputs : Tensor
         Inputs of shape (seq, batch, input_size)
     state : Tensor
@@ -117,13 +132,12 @@ class ESN(nn.Module):
 
     Outputs
     -------
-
     outputs : Tensor
         Predicitons nr_predictions into the future
+        shape (seq, batch, output_size)
     states' : Tensor
         Accumulated states of the ESN with shape (seq, batch, hidden_size)
     """
-
     def __init__(self, params):
         super(ESN, self).__init__()
         if params.input_size != params.output_size:
@@ -139,28 +153,33 @@ class ESN(nn.Module):
         if nr_predictions == 0:
             return self._forward_states_only(inputs, state)
         else:
-            return self._forward(inputs, state)
+            return self._forward(inputs, state, nr_predictions)
 
     def _forward_states_only(self, inputs, state):
         states = []
         for inp in inputs:
             state = self.esn_cell(inp, state)
             states.append(state)
-        return None, torch.cat(states)
+        return None, torch.stack(states, dim=0)
 
-    def _forward(self, inputs, state):
+    def _forward(self, inputs, state, nr_predictions):
         outputs = []
         for inp in inputs:
             state = self.esn_cell(inp, state)
             output = self.out(state)
             outputs.append(output)
-        return torch.cat(outputs), None
+        for ii in range(nr_predictions):
+            inp = output
+            state = self.esn_cell(inp, state)
+            output = self.out(state)
+            outputs.append(output)
+        return torch.stack(outputs, dim=0), None
 
     def train(self, states, labels):
         """Train the output layer.
+
         Parameters
         ----------
-
         states : Tensor
             A batch of hidden states with shape (batch, hidden_size)
         labels : Tensor
@@ -168,26 +187,5 @@ class ESN(nn.Module):
         """
         pinv = torch.pinverse(states.t())
         wout = torch.mm(labels.t(), pinv)
+        assert wout.size() == self.out.weight.size()
         self.out.weight = Parameter(wout, requires_grad=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
