@@ -26,8 +26,10 @@ def test_esn_cell():
     spectral_radius = 0.5
     weight_init = 0.1
     batch_size = 3
+    density = 1.0
         
-    cell = esn.ESNCell(input_size, hidden_size, spectral_radius, weight_init)
+    cell = esn.ESNCell(
+        input_size, hidden_size, spectral_radius, weight_init, density)
     assert cell.res_weight.size() == (hidden_size, hidden_size)
     assert cell.res_weight.requires_grad == False
     assert cell.in_weight.size() == (hidden_size, input_size)
@@ -48,7 +50,8 @@ def test_esn():
     assert params.hidden_size == 50
     assert params.output_size == 1
     assert params.spectral_radius == 1.1
-    assert params.in_weight_init == 0.01
+    assert params.in_weight_init == 0.5
+    assert params.density == 1.0
 
     # check model
     lag_len = 3

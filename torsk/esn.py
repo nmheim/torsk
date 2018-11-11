@@ -82,7 +82,8 @@ class ESNCell(RNNCellBase):
         contains the next hidden state of shape (batch, hidden_size)
     """
     def __init__(
-            self, input_size, hidden_size, spectral_radius, in_weight_init):
+            self, input_size, hidden_size,
+            spectral_radius, in_weight_init, density):
         super(ESNCell, self).__init__()
 
         self.input_size = input_size
@@ -97,7 +98,7 @@ class ESNCell(RNNCellBase):
 
         res_weight = dense_esn_reservoir(
             dim=hidden_size, spectral_radius=spectral_radius,
-            density=1.0, symmetric=False)
+            density=density, symmetric=False)
         self.res_weight = Parameter(
             torch.tensor(res_weight, dtype=torch.float32), requires_grad=False)
 
@@ -144,7 +145,7 @@ class ESN(nn.Module):
             raise ValueError(
                 "Currently input and output dimensions must be the same.")
         self.esn_cell = ESNCell(params.input_size, params.hidden_size,
-            params.spectral_radius, params.in_weight_init)
+            params.spectral_radius, params.in_weight_init, params.density)
         self.out = nn.Linear(params.hidden_size, params.output_size, bias=False)
 
     def forward(self, inputs, state, nr_predictions=0):
