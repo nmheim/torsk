@@ -41,9 +41,9 @@ class MackeyDataset(Dataset):
     Returns
     -------
     inputs : torch.Tensor
-        sequence of shape (100, 1)
+        sequence of shape (seq_length, 1)
     labels : torch.Tensor
-        sequence of shape (100, 1)
+        sequence of shape (seq_length, 1)
     """
     def __init__(self, seq_length, simulation_steps):
         if simulation_steps <= seq_length:
