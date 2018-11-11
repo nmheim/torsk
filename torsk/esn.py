@@ -43,7 +43,7 @@ def dense_esn_reservoir(dim, spectral_radius, density, symmetric):
         square reservoir matrix
     """
     mask = connection_mask(dim, density, symmetric)
-    res  = np.random.uniform(low=-1., high=1., size=(dim, dim))
+    res = np.random.normal(loc=0.0, scale=1.0, size=[dim, dim])
     if symmetric:
         res = np.triu(res) + np.tril(res.T, k=-1)
     res *= mask.astype(float)
