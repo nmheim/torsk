@@ -1,3 +1,6 @@
 matplotlib
+netCDF4
 numpy
 pytorch
+requests
+torchvision
