@@ -1,6 +1,8 @@
 import torch
 from torch.utils.data import DataLoader
+
 from torsk.data.mackey import MackeyDataset
+from torsk.data.ocean import NetcdfDataset
 
 
 def _custom_collate(batch):
