@@ -1,9 +1,11 @@
 import pathlib
+
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 from torch.nn.modules.rnn import RNNCellBase
+
 from torsk.utils import Params
 
 

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 from torchvision import transforms
 
-from torsk.esn import ESNCell, ESN
+from torsk.models import ESN
 from torsk.utils import Params
 from torsk.data import NetcdfDataset, SeqDataLoader
 from torsk.visualize import animate_double_imshow
@@ -16,7 +16,7 @@ transient_length = 100
 # input/label setup
 ncpath = pathlib.Path('../../data/ocean/kuro_SSH_3daymean.nc')
 dataset = NetcdfDataset(ncpath, train_length,
-    xslice=slice(90, 190), yslice=slice(90, 190))
+    xslice=slice(90, 190), yslice=slice(90, 190), size=[30, 30])
 
 #inputs, _ = dataset[0]
 #plt.imshow(inputs[0].reshape((30,30)))

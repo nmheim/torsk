@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-from torsk.esn import ESNCell, ESN
+from torsk.models import ESN
 from torsk.utils import Params
 
 
