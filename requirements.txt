@@ -4,3 +4,4 @@ numpy
 pytorch
 requests
 torchvision
+scikit-optimize
