@@ -2,6 +2,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from torsk.data import normalize
+
 
 def _simulate_mackey(b=None, N=3000):
     c   = 0.2
@@ -29,7 +31,7 @@ class MackeyDataset(Dataset):
     """Simulates a Mackey-Glass system for simulation_steps and returns chunks
     of of seq_length of the simulated system.  The created inputs/labels
     sequences are shifted by one timestep so that they can be used to create a
-    one-step-ahead predictor.
+    one-step-ahead predictor. Inputs/labels are normalized to (0, 1).
 
     Parameters
     ----------
@@ -60,6 +62,7 @@ class MackeyDataset(Dataset):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('MackeyDataset index out of range.')
         seq = self.seq[index:index + self.seq_length + 1]
+        seq = normalize(seq)
         inputs, labels = seq[:-1], seq[1:]
         return torch.Tensor(inputs), torch.Tensor(labels)
 

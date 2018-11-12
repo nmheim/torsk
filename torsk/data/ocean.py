@@ -1,10 +1,13 @@
 import pathlib
+
 import requests
 import numpy as np
 import netCDF4 as nc
 import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as tvf
+
+from torsk.data import normalize
 
 
 _module_dir = pathlib.Path(__file__).absolute().parent
@@ -28,7 +31,8 @@ class NetcdfDataset(Dataset):
     """Loads sea surface height (SSH) from a netCDF file of shape (seq, ydim,
     xdim) and returns chunks of of seq_length of the data.  The created
     inputs/labels sequences are shifted by one timestep so that they can be
-    used to create a one-step-ahead predictor.
+    used to create a one-step-ahead predictor. Inputs/labels are normalized to
+    (0, 1).
 
     Parameters
     ----------
@@ -70,6 +74,7 @@ class NetcdfDataset(Dataset):
             raise IndexError('MackeyDataset index out of range.')
         seq = self.data[
             index:index + self.seq_length + 1, self.yslice, self.xslice]
+        seq = normalize(seq)
         ssh, mask = seq.data, seq.mask
         ssh[mask] = 0.
 
