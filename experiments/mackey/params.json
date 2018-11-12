@@ -1,8 +1,9 @@
 {
   "input_size": 1,
-  "hidden_size": 800,
+  "hidden_size": 1000,
   "output_size": 1,
   "spectral_radius" : 1.4,
   "in_weight_init" : 0.48,
-  "density": 0.03
+  "in_bias_init": 0.48,
+  "density": 0.05
 }
