@@ -13,31 +13,25 @@ from torsk.visualize import animate_double_imshow
 train_length = 800
 transient_length = 100
 
-# input/label setup
+print("Loading + resampling of kuro window ...")
 ncpath = pathlib.Path('../../data/ocean/kuro_SSH_3daymean.nc')
 dataset = NetcdfDataset(ncpath, train_length,
     xslice=slice(90, 190), yslice=slice(90, 190), size=[30, 30])
 
-#inputs, _ = dataset[0]
-#plt.imshow(inputs[0].reshape((30,30)))
-#plt.show()
-
 loader = SeqDataLoader(dataset, batch_size=1, shuffle=True)
 inputs, labels = next(iter(loader))
 
-# build model
+print("Building model ...")
 params = Params("params.json")
 print(params)
 model = ESN(params)
 
-# define initial state
+print("Training model ...")
 state = torch.zeros(1, params.hidden_size)
-
-# create states and train
 _, states = model(inputs, state)
 model.train(states[transient_length:, 0], labels[transient_length:, 0])
 
-
+print("Creating prediction ...")
 inputs, labels = next(iter(loader))
 state = torch.zeros(1, params.hidden_size)
 
