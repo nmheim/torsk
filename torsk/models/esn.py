@@ -56,6 +56,13 @@ def dense_esn_reservoir(dim, spectral_radius, density, symmetric):
     return res
 
 
+def _scale_weight(weight, value):
+    """Scales the weight matrix to (-value, value)"""
+    weight *= 2 * value
+    weight -= value
+    return weight
+
+
 class ESNCell(RNNCellBase):
     """An Echo State Network (ESN) cell.
     
@@ -70,6 +77,10 @@ class ESNCell(RNNCellBase):
     in_weight_init : float
         Input matrix will be chosen from a random uniform like
         (-in_weight_init, in_weight_init)
+    in_bias_init : float
+        Input matrix will be chosen from a random uniform like
+        (-in_bias_init, in_bias_init)
+
 
     Inputs
     ------
@@ -85,17 +96,14 @@ class ESNCell(RNNCellBase):
     """
     def __init__(
             self, input_size, hidden_size,
-            spectral_radius, in_weight_init, density):
+            spectral_radius, in_weight_init, in_bias_init, density):
         super(ESNCell, self).__init__()
 
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.spectra_radius = spectral_radius
-        self.in_weight_init = in_weight_init
 
         in_weight = torch.rand([hidden_size, input_size])
-        in_weight *= 2. * in_weight_init
-        in_weight -= in_weight_init
+        in_weight = _scale_weight(in_weight, in_weight_init)
         self.in_weight = Parameter(in_weight, requires_grad=False)
 
         res_weight = dense_esn_reservoir(
@@ -105,7 +113,10 @@ class ESNCell(RNNCellBase):
             torch.tensor(res_weight, dtype=torch.float32), requires_grad=False)
 
         # TODO deal with biases
-        self.in_bias = self.register_parameter('in_bias', None)
+        # self.in_bias = self.register_parameter('in_bias', None)
+        in_bias = torch.rand([hidden_size,])
+        in_bias = _scale_weight(in_bias, in_bias_init)
+        self.in_bias = Parameter(torch.Tensor(in_bias), requires_grad=False)
         self.res_bias = self.register_parameter('res_bias', None)
 
     def forward(self, inputs, state):
@@ -146,8 +157,15 @@ class ESN(nn.Module):
         if params.input_size != params.output_size:
             raise ValueError(
                 "Currently input and output dimensions must be the same.")
-        self.esn_cell = ESNCell(params.input_size, params.hidden_size,
-            params.spectral_radius, params.in_weight_init, params.density)
+
+        self.esn_cell = ESNCell(
+            input_size=params.input_size,
+            hidden_size=params.hidden_size,
+            spectral_radius=params.spectral_radius,
+            in_weight_init=params.in_weight_init,
+            in_bias_init=params.in_bias_init,
+            density=params.density)
+
         self.out = nn.Linear(params.hidden_size, params.output_size, bias=False)
 
     def forward(self, inputs, state, nr_predictions=0):
