@@ -25,11 +25,17 @@ def test_esn_cell():
     hidden_size = 10
     spectral_radius = 0.5
     weight_init = 0.1
+    bias_init = 0.1
     batch_size = 3
     density = 1.0
         
     cell = esn.ESNCell(
-        input_size, hidden_size, spectral_radius, weight_init, density)
+        input_size=input_size,
+        hidden_size=hidden_size,
+        spectral_radius=spectral_radius,
+        in_weight_init=weight_init,
+        in_bias_init=bias_init,
+        density=density)
     assert cell.res_weight.size() == (hidden_size, hidden_size)
     assert cell.res_weight.requires_grad == False
     assert cell.in_weight.size() == (hidden_size, input_size)
