@@ -1,6 +1,6 @@
 {
   "input_size": 1,
-  "hidden_size": 1000,
+  "hidden_size": 500,
   "output_size": 1,
   "spectral_radius" : 1.4,
   "in_weight_init" : 0.48,

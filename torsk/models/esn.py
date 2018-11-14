@@ -45,7 +45,8 @@ def dense_esn_reservoir(dim, spectral_radius, density, symmetric):
         square reservoir matrix
     """
     mask = connection_mask(dim, density, symmetric)
-    res = np.random.normal(loc=0.0, scale=1.0, size=[dim, dim])
+    #res = np.random.normal(loc=0.0, scale=1.0, size=[dim, dim])
+    res = np.random.uniform(low=-1.0, high=1.0, size=[dim, dim])
     if symmetric:
         res = np.triu(res) + np.tril(res.T, k=-1)
     res *= mask.astype(float)
@@ -165,9 +166,11 @@ class ESN(nn.Module):
             density=params.density)
 
         self.out = nn.Linear(
-            params.hidden_size + params.input_size,
+            params.hidden_size + params.input_size + 1,
             params.output_size,
             bias=False)
+
+        self.ones = torch.ones([1, 1])
 
     def forward(self, inputs, state, nr_predictions=0):
         if inputs.size(1) != 1:
@@ -202,18 +205,18 @@ class ESN(nn.Module):
         outputs = []
         for inp in inputs:
             state = self.esn_cell(inp, state)
-            ext_state = torch.cat([inp, state], dim=1)
+            ext_state = torch.cat([self.ones, inp, state], dim=1)
             output = self.out(ext_state)
             outputs.append(output)
         for ii in range(nr_predictions):
             inp = output
             state = self.esn_cell(inp, state)
-            ext_state = torch.cat([inp, state], dim=1)
+            ext_state = torch.cat([self.ones, inp, state], dim=1)
             output = self.out(ext_state)
             outputs.append(output)
         return torch.stack(outputs, dim=0), None
 
-    def train(self, inputs, states, labels):
+    def train(self, inputs, states, labels, method='pinv', beta=None):
         """Train the output layer.
 
         Parameters
@@ -223,9 +226,38 @@ class ESN(nn.Module):
         labels : Tensor
             A batch of labels with shape (batch, output_size)
         """
-        X = torch.cat([inputs, states], dim=1)
-        pinv = torch.pinverse(X.t())
-        wout = torch.mm(labels.t(), pinv)
-        print(wout.size(), self.out.weight.size())
+        if method == 'tikhonov':
+            if beta is None:
+                raise ValueError(
+                    'For Tikhonov training the beta parameter cannot be None.')
+            wout = tikhonov(inputs, states, labels, beta)
+        elif method == 'pinv':
+            if beta is not None:
+                print('With pseudo inverse training the beta parameter has no effect.')
+            wout = pseudo_inverse(inputs, states, labels)
+        else:
+            raise ValueError(f'Unkown training method: {method}')
+
         assert wout.size() == self.out.weight.size()
         self.out.weight = Parameter(wout, requires_grad=False)
+
+
+def _extended_states(inputs, states):
+    ones = torch.ones([inputs.size(0), 1])
+    return torch.cat([ones, inputs, states], dim=1).t()
+
+
+def pseudo_inverse(inputs, states, labels):
+    X = _extended_states(inputs, states)
+    pinv = torch.pinverse(X)
+    wout = torch.mm(labels.t(), pinv)
+    return wout
+
+
+def tikhonov(inputs, states, labels, beta):
+    X = _extended_states(inputs, states)
+    XT = X.t()
+    XXT = torch.mm(X, XT)
+    inv = torch.inverse(XXT + beta * torch.eye(XXT.size(0)))
+    wout = torch.mm(labels.t(), torch.mm(XT, inv))
+    return wout
