@@ -8,6 +8,7 @@ from skopt.space import Real
 from torsk.models import ESN
 from torsk.utils import Params
 from torsk.data import MackeyDataset, SeqDataLoader
+from torsk import train_esn
 
 
 opt_steps = 100
@@ -34,7 +35,8 @@ transient_length = params.transient_length
 
 # input/label setup
 dataset = MackeyDataset(
-    seq_length=train_length + pred_length,
+    train_length=train_length,
+    pred_length=pred_length,
     simulation_steps=train_length + pred_length + opt_steps * 10)
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
@@ -49,26 +51,25 @@ def fitness(**sampled_params):
 
     error = []
     for _ in range(5):
-        inputs, labels = next(loader)
-        train_inputs, train_labels = inputs[:train_length], labels[:train_length]
-        test_inputs = inputs[train_length - transient_length:train_length]
-        test_labels = labels[train_length - transient_length:]
-        
-        # create states and train
+        train_inputs, train_labels, test_labels = next(loader)
         state = torch.zeros(1, params.hidden_size)
+
         _, states = model(train_inputs, state)
+        
         model.train(
             inputs=train_inputs[transient_length:, 0],
             states=states[transient_length:, 0],
             labels=train_labels[transient_length:, 0],
             method=params.train_method,
             beta=params.tikhonov_beta)
-         
+        
         # predict
-        state = torch.zeros(1, params.hidden_size)
-        outputs, _ = model(test_inputs, state, nr_predictions=pred_length)
+        init_input = train_inputs[-1].unsqueeze(0)
+        outputs, _ = model(
+            init_input, states[-1], nr_predictions=pred_length-1)
 
-        err = (test_labels[transient_length:] - outputs[transient_length:])**2
+
+        err = (test_labels - outputs)**2
         error.append(err)
     metric = torch.mean(torch.cat(error, dim=0))
     if not torch.isfinite(metric):

@@ -35,36 +35,47 @@ class MackeyDataset(Dataset):
 
     Parameters
     ----------
-    seq_length : int
-        length of the inputs/labels sequences 
+    train_length : int
+        length of the training inputs/labels sequences 
+    pred_length : int
+        length of the prediction label sequence
     simulation_steps : int
         number of Mackey-Glass simulation steps
 
     Returns
     -------
     inputs : torch.Tensor
-        sequence of shape (seq_length, 1)
+        sequence of shape (train_length, 1)
     labels : torch.Tensor
-        sequence of shape (seq_length, 1)
+        sequence of shape (train_length, 1)
+    pred_labels : torch.Tensor
+        sequence of shape (pred_length, 1) that starts right after the end of
+        the labels sequence.
     """
-    def __init__(self, seq_length, simulation_steps):
-        if simulation_steps <= seq_length:
+    def __init__(self, train_length, pred_length, simulation_steps):
+        if simulation_steps <= train_length + pred_length:
             raise ValueError('simulation_steps must be larger than seq_length.')
 
         self.simulation_steps = simulation_steps
-        self.seq_length = seq_length
-        self.nr_sequences = self.simulation_steps - self.seq_length
+        self.train_length = train_length
+        self.pred_length = pred_length
+        self.nr_sequences = self.simulation_steps \
+            - self.train_length - self.pred_length
 
-        self.seq = _simulate_mackey(N=simulation_steps)
+        self.seq = normalize(_simulate_mackey(N=simulation_steps))
         self.seq = self.seq.reshape((-1, 1))
 
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('MackeyDataset index out of range.')
-        seq = self.seq[index:index + self.seq_length + 1]
-        seq = normalize(seq)
-        inputs, labels = seq[:-1], seq[1:]
-        return torch.Tensor(inputs), torch.Tensor(labels)
+        train_end = index + self.train_length + 1
+        train_seq = self.seq[index:train_end]
+        pred_seq = self.seq[train_end:train_end + self.pred_length]
+        inputs = torch.Tensor(train_seq[:-1])
+        labels = torch.Tensor(train_seq[1:])
+        pred_labels = torch.Tensor(
+            self.seq[train_end:train_end + self.pred_length])
+        return inputs, labels, pred_labels
 
     def __len__(self):
         return self.nr_sequences

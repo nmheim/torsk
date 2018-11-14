@@ -37,7 +37,8 @@ def _custom_collate(batch):
 
     inputs = batch[0]
     labels = batch[1]
-    return inputs, labels
+    pred_labels = batch[2]
+    return inputs, labels, pred_labels
 
 
 class SeqDataLoader(DataLoader):
