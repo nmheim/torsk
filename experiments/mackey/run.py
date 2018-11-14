@@ -28,8 +28,12 @@ test_labels = labels[train_length - transient_length:]
 
 # create states and train
 state = torch.zeros(1, params.hidden_size)
+
 _, states = model(train_inputs, state)
-model.train(states[transient_length:, 0], train_labels[transient_length:, 0])
+model.train(
+    inputs=train_inputs[transient_length:, 0],
+    states=states[transient_length:, 0],
+    labels=train_labels[transient_length:, 0])
 
 # predict
 state = torch.zeros(1, params.hidden_size)

@@ -112,8 +112,6 @@ class ESNCell(RNNCellBase):
         self.res_weight = Parameter(
             torch.tensor(res_weight, dtype=torch.float32), requires_grad=False)
 
-        # TODO deal with biases
-        # self.in_bias = self.register_parameter('in_bias', None)
         in_bias = torch.rand([hidden_size,])
         in_bias = _scale_weight(in_bias, in_bias_init)
         self.in_bias = Parameter(torch.Tensor(in_bias), requires_grad=False)
@@ -166,7 +164,10 @@ class ESN(nn.Module):
             in_bias_init=params.in_bias_init,
             density=params.density)
 
-        self.out = nn.Linear(params.hidden_size, params.output_size, bias=False)
+        self.out = nn.Linear(
+            params.hidden_size + params.input_size,
+            params.output_size,
+            bias=False)
 
     def forward(self, inputs, state, nr_predictions=0):
         if inputs.size(1) != 1:
@@ -184,19 +185,35 @@ class ESN(nn.Module):
         return None, torch.stack(states, dim=0)
 
     def _forward(self, inputs, state, nr_predictions):
+        #def _update(inp, state):
+        #    state = self.esn_cell(inp, state)
+        #    ext_state = torch.cat([inp, state], dim=1)
+        #    return self.out(ext_state)
+
+        #outputs = []
+        #for inp in inputs:
+        #    output = _update(inp, state)
+        #    outputs.append(output)
+        #for ii in range(nr_predictions):
+        #    output = _update(output, state)
+        #    outputs.append(output)
+        #return torch.stack(outputs, dim=0), None
+
         outputs = []
         for inp in inputs:
             state = self.esn_cell(inp, state)
-            output = self.out(state)
+            ext_state = torch.cat([inp, state], dim=1)
+            output = self.out(ext_state)
             outputs.append(output)
         for ii in range(nr_predictions):
             inp = output
             state = self.esn_cell(inp, state)
-            output = self.out(state)
+            ext_state = torch.cat([inp, state], dim=1)
+            output = self.out(ext_state)
             outputs.append(output)
         return torch.stack(outputs, dim=0), None
 
-    def train(self, states, labels):
+    def train(self, inputs, states, labels):
         """Train the output layer.
 
         Parameters
@@ -206,7 +223,9 @@ class ESN(nn.Module):
         labels : Tensor
             A batch of labels with shape (batch, output_size)
         """
-        pinv = torch.pinverse(states.t())
+        X = torch.cat([inputs, states], dim=1)
+        pinv = torch.pinverse(X.t())
         wout = torch.mm(labels.t(), pinv)
+        print(wout.size(), self.out.weight.size())
         assert wout.size() == self.out.weight.size()
         self.out.weight = Parameter(wout, requires_grad=False)
