@@ -6,10 +6,9 @@ from torsk.data import normalize
 
 
 def _simulate_mackey(b=None, N=3000):
-    c   = 0.2
-    d   = 0.01
+    c = 0.2
     tau = 17
-    n   = 10
+    n = 10
 
     yinit = np.array([0.9697, 0.9699, 0.9794, 1.0003, 1.0319, 1.0703, 1.1076,
         1.1352, 1.1485, 1.1482, 1.1383, 1.1234, 1.1072, 1.0928, 1.0820, 1.0756,
@@ -21,9 +20,9 @@ def _simulate_mackey(b=None, N=3000):
     y = np.zeros(N)
     y[:yinit.shape[0]] = yinit
 
-    for i in range(tau, N-1):
-        yi = y[i] - b[i]*y[i] + c*y[i-tau]/(1+y[i-tau]**n)
-        y[i+1] = yi
+    for i in range(tau, N - 1):
+        yi = y[i] - b[i] * y[i] + c * y[i - tau] / (1 + y[i - tau]**n)
+        y[i + 1] = yi
     return y
 
 
@@ -36,7 +35,7 @@ class MackeyDataset(Dataset):
     Parameters
     ----------
     train_length : int
-        length of the training inputs/labels sequences 
+        length of the training inputs/labels sequences
     pred_length : int
         length of the prediction label sequence
     simulation_steps : int
@@ -70,7 +69,6 @@ class MackeyDataset(Dataset):
             raise IndexError('MackeyDataset index out of range.')
         train_end = index + self.train_length + 1
         train_seq = self.seq[index:train_end]
-        pred_seq = self.seq[train_end:train_end + self.pred_length]
         inputs = torch.Tensor(train_seq[:-1])
         labels = torch.Tensor(train_seq[1:])
         pred_labels = torch.Tensor(
@@ -79,10 +77,10 @@ class MackeyDataset(Dataset):
 
     def __len__(self):
         return self.nr_sequences
-        
+
 
 if __name__ == "__main__":
-    
+
     ds = MackeyDataset(100, 2000)
     inputs, labels = ds[0]
 

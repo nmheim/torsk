@@ -39,7 +39,7 @@ class NetcdfDataset(Dataset):
     ncpath : pathlib.Path
         Path to the netCDF file
     seq_length : int
-        length of the inputs/labels sequences 
+        length of the inputs/labels sequences
     xslice : slice
         slice of the x-dimension to read from the SSH variable
     yslice : slice

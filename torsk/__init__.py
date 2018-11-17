@@ -1,6 +1,5 @@
 import torch
 from torsk.models import esn
-from torsk.models import conv_esn
 
 
 def mse(predictions, labels):

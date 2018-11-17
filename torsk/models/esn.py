@@ -13,7 +13,7 @@ _module_dir = pathlib.Path(__file__).absolute().parent
 
 
 def get_default_params():
-   return Params(_module_dir / 'default_esn_params.json')
+    return Params(_module_dir / 'default_esn_params.json')
 
 
 def connection_mask(dim, density, symmetric):
@@ -29,7 +29,7 @@ def connection_mask(dim, density, symmetric):
 def dense_esn_reservoir(dim, spectral_radius, density, symmetric):
     """Creates a dense square matrix with random non-zero elements according
     to the density parameter and a given spectral radius.
-    
+
     Parameters
     ----------
     dim : int
@@ -45,8 +45,8 @@ def dense_esn_reservoir(dim, spectral_radius, density, symmetric):
         square reservoir matrix
     """
     mask = connection_mask(dim, density, symmetric)
-    #res = np.random.normal(loc=0.0, scale=1.0, size=[dim, dim])
-    res = np.random.uniform(low=-1.0, high=1.0, size=[dim, dim])
+    res = np.random.normal(loc=0.0, scale=1.0, size=[dim, dim])
+    # res = np.random.uniform(low=-1.0, high=1.0, size=[dim, dim])
     if symmetric:
         res = np.triu(res) + np.tril(res.T, k=-1)
     res *= mask.astype(float)
@@ -66,7 +66,7 @@ def _scale_weight(weight, value):
 
 class ESNCell(RNNCellBase):
     """An Echo State Network (ESN) cell.
-    
+
     Parameters
     ----------
     input_size : int
@@ -113,7 +113,7 @@ class ESNCell(RNNCellBase):
         self.res_weight = Parameter(
             torch.tensor(res_weight, dtype=torch.float32), requires_grad=False)
 
-        in_bias = torch.rand([hidden_size,])
+        in_bias = torch.rand([hidden_size])
         in_bias = _scale_weight(in_bias, in_bias_init)
         self.in_bias = Parameter(torch.Tensor(in_bias), requires_grad=False)
         self.res_bias = self.register_parameter('res_bias', None)
@@ -128,9 +128,9 @@ class ESNCell(RNNCellBase):
 
 class ESN(nn.Module):
     """Complete ESN with output layer. Only supports batch=1 for now!!!
-    
+
     Parameters
-    ---------- 
+    ----------
     params : torsk.utils.Params
         The network hyper-parameters
 
@@ -188,20 +188,6 @@ class ESN(nn.Module):
         return None, torch.stack(states, dim=0)
 
     def _forward(self, inputs, state, nr_predictions):
-        #def _update(inp, state):
-        #    state = self.esn_cell(inp, state)
-        #    ext_state = torch.cat([inp, state], dim=1)
-        #    return self.out(ext_state)
-
-        #outputs = []
-        #for inp in inputs:
-        #    output = _update(inp, state)
-        #    outputs.append(output)
-        #for ii in range(nr_predictions):
-        #    output = _update(output, state)
-        #    outputs.append(output)
-        #return torch.stack(outputs, dim=0), None
-
         outputs = []
         for inp in inputs:
             state = self.esn_cell(inp, state)
@@ -221,20 +207,30 @@ class ESN(nn.Module):
 
         Parameters
         ----------
+        inputs : Tensor
+            A batch of inputs with shape (batch, input_size)
         states : Tensor
             A batch of hidden states with shape (batch, hidden_size)
         labels : Tensor
             A batch of labels with shape (batch, output_size)
         """
+        if len(inputs.size()) == 3:
+            inputs = inputs.reshape([-1, inputs.size(2)])
+            states = states.reshape([-1, states.size(2)])
+            labels = labels.reshape([-1, labels.size(2)])
+
         if method == 'tikhonov':
             if beta is None:
                 raise ValueError(
                     'For Tikhonov training the beta parameter cannot be None.')
             wout = tikhonov(inputs, states, labels, beta)
+
         elif method == 'pinv':
             if beta is not None:
-                print('With pseudo inverse training the beta parameter has no effect.')
+                print('With pseudo inverse training the '
+                      'beta parameter has no effect.')
             wout = pseudo_inverse(inputs, states, labels)
+
         else:
             raise ValueError(f'Unkown training method: {method}')
 
