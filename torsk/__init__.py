@@ -7,16 +7,24 @@ def mse(predictions, labels):
     return torch.mean(err).item()
 
 
-def train_esn(model, inputs, labels, params):
+def train_predict_esn(model, loader, params):
     tlen = params.transient_length
+
+    inputs, labels, pred_labels = next(loader)
 
     zero_state = torch.zeros(1, params.hidden_size)
     _, states = model(inputs, zero_state)
 
     model.train(
-        inputs=inputs[tlen:, 0],
-        states=states[tlen:, 0],
-        labels=labels[tlen:, 0],
+        inputs=inputs[tlen:],
+        states=states[tlen:],
+        labels=labels[tlen:],
         method=params.train_method,
         beta=params.tikhonov_beta)
-    return model, states
+
+    # predict
+    init_inputs = inputs[-1].unsqueeze(0)
+    outputs, _ = model(
+        init_inputs, states[-1], nr_predictions=params.pred_length - 1)
+
+    return model, outputs, pred_labels

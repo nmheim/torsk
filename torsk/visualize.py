@@ -54,3 +54,44 @@ def animate_double_imshow(frames1, frames2,
     anim = animation.FuncAnimation(fig, animate, init_func=init,
                                    frames=len(frames1), interval=20, blit=True)
     return anim
+
+
+def plot_mackey(predictions, labels, weights=None):
+
+    def sort_output(output, error):
+        sort = sorted(zip(output, error), key=lambda arg: arg[1].sum())
+        sort = np.array(sort)
+        sort_out, sort_err = sort[:, 0, :], sort[:, 1, :]
+        return sort_out, sort_err
+
+    error = np.abs(predictions - labels)
+    predictions, _ = sort_output(predictions, error)
+    labels, error = sort_output(labels, error)
+
+    if weights is None:
+        fig, ax = plt.subplots(3, 1)
+    else:
+        fig, ax = plt.subplots(4, 1)
+        hist, bins = np.histogram(weights, bins=100)
+        ax[3].plot(bins[:-1], hist, label=r"$W^{out}$ histogram")
+
+    ax[0].plot(labels[0], label="Truth")
+    ax[0].plot(predictions[0], label="Prediction")
+    ax[1].plot(labels[-1])
+    ax[1].plot(predictions[-1])
+
+    mean, std = error.mean(axis=0), error.std(axis=0)
+    ax[2].plot(mean, label=r"Mean Error $\mu$")
+    ax[2].fill_between(
+        np.arange(mean.shape[0]), mean - std, mean + std, alpha=0.5,
+        label=r"$\mu \pm \sigma$")
+
+    ax[0].set_ylim(-0.1, 1.1)
+    ax[1].set_ylim(-0.1, 1.1)
+    ax[2].set_ylim(-0.1, 1.1)
+
+    for a in ax:
+        a.legend()
+
+    plt.tight_layout()
+    return fig, ax
