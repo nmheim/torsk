@@ -1,40 +1,40 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
+from tqdm import tqdm
 
+import torsk
 from torsk.models import ESN
 from torsk.utils import Params
 from torsk.data import MackeyDataset, SeqDataLoader
+from torsk.visualize import plot_mackey
 
 
-train_length = 2200
-pred_length = 500
-transient_length = 200
+sns.set_style("whitegrid")
 
-# input/label setup
-dataset = MackeyDataset(train_length + pred_length, simulation_steps=3000)
+params = Params("params.json")
+train_length = params.train_length
+pred_length = params.pred_length
+transient_length = params.transient_length
+beta = params.tikhonov_beta
+method = params.train_method
+print(params)
+
+dataset = MackeyDataset(train_length, pred_length, simulation_steps=3000)
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
-# build model
-params = Params("params.json")
-print(params)
 model = ESN(params)
 
+predictions, labels = [], []
+for i in tqdm(range(20)):
+    model, outputs, pred_labels = torsk.train_predict_esn(
+        model=model, loader=loader, params=params)
+    predictions.append(outputs.squeeze().numpy())
+    labels.append(pred_labels.squeeze().numpy())
 
-inputs, labels = next(loader)
-train_inputs, train_labels = inputs[:train_length], labels[:train_length]
-test_inputs = inputs[train_length - transient_length:train_length]
-test_labels = labels[train_length - transient_length:]
 
-# create states and train
-state = torch.zeros(1, params.hidden_size)
-_, states = model(train_inputs, state)
-model.train(states[transient_length:, 0], train_labels[transient_length:, 0])
+predictions, labels = np.array(predictions), np.array(labels)
 
-# predict
-state = torch.zeros(1, params.hidden_size)
-outputs, _ = model(test_inputs, state, nr_predictions=pred_length)
-
-plt.plot(test_labels.numpy()[transient_length:, 0, 0])
-plt.plot(outputs.numpy()[transient_length:, 0, 0])
+plot_mackey(predictions, labels, weights=model.out.weight.numpy())
 plt.show()

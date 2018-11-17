@@ -13,7 +13,7 @@ def test_reservoir_initialization():
     mask = esn.connection_mask(dim, density, symmetric)
     assert mask.sum() == dim * dim
     assert mask[0, -1] == mask[-1, -1]
-    
+
     # reservoir matrix
     res = esn.dense_esn_reservoir(dim, spectral_radius, density, symmetric)
     # check if symmteric
@@ -28,7 +28,7 @@ def test_esn_cell():
     bias_init = 0.1
     batch_size = 3
     density = 1.0
-        
+
     cell = esn.ESNCell(
         input_size=input_size,
         hidden_size=hidden_size,
@@ -37,9 +37,9 @@ def test_esn_cell():
         in_bias_init=bias_init,
         density=density)
     assert cell.res_weight.size() == (hidden_size, hidden_size)
-    assert cell.res_weight.requires_grad == False
+    assert not cell.res_weight.requires_grad
     assert cell.in_weight.size() == (hidden_size, input_size)
-    assert cell.in_weight.requires_grad == False
+    assert not cell.in_weight.requires_grad
 
     inputs = torch.Tensor(np.random.uniform(size=[batch_size, input_size]))
     state = torch.Tensor(np.random.uniform(size=[batch_size, hidden_size]))
@@ -64,6 +64,7 @@ def test_esn():
     batch_size = 1
     model = esn.ESN(params)
     inputs = torch.rand([lag_len, batch_size, params.input_size])
+    labels = torch.rand([lag_len, params.output_size, params.output_size])
     state = torch.rand([batch_size, params.hidden_size])
 
     # test _forward_states_only
@@ -73,9 +74,7 @@ def test_esn():
 
     # test train
     wout = model.out.weight.detach().numpy()
-    model.train(
-        torch.squeeze(states),
-        torch.rand([lag_len, params.output_size]))
+    model.train(inputs=inputs, states=states, labels=labels)
     assert not np.any(wout == model.out.weight.detach().numpy())
 
     # test _forward

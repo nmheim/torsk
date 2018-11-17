@@ -9,13 +9,13 @@ def test_mackey():
     mackey = _simulate_mackey(N=100)
     assert mackey.shape == (100,)
 
-    with pytest.raises(ValueError) as e_info:
-        dataset = MackeyDataset(100, 100)
+    with pytest.raises(ValueError):
+        dataset = MackeyDataset(100, 100, 200)
 
-    dataset = MackeyDataset(100, 200)
+    dataset = MackeyDataset(100, 100, 300)
     assert len(dataset) == 100
 
-    inputs, labels = dataset[0]
+    inputs, labels, pred_labels = dataset[0]
     assert inputs.shape == (100, 1)
     assert labels.shape == (100, 1)
 

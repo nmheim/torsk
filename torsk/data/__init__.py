@@ -11,15 +11,15 @@ def normalize(data, vmin=None, vmax=None):
         vmin = data.min()
     if vmax is None:
         vmax = data.max()
-    return (data-vmin)/np.abs(vmin-vmax)
+    return (data - vmin) / np.abs(vmin - vmax)
 
 
 def min_max_scale(data, vmin=0., vmax=1.):
     vrange = vmax - vmin
-    dmin   = data.min()
+    dmin = data.min()
     drange = data.max() - dmin
-    scale  = vrange / drange
-    shift  = vmin - dmin*scale
+    scale = vrange / drange
+    shift = vmin - dmin * scale
     data *= scale
     data += shift
     return data
@@ -37,7 +37,8 @@ def _custom_collate(batch):
 
     inputs = batch[0]
     labels = batch[1]
-    return inputs, labels
+    pred_labels = batch[2]
+    return inputs, labels, pred_labels
 
 
 class SeqDataLoader(DataLoader):
@@ -55,3 +56,5 @@ class SeqDataLoader(DataLoader):
 
 from torsk.data.mackey import MackeyDataset
 from torsk.data.ocean import NetcdfDataset
+
+__all__ = ["MackeyDataset", "NetcdfDataset"]

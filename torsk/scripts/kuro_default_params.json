@@ -1,0 +1,8 @@
+{
+  "input_size": 1,
+  "output_size": 1,
+  "spectral_radius" : 1.39,
+  "in_weight_init" : 0.97,
+  "in_bias_init": 0.41,
+  "density": 0.1
+}

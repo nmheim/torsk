@@ -32,4 +32,3 @@ class Params():
 
     def __str__(self):
         return json.dumps(self.__dict__, indent=2, sort_keys=True)
-

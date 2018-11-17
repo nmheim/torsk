@@ -12,4 +12,8 @@ setup(
     packages=find_packages(),
     version=0.1,
     install_requires=install_requires,
+    entry_points='''
+        [console_scripts]
+        torsk=torsk.scripts.cli:cli
+    '''
 )
