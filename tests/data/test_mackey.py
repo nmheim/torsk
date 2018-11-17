@@ -18,6 +18,7 @@ def test_mackey():
     inputs, labels, pred_labels = dataset[0]
     assert inputs.shape == (100, 1)
     assert labels.shape == (100, 1)
+    assert pred_labels.shape == (100, 1)
 
     with pytest.raises(IndexError):
         inputs, labels = dataset[199]

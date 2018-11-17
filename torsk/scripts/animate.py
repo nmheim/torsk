@@ -11,5 +11,5 @@ def cli(ncfile):
     with nc.Dataset(ncfile, "r") as src:
         data = src["SSH"][:]
 
-    anim = animate_imshow(data)
+    anim = animate_imshow(data)  # NOQA
     plt.show()

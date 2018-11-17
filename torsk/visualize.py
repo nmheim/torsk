@@ -57,7 +57,7 @@ def animate_double_imshow(frames1, frames2,
 
 
 def animate_imshow(frames, time=None, vmin=None, vmax=None,
-                   cmap_name="inferno", figsize=(8,5)):
+                   cmap_name="inferno", figsize=(8, 5)):
     def _blit_draw(self, artists, bg_cache):
         # Handles blitted drawing, which renders only the artists given instead
         # of the entire figure.
@@ -80,11 +80,11 @@ def animate_imshow(frames, time=None, vmin=None, vmax=None,
             ax.figure.canvas.blit(ax.figure.bbox)
     matplotlib.animation.Animation._blit_draw = _blit_draw
     fig = plt.figure(figsize=figsize)
-    ax  = plt.gca()
-    im  = ax.imshow(frames[0], animated=True, vmin=vmin, vmax=vmax,
-                    cmap=plt.get_cmap(cmap_name))
+    ax = plt.gca()
+    im = ax.imshow(frames[0], animated=True, vmin=vmin, vmax=vmax,
+                   cmap=plt.get_cmap(cmap_name))
     plt.colorbar(im)
-    text = ax.text(.5, 1.05, '', transform = ax.transAxes, va='center')
+    text = ax.text(.5, 1.05, '', transform=ax.transAxes, va='center')
 
     if time is None:
         time = np.arange(len(frames))
@@ -92,12 +92,12 @@ def animate_imshow(frames, time=None, vmin=None, vmax=None,
     def init():
         text.set_text("")
         im.set_data(frames[0])
-        return im,text
+        return im, text
 
     def animate(i):
         text.set_text(str(time[i]))
         im.set_data(frames[i])
-        return im,text
+        return im, text
 
     anim = animation.FuncAnimation(fig, animate, init_func=init,
                                    frames=len(frames), interval=20, blit=True)
