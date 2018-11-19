@@ -5,37 +5,41 @@ from torsk.models import ESN
 from torsk.utils import Params
 
 
-def make_sine(periods=30):
-    x = np.linspace(0, 2*np.pi-np.pi/10, 20)
+def make_sine(periods=30, N=20):
+    dx = 2*np.pi/(N+1);
+    x = np.linspace(0, 2*np.pi-dx, N)
     y = np.sin(x)
     y = np.tile(y, periods)
     return y
 
 
-# do it with the ESN class and the pseudo inverse
-data = make_sine(periods=100)
-data = data.reshape((data.shape[0], 1, 1))
-inputs, labels = data[:-1], data[1:]
-
-inputs = torch.tensor(inputs, dtype=torch.float32)
-labels = torch.tensor(labels[:,0,:], dtype=torch.float32)
-
+# Parameters and model initialization
 params = Params("params.json")
+nr_predictions = params.pred_length
+tlen          = params.transient_length
+T             = params.train_length
+
 model = ESN(params)
-state = torch.zeros(1, params.hidden_size)
 
-_, states = model(inputs, state)
-model.train(states[10*20:, 0], labels[10*20:])
+# do it with the ESN class and the pseudo inverse
+data = make_sine(periods=100, N=20)
+data = torch.tensor(data.reshape((len(data), 1, 1)),dtype=torch.float32)
+all_inputs,   all_labels   = data[:-1],           data[1:]
+train_inputs, train_labels = all_inputs[:T+tlen], all_labels[:T+tlen]
 
-data = make_sine(periods=10)
-data = data.reshape((data.shape[0], 1, 1))
-inputs, labels = data[:-1], data[1:]
-inputs = torch.tensor(inputs, dtype=torch.float32)
-labels = torch.tensor(labels, dtype=torch.float32)
-state = torch.zeros(1, params.hidden_size)
-outputs, _ = model(inputs, state, nr_predictions=100)
+state0 = torch.zeros(1, params.hidden_size)
+_, train_states = model(train_inputs,state0)
 
-plt.plot(labels.numpy()[:,0], '.')
+
+model.train(train_inputs[tlen:],train_states[tlen:], train_labels[tlen:],
+            method=params.train_method, beta=params.tikhonov_beta)
+
+
+outputs, _ = model(train_inputs[-1].unsqueeze(0), train_states[-1], nr_predictions=nr_predictions)
+
+print(outputs.shape)
+
+plt.plot(all_labels[tlen+T:tlen+T+nr_predictions].numpy()[:,0], '.')
 plt.plot(outputs.numpy()[:,0])
 #plt.ylim(-1, 1)
 plt.show()
