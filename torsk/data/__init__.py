@@ -56,5 +56,6 @@ class SeqDataLoader(DataLoader):
 
 from torsk.data.mackey import MackeyDataset
 from torsk.data.ocean import NetcdfDataset
+from torsk.data.sine import SineDataset
 
-__all__ = ["MackeyDataset", "NetcdfDataset"]
+__all__ = ["MackeyDataset", "NetcdfDataset", "SineDataset"]
