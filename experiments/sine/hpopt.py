@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import skopt
 from skopt.utils import use_named_args
-from skopt.space import Real
+from skopt.space import Real, Integer
 
 import torsk
 from torsk.models import ESN
@@ -17,16 +17,18 @@ output_dir = pathlib.Path("hpopt")
 
 dimensions = [
     Real(low=0.5, high=2.0, name="spectral_radius"),
-    Real(low=0.001, high=2.0, name="in_weight_init"),
-    Real(low=0.001, high=2.0, name="in_bias_init"),
-    Real(low=1e-5, high=1e1, name="tikhonov_beta", prior="log_scale")
+    Real(low=0.001, high=2.0, name="in_weight_init", prior="log_scale"),
+    Real(low=0.001, high=2.0, name="in_bias_init", prior="log_scale"),
+    # Integer(low=10, high=200, name="hidden_size"),
+    # Real(low=1e-5, high=1e1, name="tikhonov_beta", prior="log_scale")
 ]
 
 starting_params = [
     1.0,    # esn_spectral_radius
     0.01,    # in_weight_init
     0.01,    # in_bias_init
-    0.01,    # tikhonov_beta
+    # 100,     # hidden size
+    # 0.01,    # tikhonov_beta
 ]
 
 params = Params("hpopt_params.json")
@@ -41,6 +43,7 @@ loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 def fitness(**sampled_params):
 
     params.update(sampled_params)
+    # params.hidden_size = int(sampled_params['hidden_size'])
     print(f"Current model parameters {params}")
     model = ESN(params)
 
@@ -68,7 +71,7 @@ if __name__ == "__main__":
         n_calls=opt_steps,
         func=fitness,
         dimensions=dimensions,
-        acq_func="gp_hedge",
+        acq_func="EI",
         x0=starting_params,
         verbose=True)
 
