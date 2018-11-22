@@ -4,4 +4,6 @@ netCDF4
 numpy
 requests
 torchvision
+tqdm
+seaborn
 scikit-optimize
