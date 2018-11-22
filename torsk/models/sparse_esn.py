@@ -7,6 +7,37 @@ from torsk.models.utils import scale_weight, sparse_esn_reservoir
 
 
 class SparseESNCell(RNNCellBase):
+    """An Echo State Network (ESN) cell with a sparsely represented reservoir
+    matrix. Can currently only handle batch==1.
+
+    Parameters
+    ----------
+    input_size : int
+        Number of input features
+    hidden_size : int
+        Number of features in the hidden state
+    spectral_radius : float
+        Largest eigenvalue of the reservoir matrix
+    in_weight_init : float
+        Input matrix will be chosen from a random uniform like
+        (-in_weight_init, in_weight_init)
+    in_bias_init : float
+        Input matrix will be chosen from a random uniform like
+        (-in_bias_init, in_bias_init)
+
+
+    Inputs
+    ------
+    input : torch.Tensor
+        contains input features of shape (batch, input_size)
+    state : torch.Tensor
+        current hidden state of shape (batch, hidden_size)
+
+    Outputs
+    -------
+    state' : torch.Tensor
+        contains the next hidden state of shape (batch, hidden_size)
+    """
 
     def __init__(self, input_size, hidden_size,
                  spectral_radius, in_weight_init, in_bias_init, density):
