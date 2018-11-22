@@ -3,6 +3,7 @@
   "hidden_size": 100,
   "output_size": 1,
 
+  "reservoir_representation": "dense",
   "spectral_radius" : 1.0,
   "in_weight_init" : 0.1,
   "in_bias_init": 0.1,

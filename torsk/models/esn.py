@@ -6,7 +6,9 @@ import torch.nn as nn
 from torch.nn.parameter import Parameter
 from torch.nn.modules.rnn import RNNCellBase
 
-from torsk.utils import Params
+from torsk import Params
+from torsk.models.utils import dense_esn_reservoir, scale_weight
+from torsk.models.sparse_esn import SparseESNCell
 
 
 _module_dir = pathlib.Path(__file__).absolute().parent
@@ -14,54 +16,6 @@ _module_dir = pathlib.Path(__file__).absolute().parent
 
 def get_default_params():
     return Params(_module_dir / 'default_esn_params.json')
-
-
-def connection_mask(dim, density, symmetric):
-    """Creates a square mask with a given density of ones"""
-    mask = np.random.uniform(low=0., high=1., size=(dim, dim)) < density
-    if symmetric:
-        triu = np.triu(mask, k=1)
-        tril = np.tril(mask.T)
-        mask = triu + tril
-    return mask
-
-
-def dense_esn_reservoir(dim, spectral_radius, density, symmetric):
-    """Creates a dense square matrix with random non-zero elements according
-    to the density parameter and a given spectral radius.
-
-    Parameters
-    ----------
-    dim : int
-        specifies the dimensions of the square matrix
-    spectral_radius : float
-        largest eigenvalue of the created matrix
-    symmetric : bool
-        defines if the created matrix is symmetrix or not
-
-    Returns
-    -------
-    np.ndarray
-        square reservoir matrix
-    """
-    mask = connection_mask(dim, density, symmetric)
-    res = np.random.normal(loc=0.0, scale=1.0, size=[dim, dim])
-    # res = np.random.uniform(low=-1.0, high=1.0, size=[dim, dim])
-    if symmetric:
-        res = np.triu(res) + np.tril(res.T, k=-1)
-    res *= mask.astype(float)
-    if spectral_radius:
-        eig = np.linalg.eigvals(res)
-        rho = np.abs(eig).max()
-        res = spectral_radius * res / rho
-    return res
-
-
-def _scale_weight(weight, value):
-    """Scales the weight matrix to (-value, value)"""
-    weight *= 2 * value
-    weight -= value
-    return weight
 
 
 class ESNCell(RNNCellBase):
@@ -104,7 +58,7 @@ class ESNCell(RNNCellBase):
         self.hidden_size = hidden_size
 
         in_weight = torch.rand([hidden_size, input_size])
-        in_weight = _scale_weight(in_weight, in_weight_init)
+        in_weight = scale_weight(in_weight, in_weight_init)
         self.in_weight = Parameter(in_weight, requires_grad=False)
 
         res_weight = dense_esn_reservoir(
@@ -114,7 +68,7 @@ class ESNCell(RNNCellBase):
             torch.tensor(res_weight, dtype=torch.float32), requires_grad=False)
 
         in_bias = torch.rand([hidden_size])
-        in_bias = _scale_weight(in_bias, in_bias_init)
+        in_bias = scale_weight(in_bias, in_bias_init)
         self.in_bias = Parameter(torch.Tensor(in_bias), requires_grad=False)
         self.res_bias = self.register_parameter('res_bias', None)
 
@@ -157,7 +111,12 @@ class ESN(nn.Module):
             raise ValueError(
                 "Currently input and output dimensions must be the same.")
 
-        self.esn_cell = ESNCell(
+        if params.reservoir_representation == "dense":
+            esn_cell = ESNCell
+        elif params.reservoir_representation == "sparse":
+            esn_cell = SparseESNCell
+
+        self.esn_cell = esn_cell(
             input_size=params.input_size,
             hidden_size=params.hidden_size,
             spectral_radius=params.spectral_radius,

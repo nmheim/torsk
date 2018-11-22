@@ -6,14 +6,13 @@ from tqdm import tqdm
 
 import torsk
 from torsk.models import ESN
-from torsk.utils import Params
 from torsk.data import MackeyDataset, SeqDataLoader
 from torsk.visualize import plot_mackey
 
 
 sns.set_style("whitegrid")
 
-params = Params("params.json")
+params = torsk.Params("params.json")
 train_length = params.train_length
 pred_length = params.pred_length
 transient_length = params.transient_length

@@ -5,13 +5,12 @@ from tqdm import tqdm
 
 import torsk
 from torsk.models import ESN
-from torsk.utils import Params
 from torsk.visualize import plot_mackey
 from torsk.data import SineDataset, SeqDataLoader
 
 
 # Parameters and model initialization
-params = Params("params.json")
+params = torsk.Params("params.json")
 
 dataset = SineDataset(
     train_length=params.train_length,

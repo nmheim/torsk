@@ -7,8 +7,6 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as tvf
 
-from torsk.data import normalize
-
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 _data_dir = _module_dir / "../../data"
@@ -27,12 +25,31 @@ def _maybe_download(fname):
         print("Done.")
 
 
+def resample(sequence, size):
+    sequence = [tvf.to_pil_image(img[:, :, np.newaxis]) for img in sequence]
+    sequence = [tvf.resize(img, size) for img in sequence]
+    sequence = torch.cat([tvf.to_tensor(img) for img in sequence], dim=0)
+    return sequence
+
+
+def split(sequence, train_length, pred_length):
+    train_end = train_length + 1
+    train_seq = sequence[:train_end]
+    #inputs = torch.Tensor(train_seq[:-1])
+    #labels = torch.Tensor(train_seq[1:])
+    inputs = train_seq[:-1]
+    labels = train_seq[1:]
+    #pred_labels = torch.Tensor(
+    #    sequence[train_end:train_end + pred_length])
+    pred_labels = sequence[train_end:train_end + pred_length]
+    return inputs, labels, pred_labels
+
+
 class NetcdfDataset(Dataset):
     """Loads sea surface height (SSH) from a netCDF file of shape (seq, ydim,
     xdim) and returns chunks of of seq_length of the data.  The created
     inputs/labels sequences are shifted by one timestep so that they can be
-    used to create a one-step-ahead predictor. Inputs/labels are normalized to
-    (0, 1).
+    used to create a one-step-ahead predictor.
 
     Parameters
     ----------
@@ -54,36 +71,43 @@ class NetcdfDataset(Dataset):
     labels : torch.Tensor
         sequence of shape (seq_length, ydim, xdim)
     """
-    def __init__(self, ncpath, seq_length, xslice, yslice, size):
-        # TODO: solve downloading differently...
-        _maybe_download(ncpath)
-        self.seq_length = seq_length
+    def __init__(self, ncpath, train_length, pred_length, xslice, yslice, size=None):
+
+        self.train_length = train_length
+        self.pred_length = pred_length
         self.ncfile = nc.Dataset(ncpath, "r")
         self.data = self.ncfile["SSH"]
-        self.nr_sequences = self.data.shape[0] - self.seq_length
         self.xslice = xslice
         self.yslice = yslice
         self.size = size
 
-        if self.data.shape[0] <= seq_length:
+        self.seq_length = train_length + pred_length
+        self.nr_sequences = self.data.shape[0] - self.seq_length
+
+        if self.data.shape[0] <= self.seq_length:
             raise ValueError("First dimension of 'SSH' variable must be "
-                    "larger than seq_length.")
+                             "larger than seq_length.")
 
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('MackeyDataset index out of range.')
         seq = self.data[
             index:index + self.seq_length + 1, self.yslice, self.xslice]
-        seq = normalize(seq)
+
         ssh, mask = seq.data, seq.mask
         ssh[mask] = 0.
 
-        seq = [tvf.to_pil_image(img[:, :, np.newaxis]) for img in seq]
-        seq = [tvf.resize(img, self.size) for img in seq]
-        seq = torch.cat([tvf.to_tensor(img) for img in seq], dim=0)
+        if self.size is not None:
+            seq = resample(seq, self.size)
+        #print(seq.shape)
+        #seq = np.fft.fft2(seq)
+        #print(seq[0])
         seq = seq.reshape([self.seq_length + 1, -1])
-        inputs, labels = seq[:-1], seq[1:]
-        return torch.Tensor(inputs), torch.Tensor(labels)
+
+        inputs, labels, pred_labels = split(
+            seq, self.train_length, self.pred_length)
+
+        return inputs, labels, pred_labels
 
     def __len__(self):
         return self.nr_sequences
