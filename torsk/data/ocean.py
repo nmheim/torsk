@@ -214,14 +214,21 @@ class FFTNetcdfDataset(Dataset):
         ssh, mask = seq.data, seq.mask
         ssh[mask] = 0.
 
+        ssh = seq[-self.pred_length:].copy()
         seq = fft(seq, self.size)
 
         seq = seq.reshape([self.seq_length + 1, -1])
+        seq = np.hstack([seq.real, seq.imag])
 
         inputs, labels, pred_labels = split(
             seq, self.train_length, self.pred_length)
 
-        return inputs, labels, pred_labels
+        inputs = torch.Tensor(inputs)
+        labels = torch.Tensor(labels)
+        pred_labels = torch.Tensor(pred_labels)
+        ssh = torch.Tensor(ssh)
+
+        return inputs, labels, pred_labels, ssh
 
     def __len__(self):
         return self.nr_sequences

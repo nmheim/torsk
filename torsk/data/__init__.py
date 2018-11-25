@@ -34,11 +34,7 @@ def _custom_collate(batch):
         return torch.transpose(torch.stack(tensor), 0, 1)
     batch = [list(b) for b in zip(*batch)]
     batch = [transpose(b) for b in batch]
-
-    inputs = batch[0]
-    labels = batch[1]
-    pred_labels = batch[2]
-    return inputs, labels, pred_labels
+    return batch
 
 
 class SeqDataLoader(DataLoader):
