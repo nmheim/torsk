@@ -9,7 +9,6 @@ from torsk.models import ESN
 from torsk.data import NetcdfDataset, SeqDataLoader
 from torsk.visualize import animate_double_imshow
 
-
 params = torsk.Params("params.json")
 print(params)
 
