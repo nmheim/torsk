@@ -1,4 +1,3 @@
-import pathlib
 import numpy as np
 from scipy import sparse
 from scipy.stats import uniform
@@ -68,14 +67,14 @@ def sparse_esn_reservoir(dim, spectral_radius, density, symmetric):
     matrix = matrix.tocsr()
     if symmetric:
         matrix = sparse.triu(matrix)
-        tril   = sparse.tril(matrix.transpose(), k=-1)
+        tril = sparse.tril(matrix.transpose(), k=-1)
         matrix = matrix + tril
         # calc eigenvalues with scipy's lanczos implementation:
         eig, _ = sparse.linalg.eigsh(matrix, k=2, tol=1e-4)
     else:
         eig, _ = sparse.linalg.eigs(matrix, k=2, tol=1e-4)
 
-    rho     = np.abs(eig).max()
-    matrix  = matrix.multiply(1./rho)
-    matrix  = matrix.multiply(spectral_radius)
+    rho = np.abs(eig).max()
+    matrix = matrix.multiply(1. / rho)
+    matrix = matrix.multiply(spectral_radius)
     return matrix

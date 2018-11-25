@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 from torch.nn.parameter import Parameter
 from torch.nn.modules.rnn import RNNCellBase
 
@@ -57,7 +56,7 @@ class SparseESNCell(RNNCellBase):
             spectral_radius=spectral_radius,
             density=density,
             symmetric=False)
-        
+
         matrix = matrix.tocoo()
         indices = torch.LongTensor([matrix.row, matrix.col])
         values = torch.FloatTensor(matrix.data)

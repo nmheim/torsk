@@ -5,8 +5,8 @@ from torsk.data import normalize
 
 
 def _make_sine(periods=30, N=20):
-    dx = 2*np.pi/(N+1);
-    x = np.linspace(0, 2*np.pi-dx, N)
+    dx = 2 * np.pi / (N + 1)
+    x = np.linspace(0, 2 * np.pi - dx, N)
     y = np.sin(x)
     y = np.tile(y, periods)
     return y

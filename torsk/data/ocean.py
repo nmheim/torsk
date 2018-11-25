@@ -77,7 +77,6 @@ def central_pad(sequence, size):
 
     # ypad, xpad = ydif // 2, xdif // 2
     padding = [[0, 0], [ypad_start, ypad_end], [xpad_start, xpad_end]]
-    print(f'Padding {padding}')
     return np.pad(sequence, padding, 'constant')
 
 

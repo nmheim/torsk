@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from torsk import esn
+from torsk.models import esn, utils
 
 
 def test_reservoir_initialization():
@@ -10,12 +10,12 @@ def test_reservoir_initialization():
     spectral_radius = 1.
 
     # connection mask
-    mask = esn.connection_mask(dim, density, symmetric)
+    mask = utils.connection_mask(dim, density, symmetric)
     assert mask.sum() == dim * dim
     assert mask[0, -1] == mask[-1, -1]
 
     # reservoir matrix
-    res = esn.dense_esn_reservoir(dim, spectral_radius, density, symmetric)
+    res = utils.dense_esn_reservoir(dim, spectral_radius, density, symmetric)
     # check if symmteric
     assert np.all(res.T == res)
 
@@ -53,11 +53,8 @@ def test_esn():
     # check default parameters
     params = esn.get_default_params()
     assert params.input_size == 1
-    assert params.hidden_size == 50
+    assert params.hidden_size == 100
     assert params.output_size == 1
-    assert params.spectral_radius == 1.1
-    assert params.in_weight_init == 0.5
-    assert params.density == 1.0
 
     # check model
     lag_len = 3
