@@ -2,6 +2,7 @@ import pathlib
 
 import requests
 import numpy as np
+from scipy.fftpack import dct, idct
 import netCDF4 as nc
 import torch
 from torch.utils.data import Dataset
@@ -79,21 +80,18 @@ def central_pad(sequence, size):
     padding = [[0, 0], [ypad_start, ypad_end], [xpad_start, xpad_end]]
     return np.pad(sequence, padding, 'constant')
 
+def dct_2d(image):
+    return dct(dct(image.T, norm='ortho').T, norm='ortho')
 
-def fft(sequence, size=None, filter=None):
-    sequence = np.fft.fft2(sequence)
-    sequence = np.fft.fftshift(sequence, axes=[1, 2])
-    if size is not None:
-        sequence = central_slice(sequence, size)
-    return sequence
+def idct_2d(coefficient):
+    return idct(idct(coefficient.T, norm='ortho').T, norm='ortho')
 
+def DCT(sequence, size=None, filter=None):
+    return np.array([dct_2d(frame)[:size[0],:size[1]] for frame in sequence]);
 
-def ifft(sequence, size=None):
-    if size is not None:
-        sequence = central_pad(sequence, size)
-    sequence = np.fft.ifftshift(sequence, axes=[1, 2])
-    sequence = np.fft.ifft2(sequence)
-    return sequence
+def iDCT(sequence, size=None):
+    return np.array([ idct_2d(np.pad(frame,[[0,size[0]-frame.shape[0]],[0,size[1]-frame.shape[1]]],'constant'))
+                      for frame in sequence])
 
 
 class NetcdfDataset(Dataset):
@@ -215,10 +213,9 @@ class FFTNetcdfDataset(Dataset):
         ssh[mask] = 0.
 
         ssh = seq[-self.pred_length:].copy()
-        seq = fft(seq, self.size)
+        seq = DCT(seq, self.size)
 
         seq = seq.reshape([self.seq_length + 1, -1])
-        seq = np.hstack([seq.real, seq.imag])
 
         inputs, labels, pred_labels = split(
             seq, self.train_length, self.pred_length)
