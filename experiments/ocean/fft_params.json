@@ -1,16 +1,16 @@
 {
-  "input_size": 450,
-  "hidden_size": 4000,
-  "output_size": 450,
+  "input_size": 4096,
+  "hidden_size": 18000,
+  "output_size": 4096,
 
   "reservoir_representation": "sparse",
   "spectral_radius" : 2.0,
   "in_weight_init" : 1.00,
   "in_bias_init": 1.00,
-  "density": 1e-3,
+  "density": 2e-3,
 
   "train_length": 800,
-  "pred_length": 300,
+  "pred_length": 600,
   "transient_length": 100,
   "train_method": "pinv",
   "tikhonov_beta": null

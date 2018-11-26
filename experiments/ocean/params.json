@@ -1,6 +1,6 @@
 {
   "input_size": 900,
-  "hidden_size": 10000,
+  "hidden_size": 12000,
   "output_size": 900,
 
   "reservoir_representation": "sparse",
