@@ -3,6 +3,7 @@ import click
 from torsk.scripts import defaults
 from torsk.scripts import scale
 from torsk.scripts import animate
+from torsk.scripts import ncextract
 
 
 @click.group('torsk')
@@ -14,6 +15,7 @@ def cli():
 cli.add_command(defaults.cli)
 cli.add_command(scale.cli)
 cli.add_command(animate.cli)
+cli.add_command(ncextract.cli)
 
 
 if __name__ == "__main__":
