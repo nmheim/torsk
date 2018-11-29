@@ -15,7 +15,7 @@ def test_mackey():
     dataset = MackeyDataset(100, 100, 300)
     assert len(dataset) == 100
 
-    inputs, labels, pred_labels = dataset[0]
+    inputs, labels, pred_labels, _ = dataset[0]
     assert inputs.shape == (100, 1)
     assert labels.shape == (100, 1)
     assert pred_labels.shape == (100, 1)
