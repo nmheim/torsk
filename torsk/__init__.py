@@ -1,5 +1,9 @@
 import json
+import logging
 import torch
+
+
+logger = logging.getLogger(__file__)
 
 
 class Params():
@@ -41,23 +45,26 @@ def mse(predictions, labels):
 
 
 def train_predict_esn(model, loader, params):
+    model.eval()  # because we are not using gradients
     tlen = params.transient_length
 
-    inputs, labels, pred_labels = next(loader)
+    inputs, labels, pred_labels, orig_data = next(loader)
 
+    logger.debug(f"Creating {inputs.size(0)} training states")
     zero_state = torch.zeros(1, params.hidden_size)
-    _, states = model(inputs, zero_state)
+    _, states = model(inputs, zero_state, states_only=True)
 
-    model.train(
+    logger.debug("Optimizing output weights")
+    model.optimize(
         inputs=inputs[tlen:],
         states=states[tlen:],
         labels=labels[tlen:],
         method=params.train_method,
         beta=params.tikhonov_beta)
 
-    # predict
-    init_inputs = inputs[-1].unsqueeze(0)
-    outputs, _ = model(
+    logger.debug(f"Predicting the next {params.pred_length} frames")
+    init_inputs = inputs[-1]
+    outputs, _ = model.predict(
         init_inputs, states[-1], nr_predictions=params.pred_length - 1)
 
-    return model, outputs, pred_labels
+    return model, outputs, pred_labels, orig_data
