@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from torsk.data import normalize
+from torsk.data.utils import normalize
 
 
 def _simulate_mackey(b=None, N=3000):

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torsk.data import normalize
+from torsk.data.utils import normalize
 
 
 def _make_sine(periods=30, N=20):

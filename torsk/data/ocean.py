@@ -6,7 +6,8 @@ import netCDF4 as nc
 import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as tvf
-from scipy.fftpack import dct, idct
+
+from torsk.data.utils import dct2
 
 
 _module_dir = pathlib.Path(__file__).absolute().parent
@@ -81,54 +82,6 @@ def central_pad(sequence, size):
     return np.pad(sequence, padding, 'constant')
 
 
-def _dct_2d(image):
-    return dct(dct(image.T, norm='ortho').T, norm='ortho')
-
-
-def _idct_2d(coefficient):
-    return idct(idct(coefficient.T, norm='ortho').T, norm='ortho')
-
-
-def dct2(sequence, size):
-    """Discrete Cosine Transform of a sequence of 2D images.
-
-    Params
-    ------
-    sequence : ndarray
-        with shape (time, ydim, xdim)
-    size : (ysize, xsize)
-        determines how many DCT coefficents are kept
-
-    Returns
-    -------
-    ndarray
-        DCT coefficients with shape (time, ysize, xsize)
-    """
-    return np.array([_dct_2d(frame)[:size[0], :size[1]] for frame in sequence])
-
-
-def idct2(sequence, size):
-    """Inverse Discrete Cosine Transform of a sequence of 2D images.
-
-    Params
-    ------
-    sequence : ndarray
-        with shape (time, ydim, xdim)
-    size : (ysize, xsize)
-        Pads the sequence with (nsize - ndim) zeros before calculating the
-        inverse transform. Must be larger than sequence.shape[1:]
-
-    Returns
-    -------
-    ndarray
-        DCT coefficients with shape (time, ysize, xsize)
-    """
-    ydim, xdim = sequence.shape[1:]
-    padding = [[0, size[0] - ydim], [0, size[1] - xdim]]
-    iseq = [_idct_2d(np.pad(frame, padding, 'constant')) for frame in sequence]
-    return np.array(iseq)
-
-
 class NetcdfDataset(Dataset):
     """Loads sea surface height (SSH) from a netCDF file of shape (seq, ydim,
     xdim) and returns chunks of of seq_length of the data.  The created
@@ -188,7 +141,7 @@ class NetcdfDataset(Dataset):
         inputs, labels, pred_labels = split(
             seq, self.train_length, self.pred_length)
 
-        return inputs, labels, pred_labels
+        return inputs, labels, pred_labels, torch.Tensor([[0]])
 
     def __len__(self):
         return self.nr_sequences

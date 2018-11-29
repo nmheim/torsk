@@ -19,7 +19,7 @@ def test_nc_dataset(tmpdir):
         xslice=slice(0, 10), yslice=slice(0, 10),
         size=[10, 10])
 
-    inputs, labels, pred_labels = dataset[0]
+    inputs, labels, pred_labels, _ = dataset[0]
 
     assert inputs.shape == (30, 100)
     assert labels.shape == (30, 100)
