@@ -7,7 +7,7 @@ from torchvision import transforms
 
 import torsk
 from torsk.models import ESN
-from torsk.data import DCTNetcdfDataset, SeqDataLoader
+from torsk.data import DCTCircleDataset, SeqDataLoader
 from torsk.data.utils import idct2
 from torsk.visualize import animate_double_imshow
 
@@ -15,25 +15,23 @@ from torsk.visualize import animate_double_imshow
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG)
 
-#region = [[90,190],[90,190]];
-#region = [[200,300],[100,200]];
-region = [[0,300],[0,200]]
-Nfrq = 110
-params = torsk.Params("fft_params.json")
+Nfrq = 20
+params = torsk.Params("dct_params.json")
 params.input_size  = Nfrq**2
 params.output_size = Nfrq**2 
 
 logger.info(params)
 
 logger.info("Loading + resampling of kuro window ...")
-ncpath = pathlib.Path('../../data/ocean/kuro_SSH_3daymean_scaled.nc')
-dataset = DCTNetcdfDataset(
-    ncpath,
-    params.train_length,
-    params.pred_length,
-    xslice=slice(region[0][0], region[0][1]),
-    yslice=slice(region[1][0], region[1][1]),
-    size=[Nfrq, Nfrq])
+x = np.sin(np.arange(0, 200*np.pi, 0.1))
+y = np.cos(0.5 * np.arange(0, 200*np.pi, 0.1))
+center = np.array([y, x]).T
+sigma = 0.2
+
+dataset = DCTCircleDataset(
+    params.train_length, params.pred_length,
+    center=center, sigma=sigma, size=[100, 100], resize=[Nfrq, Nfrq])
+
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
 logger.info("Building model ...")
