@@ -65,16 +65,16 @@ def test_esn():
     state = torch.rand([batch_size, params.hidden_size])
 
     # test _forward_states_only
-    outputs, states = model(inputs, state, nr_predictions=0)
-    assert outputs is None
+    outputs, states = model(inputs, state, states_only=False)
+    assert outputs.size() == (lag_len, batch_size, params.output_size)
     assert states.size() == (lag_len, batch_size, params.hidden_size)
 
     # test train
     wout = model.out.weight.detach().numpy()
-    model.train(inputs=inputs, states=states, labels=labels)
+    model.optimize(inputs=inputs, states=states, labels=labels)
     assert not np.any(wout == model.out.weight.detach().numpy())
 
     # test _forward
-    outputs, states = model(inputs, state, nr_predictions=2)
-    assert states is None
-    assert outputs.size() == (lag_len + 2, batch_size, params.output_size)
+    outputs, states = model.predict(inputs[-1], state, nr_predictions=2)
+    assert states.size() == (2, batch_size, params.hidden_size)
+    assert outputs.size() == (2, batch_size, params.output_size)

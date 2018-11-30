@@ -7,7 +7,7 @@ from torchvision import transforms
 
 import torsk
 from torsk.models import ESN
-from torsk.data import NetcdfDataset, SeqDataLoader
+from torsk.data import CircleDataset, SeqDataLoader
 from torsk.visualize import animate_double_imshow
 
 
@@ -21,10 +21,18 @@ params.input_size  = Nx*Ny
 params.output_size = Nx*Ny
 logger.info(params)
 
-logger.info("Loading + resampling of kuro window ...")
-ncpath = pathlib.Path('../../data/ocean/kuro_SSH_3daymean_scaled.nc')
-dataset = NetcdfDataset(ncpath, params.train_length, params.pred_length,
-    xslice=slice(90, 190), yslice=slice(90, 190), size=[Nx, Ny])
+logger.info("Creating circle dataset")
+
+x = np.sin(np.arange(0, 200*np.pi, 0.1))
+y = np.cos(np.arange(0, 200*np.pi, 0.1))
+center = np.array([y, x]).T
+sigma = 0.4
+
+
+dataset = CircleDataset(
+    params.train_length, params.pred_length,
+    center=center, sigma=sigma, size=[Ny, Nx])
+
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
 logger.info("Building model ...")

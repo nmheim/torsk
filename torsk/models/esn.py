@@ -17,6 +17,27 @@ def get_default_params():
     return Params(_module_dir / 'default_esn_params.json')
 
 
+def _extended_states(inputs, states):
+    ones = torch.ones([inputs.size(0), 1])
+    return torch.cat([ones, inputs, states], dim=1).t()
+
+
+def pseudo_inverse(inputs, states, labels):
+    X = _extended_states(inputs, states)
+    pinv = torch.pinverse(X)
+    wout = torch.mm(labels.t(), pinv)
+    return wout
+
+
+def tikhonov(inputs, states, labels, beta):
+    X = _extended_states(inputs, states)
+    XT = X.t()
+    XXT = torch.mm(X, XT)
+    inv = torch.inverse(XXT + beta * torch.eye(XXT.size(0)))
+    wout = torch.mm(labels.t(), torch.mm(XT, inv))
+    return wout
+
+
 class ESNCell(RNNCellBase):
     """An Echo State Network (ESN) cell.
 
@@ -130,13 +151,13 @@ class ESN(nn.Module):
 
         self.ones = torch.ones([1, 1])
 
-    def forward(self, inputs, state, nr_predictions=0):
+    def forward(self, inputs, state, states_only=True):
         if inputs.size(1) != 1:
             raise ValueError("Supports only batch size of one -.-")
-        if nr_predictions == 0:
+        if states_only:
             return self._forward_states_only(inputs, state)
         else:
-            return self._forward(inputs, state, nr_predictions)
+            return self._forward(inputs, state)
 
     def _forward_states_only(self, inputs, state):
         states = []
@@ -145,22 +166,32 @@ class ESN(nn.Module):
             states.append(state)
         return None, torch.stack(states, dim=0)
 
-    def _forward(self, inputs, state, nr_predictions):
-        outputs = []
+    def _forward(self, inputs, state):
+        outputs, states = [], []
         for inp in inputs:
             state = self.esn_cell(inp, state)
             ext_state = torch.cat([self.ones, inp, state], dim=1)
             output = self.out(ext_state)
             outputs.append(output)
+            states.append(state)
+        return torch.stack(outputs, dim=0), torch.stack(states, dim=0)
+
+    def predict(self, initial_inputs, initial_state, nr_predictions):
+        inp = initial_inputs
+        state = initial_state
+        outputs, states = [], []
+
         for ii in range(nr_predictions):
-            inp = output
             state = self.esn_cell(inp, state)
             ext_state = torch.cat([self.ones, inp, state], dim=1)
             output = self.out(ext_state)
-            outputs.append(output)
-        return torch.stack(outputs, dim=0), None
+            inp = output
 
-    def train(self, inputs, states, labels, method='pinv', beta=None):
+            outputs.append(output)
+            states.append(state)
+        return torch.stack(outputs, dim=0), torch.stack(states, dim=0)
+
+    def optimize(self, inputs, states, labels, method='pinv', beta=None):
         """Train the output layer.
 
         Parameters
@@ -194,24 +225,3 @@ class ESN(nn.Module):
 
         assert wout.size() == self.out.weight.size()
         self.out.weight = Parameter(wout, requires_grad=False)
-
-
-def _extended_states(inputs, states):
-    ones = torch.ones([inputs.size(0), 1])
-    return torch.cat([ones, inputs, states], dim=1).t()
-
-
-def pseudo_inverse(inputs, states, labels):
-    X = _extended_states(inputs, states)
-    pinv = torch.pinverse(X)
-    wout = torch.mm(labels.t(), pinv)
-    return wout
-
-
-def tikhonov(inputs, states, labels, beta):
-    X = _extended_states(inputs, states)
-    XT = X.t()
-    XXT = torch.mm(X, XT)
-    inv = torch.inverse(XXT + beta * torch.eye(XXT.size(0)))
-    wout = torch.mm(labels.t(), torch.mm(XT, inv))
-    return wout

@@ -2,11 +2,12 @@ import pathlib
 
 import requests
 import numpy as np
-from scipy.fftpack import dct, idct
 import netCDF4 as nc
 import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as tvf
+
+from torsk.data.utils import dct2
 
 
 _module_dir = pathlib.Path(__file__).absolute().parent
@@ -80,19 +81,6 @@ def central_pad(sequence, size):
     padding = [[0, 0], [ypad_start, ypad_end], [xpad_start, xpad_end]]
     return np.pad(sequence, padding, 'constant')
 
-def dct_2d(image):
-    return dct(dct(image.T, norm='ortho').T, norm='ortho')
-
-def idct_2d(coefficient):
-    return idct(idct(coefficient.T, norm='ortho').T, norm='ortho')
-
-def DCT(sequence, size=None, filter=None):
-    return np.array([dct_2d(frame)[:size[0],:size[1]] for frame in sequence]);
-
-def iDCT(sequence, size=None):
-    return np.array([ idct_2d(np.pad(frame,[[0,size[0]-frame.shape[0]],[0,size[1]-frame.shape[1]]],'constant'))
-                      for frame in sequence])
-
 
 class NetcdfDataset(Dataset):
     """Loads sea surface height (SSH) from a netCDF file of shape (seq, ydim,
@@ -153,15 +141,15 @@ class NetcdfDataset(Dataset):
         inputs, labels, pred_labels = split(
             seq, self.train_length, self.pred_length)
 
-        return inputs, labels, pred_labels
+        return inputs, labels, pred_labels, torch.Tensor([[0]])
 
     def __len__(self):
         return self.nr_sequences
 
 
-class FFTNetcdfDataset(Dataset):
+class DCTNetcdfDataset(Dataset):
     """Loads sea surface height (SSH) from a netCDF file of shape (seq, ydim,
-    xdim) and returns chunks the spatial FFT of seq_length of the data.  The
+    xdim) and returns chunks the spatial DCT of seq_length of the data.  The
     created inputs/labels sequences are shifted by one timestep so that they
     can be used to create a one-step-ahead predictor.
 
@@ -176,7 +164,7 @@ class FFTNetcdfDataset(Dataset):
     yslice : slice
         slice of the y-dimension to read from the SSH variable
     size : tuple
-        (h, w) tuple that defines the centered rectangle of kept FFT
+        (h, w) tuple that defines the centered rectangle of kept DCT
         coefficients
 
     Returns
@@ -213,7 +201,7 @@ class FFTNetcdfDataset(Dataset):
         ssh[mask] = 0.
 
         ssh = seq[-self.pred_length:].copy()
-        seq = DCT(seq, self.size)
+        seq = dct2(seq, self.size)
 
         seq = seq.reshape([self.seq_length + 1, -1])
 

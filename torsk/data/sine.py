@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torsk.data import normalize
+from torsk.data.utils import normalize
 
 
 def _make_sine(periods=30, N=20):
@@ -55,7 +55,7 @@ class SineDataset(Dataset):
         labels = torch.Tensor(train_seq[1:])
         pred_labels = torch.Tensor(
             self.seq[train_end:train_end + self.pred_length])
-        return inputs, labels, pred_labels
+        return inputs, labels, pred_labels, torch.Tensor([[0]])
 
     def __len__(self):
         return self.nr_sequences
