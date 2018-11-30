@@ -64,15 +64,18 @@ full_mask_plus = morf.binary_dilation(full_mask,selem=morf.disk(3));
 def smooth_mask(frame):
     
     (ny,nx) = frame.shape;
-    mask_data=frame.copy();
+    mask_data=frame.data.copy();
     
     for i in range(ny):
         f  = np.ma.masked_array(mask_data[i].copy(),mask=np.logical_not(edges[i]));#full_mask[i]);
         mean = np.mean(f);
         if(np.all(f.mask)):
             mean = np.mean(frame);
-        f[0]  = mean;
-        f[-1] = mean;
+        if(f.mask[0]):
+            f[0]  = mean;
+        if(f.mask[-1]):
+            f[-1] = mean;
+
         xs = np.nonzero(f)[0];
         fi = sp.interpolate.interp1d(xs,f.compressed(),kind='linear');
     
@@ -84,8 +87,10 @@ def smooth_mask(frame):
         mean = np.mean(f);
         if(np.all(f.mask)):
             mean = np.mean(frame);
-        f[0]  = mean;
-        f[-1] = mean;
+        if(f.mask[0]):
+            f[0]  = mean;
+        if(f.mask[-1]):
+            f[-1] = mean;
         xs = np.nonzero(f)[0];
         fi = sp.interpolate.interp1d(xs,f.compressed(),kind='linear');
     
@@ -139,6 +144,6 @@ chunk = np.empty((chunk_size,nk1,nk2));
 for start in range(0,ntime,chunk_size):
     end = min(start+chunk_size,ntime);
     print(start,":",end);
-    chunk[:end-start] = Parallel(n_jobs=num_cores)(delayed(smooth_mask_and_dct)(in_ssh[i]) for i in range(start,end));
+    chunk[:end-start] = Parallel(n_jobs=num_cores)(delayed(smooth_mask_and_isct)(in_ssh[i],basis1,basis2) for i in range(start,end));
     out_ssh_dct[start:end] = chunk[:end-start];
 
