@@ -119,13 +119,13 @@ def sct(fk,basis):
     return fx;
 
 def isct2(Fxx,basis1, basis2):
-    Fkx = isct(Fxx.T,basis1);
-    Fkk = isct(Fkx.T,basis2);
+    Fkx = isct(Fxx.T,basis2);
+    Fkk = isct(Fkx.T,basis1);
     return Fkk
 
 def sct2(Fxx,basis1, basis2):
-    Fkx = sct(Fxx.T,basis2);
-    Fxx = sct(Fkx.T,basis1);
+    Fkx = sct(Fxx.T,basis1);
+    Fxx = sct(Fkx.T,basis2);
     return Fxx
 
 def smooth_mask_and_dct(frame):
