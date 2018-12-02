@@ -63,8 +63,8 @@ def train_predict_esn(model, loader, params):
         beta=params.tikhonov_beta)
 
     logger.debug(f"Predicting the next {params.pred_length} frames")
-    init_inputs = inputs[-1]
+    init_inputs = labels[-1]
     outputs, _ = model.predict(
-        init_inputs, states[-1], nr_predictions=params.pred_length - 1)
+        init_inputs, states[-1], nr_predictions=params.pred_length)
 
     return model, outputs, pred_labels, orig_data
