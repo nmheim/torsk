@@ -1,4 +1,5 @@
 import pathlib
+import logging
 
 import torch
 import torch.nn as nn
@@ -11,6 +12,7 @@ from torsk.models.sparse_esn import SparseESNCell
 
 
 _module_dir = pathlib.Path(__file__).absolute().parent
+logger = logging.getLogger(__file__)
 
 
 def get_default_params():
@@ -216,8 +218,8 @@ class ESN(nn.Module):
 
         elif method == 'pinv':
             if beta is not None:
-                print('With pseudo inverse training the '
-                      'beta parameter has no effect.')
+                logger.debug('With pseudo inverse training the '
+                             'beta parameter has no effect.')
             wout = pseudo_inverse(inputs, states, labels)
 
         else:

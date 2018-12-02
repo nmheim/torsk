@@ -1,3 +1,4 @@
+import logging
 import pathlib
 
 import requests
@@ -12,6 +13,7 @@ from torsk.data.utils import dct2, split_train_label_pred
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 _data_dir = _module_dir / "../../data"
+logger = logging.getLogger(__file__)
 
 
 def _maybe_download(fname):
@@ -19,12 +21,12 @@ def _maybe_download(fname):
         dirname = fname.parent
         if not dirname.exists():
             dirname.mkdir(parents=True)
-        print(f"Downloading SSH data to {fname} ...")
+        logging.info(f"Downloading SSH data to {fname} ...")
         kuro_url = "https://sid.erda.dk/share_redirect/d9pMpC1tUM"
         res = requests.get(kuro_url)
         with open(fname, "wb") as fi:
             fi.write(res.content)
-        print("Done.")
+        logging.info("Done.")
 
 
 def resample(sequence, size):
