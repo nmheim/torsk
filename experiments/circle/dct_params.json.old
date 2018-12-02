@@ -1,6 +1,6 @@
 {
   "input_size": 4096,
-  "hidden_size": 4000,
+  "hidden_size": 6000,
   "output_size": 4096,
 
   "reservoir_representation": "sparse",

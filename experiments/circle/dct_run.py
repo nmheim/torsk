@@ -14,42 +14,58 @@ from torsk.visualize import animate_double_imshow
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("matplotlib").setLevel(logging.INFO)
 
-Nfrq = 20
-params = torsk.Params("dct_params.json")
+
+params = torsk.Params("params.json")
+Nfrq = 10
 params.input_size  = Nfrq**2
 params.output_size = Nfrq**2 
 
+params.train_length = 1500
+params.pred_length = 600
+
+params.train_method = "tikhonov"
+params.tikhonov_beta = 5
+
 logger.info(params)
 
-logger.info("Loading + resampling of kuro window ...")
+
+logger.info("Loading + resampling of input data ...")
 x = np.sin(np.arange(0, 200*np.pi, 0.1))
-y = np.cos(0.5 * np.arange(0, 200*np.pi, 0.1))
+y = np.cos(0.25 * np.arange(0, 200*np.pi, 0.1))
 center = np.array([y, x]).T
 sigma = 0.2
 
 dataset = DCTCircleDataset(
     params.train_length, params.pred_length,
-    center=center, sigma=sigma, size=[100, 100], resize=[Nfrq, Nfrq])
-
+    center=center, sigma=sigma, size=[20, 20], resize=[Nfrq, Nfrq])
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
+
 
 logger.info("Building model ...")
 model = ESN(params)
 
+
 logger.info("Training + predicting ...")
 model, outputs, pred_labels, ssh = torsk.train_predict_esn(model, loader, params)
 
-ssh = torch.squeeze(ssh)
+
+logger.info("Visualizing results ...")
+ssh = torch.squeeze(ssh).numpy()
 weight = model.esn_cell.res_weight._values().numpy()
 
-# hist, bins = np.histogram(weight, bins=100)
-# plt.plot(bins[1:], hist)
-# plt.show()
-
-outputs = outputs.numpy().reshape([-1, Nfrq, Nfrq])
-
-outputs = idct2(outputs, size=ssh.shape[1:])
-anim = animate_double_imshow(ssh, outputs.real)
+hist, bins = np.histogram(weight, bins=100)
+plt.plot(bins[1:], hist)
 plt.show()
 
+outputs = outputs.numpy().reshape([-1, Nfrq, Nfrq])
+outputs = idct2(outputs, size=ssh.shape[1:])
+
+y, x = 10, 10
+plt.plot(ssh[:, y, x])
+plt.plot(outputs[:, y, x])
+plt.show()
+
+anim = animate_double_imshow(ssh, outputs.real)
+plt.show()

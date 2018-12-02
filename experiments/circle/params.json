@@ -12,6 +12,6 @@
   "train_length": 800,
   "pred_length": 300,
   "transient_length": 100,
-  "train_method": "pinv",
-  "tikhonov_beta": null
+  "train_method": "tikhonov",
+  "tikhonov_beta": 5
 }
