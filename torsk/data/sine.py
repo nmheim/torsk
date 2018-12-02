@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torsk.data.utils import normalize
+from torsk.data.utils import normalize, split_train_label_pred
 
 
 def _make_sine(periods=30, N=20):
@@ -49,12 +49,12 @@ class SineDataset(Dataset):
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('MackeyDataset index out of range.')
-        train_end = index + self.train_length + 1
-        train_seq = self.seq[index:train_end]
-        inputs = torch.Tensor(train_seq[:-1])
-        labels = torch.Tensor(train_seq[1:])
-        pred_labels = torch.Tensor(
-            self.seq[train_end:train_end + self.pred_length])
+        sub_seq = self.seq[index:index + self.train_length + self.pred_length + 1]
+        inputs, labels, pred_labels = split_train_label_pred(
+            sub_seq, self.train_length, self.pred_length)
+        inputs = torch.Tensor(inputs)
+        labels = torch.Tensor(labels)
+        pred_labels = torch.Tensor(pred_labels)
         return inputs, labels, pred_labels, torch.Tensor([[0]])
 
     def __len__(self):

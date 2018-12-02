@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as tvf
 
-from torsk.data.utils import dct2
+from torsk.data.utils import dct2, split_train_label_pred
 
 
 _module_dir = pathlib.Path(__file__).absolute().parent
@@ -32,15 +32,6 @@ def resample(sequence, size):
     sequence = [tvf.resize(img, size) for img in sequence]
     sequence = torch.cat([tvf.to_tensor(img) for img in sequence], dim=0)
     return sequence
-
-
-def split(sequence, train_length, pred_length):
-    train_end = train_length + 1
-    train_seq = sequence[:train_end]
-    inputs = train_seq[:-1]
-    labels = train_seq[1:]
-    pred_labels = sequence[train_end:train_end + pred_length]
-    return inputs, labels, pred_labels
 
 
 def central_slice(sequence, size):
@@ -138,7 +129,7 @@ class NetcdfDataset(Dataset):
             seq = resample(seq, self.size)
         seq = seq.reshape([self.seq_length + 1, -1])
 
-        inputs, labels, pred_labels = split(
+        inputs, labels, pred_labels = split_train_label_pred(
             seq, self.train_length, self.pred_length)
 
         return inputs, labels, pred_labels, torch.Tensor([[0]])
@@ -205,7 +196,7 @@ class DCTNetcdfDataset(Dataset):
 
         seq = seq.reshape([self.seq_length + 1, -1])
 
-        inputs, labels, pred_labels = split(
+        inputs, labels, pred_labels = split_train_label_pred(
             seq, self.train_length, self.pred_length)
 
         inputs = torch.Tensor(inputs)

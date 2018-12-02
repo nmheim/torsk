@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torsk.data.utils import normalize, dct2
+from torsk.data.utils import normalize, dct2, split_train_label_pred
 
 
 def gauss2d(center, sigma, size, borders=[[-2, 2], [-2, 2]]):
@@ -28,12 +28,12 @@ class CircleDataset(Dataset):
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('MackeyDataset index out of range.')
-        train_end = index + self.train_length + 1
-        train_seq = self.seq[index:train_end]
-        inputs = torch.Tensor(train_seq[:-1])
-        labels = torch.Tensor(train_seq[1:])
-        pred_labels = torch.Tensor(
-            self.seq[train_end:train_end + self.pred_length])
+        sub_seq = self.seq[index:index + self.train_length + self.pred_length + 1]
+        inputs, labels, pred_labels = split_train_label_pred(
+            sub_seq, self.train_length, self.pred_length)
+        inputs = torch.Tensor(inputs)
+        labels = torch.Tensor(labels)
+        pred_labels = torch.Tensor(pred_labels)
         return inputs, labels, pred_labels, torch.Tensor([[0]])
 
     def __len__(self):
@@ -57,13 +57,19 @@ class DCTCircleDataset(Dataset):
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('MackeyDataset index out of range.')
-        train_end = index + self.train_length + 1
-        train_seq = self.dct[index:train_end]
-        inputs = torch.Tensor(train_seq[:-1])
-        labels = torch.Tensor(train_seq[1:])
-        pred_labels = torch.Tensor(
-            self.dct[train_end:train_end + self.pred_length])
-        return inputs, labels, pred_labels, torch.Tensor(self.seq[-self.pred_length:])
+        sub_seq = self.seq[index:index + self.train_length + self.pred_length + 1]
+        sub_dct = self.dct[index:index + self.train_length + self.pred_length + 1]
+
+        inputs, labels, pred_labels = split_train_label_pred(
+            sub_dct, self.train_length, self.pred_length)
+        _, _, real_labels = split_train_label_pred(
+            sub_seq, self.train_length, self.pred_length)
+
+        inputs = torch.Tensor(inputs)
+        labels = torch.Tensor(labels)
+        pred_labels = torch.Tensor(pred_labels)
+        real_labels = torch.Tensor(real_labels)
+        return inputs, labels, pred_labels, real_labels
 
     def __len__(self):
         return self.nr_sequences
