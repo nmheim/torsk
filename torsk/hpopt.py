@@ -6,7 +6,7 @@ from tqdm import tqdm
 from torsk.models import ESN
 
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def _tikhonov_optimize(tikhonov_betas, model, params, inputs, states, labels, pred_labels):
@@ -68,7 +68,7 @@ def esn_tikhonov_fitnessfunc(loader, params, dimensions, tikhonov_betas, nr_avg_
             model = ESN(params)
     
             # create states
-            # model.eval()  # because we are not using gradients
+            model.eval()  # because we are not using gradients
             inputs, labels, pred_labels, orig_data = next(loader)
             zero_state = torch.zeros(1, params.hidden_size)
             _, states = model(inputs, zero_state, states_only=True)

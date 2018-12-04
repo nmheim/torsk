@@ -13,7 +13,7 @@ from torsk.data.utils import dct2, split_train_label_pred
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 _data_dir = _module_dir / "../../data"
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def _maybe_download(fname):

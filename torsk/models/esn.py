@@ -12,7 +12,7 @@ from torsk.models.sparse_esn import SparseESNCell
 
 
 _module_dir = pathlib.Path(__file__).absolute().parent
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def get_default_params():

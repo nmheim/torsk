@@ -3,7 +3,7 @@ import logging
 import torch
 
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 class Params():
