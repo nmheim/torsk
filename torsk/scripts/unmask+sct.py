@@ -138,7 +138,7 @@ def smooth_mask_and_isct(frame,basis1,basis2):
     Fkk = isct2(Fxx,basis1,basis2);
     Fxx_min, Fxx_max = np.amin(Fxx), np.amax(Fxx);
     Fkk_min, Fkk_max = np.amin(Fkk), np.amax(Fkk);    
-    return Fkk, np.array(Fxx_min,Fxx_max,Fkk_min,Fkk_max);
+    return Fkk, np.array([Fxx_min,Fxx_max,Fkk_min,Fkk_max]);
 
 
 basis1 = sct_basis(nlat,nk1);
@@ -146,7 +146,7 @@ basis2 = sct_basis(nlon,nk2);
 
 
 Fxx_min, Fkk_min = np.Inf, np.Inf;
-Fxx_max, fkk_max = -np.Inf, -np.Inf;
+Fxx_max, Fkk_max = -np.Inf, -np.Inf;
 
 
 for start in range(0,ntime,chunk_size):
@@ -160,11 +160,10 @@ for start in range(0,ntime,chunk_size):
     Fxx_max = max(Fxx_max,np.amax(ranges[:,1]))
     Fkk_min = min(Fkk_min,np.amin(ranges[:,2]))
     Fkk_max = max(Fkk_max,np.amax(ranges[:,3]))    
- = Fkks;
 
     out_ssh_dct[start:end] = Fkks[:end-start];
 
-nout.createDimension('Fxx_min',Fxx_min);
-nout.createDimension('Fxx_max',Fxx_max);
-nout.createDimension('Fkk_min',Fkk_min);
-nout.createDimension('Fkk_max',Fkk_max);
+n_ranges = nout.createDimension("n_ranges",4);
+ranges   = nout.createVariable("ranges",np.float,("n_ranges"));
+ranges[:] = [Fxx_min,Fxx_max,Fkk_min,Fkk_max];
+nout.close()
