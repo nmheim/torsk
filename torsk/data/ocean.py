@@ -120,7 +120,7 @@ class NetcdfDataset(Dataset):
 
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
-            raise IndexError('MackeyDataset index out of range.')
+            raise IndexError('Dataset index out of range.')
         seq = self.data[
             index:index + self.seq_length + 1, self.yslice, self.xslice]
 
@@ -186,7 +186,7 @@ class DCTNetcdfDataset(Dataset):
 
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
-            raise IndexError('MackeyDataset index out of range.')
+            raise IndexError('Dataset index out of range.')
         seq = self.data[
             index:index + self.seq_length + 1, self.yslice, self.xslice]
 
@@ -226,3 +226,76 @@ def _read_kuro(xslice, yslice, demask=True):
             array.mask = np.logical_or(array.mask, array.data == -1)
             ssh = array
     return time, ssh
+
+class SCTNetcdfDataset(Dataset):
+    """Loads sea surface height (SSH) from a netCDF file of shape (seq, ydim,
+    xdim) and returns chunks the spatial DCT of seq_length of the data.  The
+    created inputs/labels sequences are shifted by one timestep so that they
+    can be used to create a one-step-ahead predictor.
+
+    Parameters
+    ----------
+    ncpath : pathlib.Path
+        Path to the netCDF file
+    seq_length : int
+        length of the inputs/labels sequences
+    xslice : slice
+        slice of the x-dimension to read from the SSH variable
+    yslice : slice
+        slice of the y-dimension to read from the SSH variable
+    size : tuple
+        (h, w) tuple that defines the centered rectangle of kept DCT
+        coefficients
+
+    Returns
+    -------
+    inputs : torch.Tensor
+        sequence of shape (seq_length, ydim, xdim)
+    labels : torch.Tensor
+        sequence of shape (seq_length, ydim, xdim)
+    """
+    def __init__(self, ncpath, train_length, pred_length):
+
+        self.train_length = train_length
+        self.pred_length = pred_length
+        self.ncfile = nc.Dataset(ncpath, "r")
+        self.data = self.ncfile["SSH_SCT"]
+        self.full_mask = self.ncfile["full_mask"];
+        self.edge_mask = self.ncfile["edge_mask"];
+        self.time      = self.ncfile["time"];
+        self.xdims     = (self.ncfile.dimensions["nlat"].size,self.ncfile.dimensions["nlon"].size);
+        self.kdims     = (self.ncfile.dimensions["nk1"].size, self.ncfile.dimensions["nk2"].size);        
+
+        (nlat,nlon) = self.xdims;
+        (nk1,nk2)   = self.kdims;
+        self.basis1 = sct_basis(nlat,nk1);
+        self.basis2 = sct_basis(nlon,nk2);
+        
+        self.seq_length = train_length + pred_length
+        self.nr_sequences = self.data.shape[0] - self.seq_length
+
+        if self.data.shape[0] <= self.seq_length:
+            raise ValueError("First dimension of 'SSH' variable must be "
+                             "larger than seq_length.")
+
+    def __getitem__(self, index):
+        if (index < 0) or (index >= self.nr_sequences):
+            raise IndexError('Dataset index out of range.')
+
+        seq = self.data[index:index + self.seq_length + 1]
+        seq = seq.reshape([self.seq_length + 1, -1])
+
+        inputs, labels, pred_labels = split_train_label_pred(
+            seq, self.train_length, self.pred_length)
+
+        ssh = sct2(pred_labels,self.basis1,self.basis2)
+        
+        inputs = torch.Tensor(inputs)
+        labels = torch.Tensor(labels)
+        pred_labels = torch.Tensor(pred_labels)
+        ssh = torch.Tensor(ssh)
+
+        return inputs, labels, pred_labels, ssh
+
+    def __len__(self):
+        return self.nr_sequences
