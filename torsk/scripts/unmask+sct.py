@@ -45,6 +45,7 @@ o_nlon = nout.createDimension('nlon',nlon);
 o_nlat = nout.createDimension('nk1',nk1);
 o_nlon = nout.createDimension('nk2',nk2);
 
+
 out_full_mask  = nout.createVariable("full_mask",'u1',("nlat","nlon"));
 out_inner_mask = nout.createVariable("inner_mask",'u1',("nlat","nlon"));
 out_outer_mask = nout.createVariable("outer_mask",'u1',("nlat","nlon"));
@@ -57,7 +58,7 @@ out_inner_mask[:,:] = inner_region[:,:];
 out_edge_mask[:,:]  = edges[:,:];
 
 #out_time[:] = nin["time"][:];
-out_ssh_dct  = nout.createVariable("SSH_DCT",np.float32,("time","nk1","nk2"));
+out_ssh_dct  = nout.createVariable("SSH_SCT",np.float32,("time","nk1","nk2"));
 
 full_mask_plus = morf.binary_dilation(full_mask,selem=morf.disk(3));
 
@@ -133,17 +134,37 @@ def smooth_mask_and_dct(frame):
     return dctn(mask_data,type=1,norm='ortho',overwrite_x=True)[:nk1,:nk2];
 
 def smooth_mask_and_isct(frame,basis1,basis2):
-    unmasked_data = smooth_mask(frame);
-    return isct2(unmasked_data,basis1,basis2);
+    Fxx = smooth_mask(frame);
+    Fkk = isct2(Fxx,basis1,basis2);
+    Fxx_min, Fxx_max = np.amin(Fxx), np.amax(Fxx);
+    Fkk_min, Fkk_max = np.amin(Fkk), np.amax(Fkk);    
+    return Fkk, np.array(Fxx_min,Fxx_max,Fkk_min,Fkk_max);
 
 
 basis1 = sct_basis(nlat,nk1);
 basis2 = sct_basis(nlon,nk2);
 
-chunk = np.empty((chunk_size,nk1,nk2));
+
+Fxx_min, Fkk_min = np.Inf, np.Inf;
+Fxx_max, fkk_max = -np.Inf, -np.Inf;
+
+
 for start in range(0,ntime,chunk_size):
     end = min(start+chunk_size,ntime);
     print(start,":",end);
-    chunk[:end-start] = Parallel(n_jobs=num_cores)(delayed(smooth_mask_and_isct)(in_ssh[i],basis1,basis2) for i in range(start,end));
-    out_ssh_dct[start:end] = chunk[:end-start];
+    chunk  = Parallel(n_jobs=num_cores-1)(delayed(smooth_mask_and_isct)(in_ssh[i],basis1,basis2) for i in range(start,end));
+    Fkks   = np.array([c[0] for c in chunk]);
+    ranges = np.array([c[1] for c in chunk]);
 
+    Fxx_min = min(Fxx_min,np.amin(ranges[:,0]))
+    Fxx_max = max(Fxx_max,np.amax(ranges[:,1]))
+    Fkk_min = min(Fkk_min,np.amin(ranges[:,2]))
+    Fkk_max = max(Fkk_max,np.amax(ranges[:,3]))    
+ = Fkks;
+
+    out_ssh_dct[start:end] = Fkks[:end-start];
+
+nout.createDimension('Fxx_min',Fxx_min);
+nout.createDimension('Fxx_max',Fxx_max);
+nout.createDimension('Fkk_min',Fkk_min);
+nout.createDimension('Fkk_max',Fkk_max);
