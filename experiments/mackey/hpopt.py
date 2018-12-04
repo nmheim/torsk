@@ -1,112 +1,74 @@
 from datetime import datetime
 import pathlib
-import torch
+import logging
+
+import numpy as np
 import skopt
 from skopt.utils import use_named_args
-from skopt.space import Real
+from skopt.space import Real, Integer
 
-from torsk.models import ESN
-from torsk.utils import Params
+import torsk
 from torsk.data import MackeyDataset, SeqDataLoader
-from torsk import train_esn
+from torsk.hpopt import esn_tikhonov_fitnessfunc
 
 
-opt_steps = 100
+logging.basicConfig(level="INFO")
+
+
+opt_steps = 50
+tik_steps = 20
+tik_start = -5
+tik_stop = 2
+tikhonov_betas = np.logspace(tik_start, tik_stop, tik_steps)
+
 output_dir = pathlib.Path("hpopt")
 
 dimensions = [
     Real(low=0.5, high=2.0, name="spectral_radius"),
-    Real(low=0.01, high=2.0, name="in_weight_init"),
-    Real(low=0.01, high=2.0, name="in_bias_init"),
-    Real(low=1e-5, high=1e1, name="tikhonov_beta", prior="log_scale")
+    Real(low=0.0, high=2.0, name="in_weight_init"),
+    Real(low=0.0, high=2.0, name="in_bias_init"),
 ]
 
 starting_params = [
-    1.3,    # esn_spectral_radius
-    0.5,    # in_weight_init
-    0.5,    # in_bias_init
-    1.0,    # tikhonov_beta
+    1.0,    # esn_spectral_radius
+    1.0,    # in_weight_init
+    1.0,    # in_bias_init
 ]
 
-params = Params("hpopt_params.json")
-train_length = params.train_length
-pred_length = params.pred_length
-transient_length = params.transient_length
-
-# input/label setup
+params = torsk.Params("hpopt_params.json")
 dataset = MackeyDataset(
-    train_length=train_length,
-    pred_length=pred_length,
-    simulation_steps=train_length + pred_length + opt_steps * 10)
+    train_length=params.train_length,
+    pred_length=params.pred_length,
+    simulation_steps=params.train_length + params.pred_length + opt_steps * 10)
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
+fitness = esn_tikhonov_fitnessfunc(loader, params, dimensions, tikhonov_betas)
 
-@use_named_args(dimensions=dimensions)
-def fitness(**sampled_params):
+# TODO: add callback that saves checkpoints
+result = skopt.gp_minimize(
+    n_calls=opt_steps,
+    func=fitness,
+    dimensions=dimensions,
+    acq_func="gp_hedge",
+    x0=starting_params,
+    verbose=True)
 
-    params.update(sampled_params)
-    print(f"Current model parameters {params}")
-    model = ESN(params)
+print("\n\nBest parameters:")
+keys = [d.name for d in dimensions]
+for key, val in zip(keys, result.x):
+    print("\t"+key, val)
+print("With loss:", result.fun)
+print("\n")
 
+sorted_results = sorted(zip(result.func_vals, result.x_iters))
+for res in sorted_results:
+    print(res)
 
-    error = []
-    for _ in range(5):
-        train_inputs, train_labels, test_labels = next(loader)
-        state = torch.zeros(1, params.hidden_size)
+if not output_dir.exists():
+    output_dir.mkdir(parents=True)
 
-        _, states = model(train_inputs, state)
-        
-        model.train(
-            inputs=train_inputs[transient_length:, 0],
-            states=states[transient_length:, 0],
-            labels=train_labels[transient_length:, 0],
-            method=params.train_method,
-            beta=params.tikhonov_beta)
-        
-        # predict
-        init_input = train_inputs[-1].unsqueeze(0)
-        outputs, _ = model(
-            init_input, states[-1], nr_predictions=pred_length-1)
-
-        err = (test_labels - outputs)**2
-        error.append(err)
-    metric = torch.mean(torch.cat(error, dim=0))
-    if not torch.isfinite(metric):
-        metric = 1e6
-    else:
-        metric = metric.item()
-
-    return metric
-
-
-if __name__ == "__main__":
-    
-    # TODO: add callback that saves checkpoints
-    result = skopt.gp_minimize(
-        n_calls=opt_steps,
-        func=fitness,
-        dimensions=dimensions,
-        acq_func="gp_hedge",
-        x0=starting_params,
-        verbose=True)
-
-    print("\n\nBest parameters:")
-    keys = [d.name for d in dimensions]
-    for key, val in zip(keys, result.x):
-        print("\t"+key, val)
-    print("With loss:", result.fun)
-    print("\n")
-
-    sorted_results = sorted(zip(result.func_vals, result.x_iters))
-    for res in sorted_results:
-        print(res)
-
-    if not output_dir.exists():
-        output_dir.mkdir(parents=True)
-
-    now = datetime.now().strftime("%Y%m%d-%H%M%S")
-    skopt.dump(
-        result,
-        output_dir.joinpath(f"result_{now}.pkl"),
-        store_objective=False)
-
+now = datetime.now().strftime("%Y%m%d-%H%M%S")
+skopt.dump(
+    result,
+    output_dir.joinpath(f"result_{now}.pkl"),
+    store_objective=False)
