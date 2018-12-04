@@ -8,8 +8,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as tvf
 
-from torsk.data.utils import dct2, split_train_label_pred
-
+from torsk.data import utils
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 _data_dir = _module_dir / "../../data"
@@ -131,7 +130,7 @@ class NetcdfDataset(Dataset):
             seq = resample(seq, self.size)
         seq = seq.reshape([self.seq_length + 1, -1])
 
-        inputs, labels, pred_labels = split_train_label_pred(
+        inputs, labels, pred_labels = utils.split_train_label_pred(
             seq, self.train_length, self.pred_length)
 
         return inputs, labels, pred_labels, torch.Tensor([[0]])
@@ -194,11 +193,11 @@ class DCTNetcdfDataset(Dataset):
         ssh[mask] = 0.
 
         ssh = seq[-self.pred_length:].copy()
-        seq = dct2(seq, self.size)
+        seq = utils.dct2(seq, self.size)
 
         seq = seq.reshape([self.seq_length + 1, -1])
 
-        inputs, labels, pred_labels = split_train_label_pred(
+        inputs, labels, pred_labels = utils.split_train_label_pred(
             seq, self.train_length, self.pred_length)
 
         inputs = torch.Tensor(inputs)
@@ -226,6 +225,7 @@ def _read_kuro(xslice, yslice, demask=True):
             array.mask = np.logical_or(array.mask, array.data == -1)
             ssh = array
     return time, ssh
+
 
 class SCTNetcdfDataset(Dataset):
     """Loads sea surface height (SSH) from a netCDF file of shape (seq, ydim,
@@ -260,17 +260,21 @@ class SCTNetcdfDataset(Dataset):
         self.pred_length = pred_length
         self.ncfile = nc.Dataset(ncpath, "r")
         self.data = self.ncfile["SSH_SCT"]
-        self.full_mask = self.ncfile["full_mask"];
-        self.edge_mask = self.ncfile["edge_mask"];
-        self.time      = self.ncfile["time"];
-        self.xdims     = (self.ncfile.dimensions["nlat"].size,self.ncfile.dimensions["nlon"].size);
-        self.kdims     = (self.ncfile.dimensions["nk1"].size, self.ncfile.dimensions["nk2"].size);        
+        self.full_mask = self.ncfile["full_mask"]
+        self.edge_mask = self.ncfile["edge_mask"]
+        self.time = self.ncfile["time"]
+        self.xdims = (
+            self.ncfile.dimensions["nlat"].size,
+            self.ncfile.dimensions["nlon"].size)
+        self.kdims = (
+            self.ncfile.dimensions["nk1"].size,
+            self.ncfile.dimensions["nk2"].size)
 
-        (nlat,nlon) = self.xdims;
-        (nk1,nk2)   = self.kdims;
-        self.basis1 = sct_basis(nlat,nk1);
-        self.basis2 = sct_basis(nlon,nk2);
-        
+        (nlat, nlon) = self.xdims
+        (nk1, nk2) = self.kdims
+        self.basis1 = utils.sct_basis(nlat, nk1)
+        self.basis2 = utils.sct_basis(nlon, nk2)
+
         self.seq_length = train_length + pred_length
         self.nr_sequences = self.data.shape[0] - self.seq_length
 
@@ -285,11 +289,11 @@ class SCTNetcdfDataset(Dataset):
         seq = self.data[index:index + self.seq_length + 1]
         seq = seq.reshape([self.seq_length + 1, -1])
 
-        inputs, labels, pred_labels = split_train_label_pred(
+        inputs, labels, pred_labels = utils.split_train_label_pred(
             seq, self.train_length, self.pred_length)
 
-        ssh = sct2(pred_labels,self.basis1,self.basis2)
-        
+        ssh = utils.sct2(pred_labels, self.basis1, self.basis2)
+
         inputs = torch.Tensor(inputs)
         labels = torch.Tensor(labels)
         pred_labels = torch.Tensor(pred_labels)

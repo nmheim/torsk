@@ -2,30 +2,36 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from scipy.fftpack import dct, idct
+import scipy as sp
+
 
 # Least-squares approximation to restricted DCT-III / Inverse DCT-II
-def sct_basis(nx,nk):
-    xs = np.arange(nx);
-    ks = np.arange(nk);
-    basis = 2*np.cos(np.pi*(xs[:,None]+0.5)*ks[None,:]/nx);
-    return basis;
+def sct_basis(nx, nk):
+    xs = np.arange(nx)
+    ks = np.arange(nk)
+    basis = 2 * np.cos(np.pi * (xs[:, None] + 0.5) * ks[None, :] / nx)
+    return basis
 
-def isct(fx,basis):  
-    fk,_,_,_ = sp.linalg.lstsq(basis,fx);
-    return fk;
 
-def sct(fk,basis):
-    fx = np.dot(basis,fk)  
-    return fx;
+def isct(fx, basis):
+    fk, _, _, _ = sp.linalg.lstsq(basis, fx)
+    return fk
 
-def isct2(Fxx,basis1, basis2):
-    Fkx = isct(Fxx.T,basis2);
-    Fkk = isct(Fkx.T,basis1);
+
+def sct(fk, basis):
+    fx = np.dot(basis, fk)
+    return fx
+
+
+def isct2(Fxx, basis1, basis2):
+    Fkx = isct(Fxx.T, basis2)
+    Fkk = isct(Fkx.T, basis1)
     return Fkk
 
-def sct2(Fkk,basis1, basis2):
-    Fkx = sct(Fkk.T,basis1);
-    Fxx = sct(Fkx.T,basis2);
+
+def sct2(Fkk, basis1, basis2):
+    Fkx = sct(Fkk.T, basis1)
+    Fxx = sct(Fkx.T, basis2)
     return Fxx
 
 
