@@ -259,17 +259,23 @@ class SCTNetcdfDataset(Dataset):
         self.train_length = train_length
         self.pred_length = pred_length
         self.ncfile = nc.Dataset(ncpath, "r")
-        self.data = self.ncfile["SSH_SCT"]
+        self.data = self.ncfile["SSH_CT"]
         self.full_mask = self.ncfile["full_mask"]
         self.edge_mask = self.ncfile["edge_mask"]
-        self.time = self.ncfile["time"]
+        # TODO: Re-add time to world data
+        self.time = self.ncfile["time"]  
+
+        ranges = self.ncfile["ranges"];
+        self.Fxx_min = ranges[0];
+        self.Fxx_max = ranges[1];
+        self.Fkk_min = ranges[2];
+        self.Fkk_max = ranges[3];
+
+        self.kdims = self.data.shape[1:];
         self.xdims = (
             self.ncfile.dimensions["nlat"].size,
             self.ncfile.dimensions["nlon"].size)
-        self.kdims = (
-            self.ncfile.dimensions["nk1"].size,
-            self.ncfile.dimensions["nk2"].size)
-
+        
         (nlat, nlon) = self.xdims
         (nk1, nk2) = self.kdims
         self.basis1 = utils.sct_basis(nlat, nk1)
@@ -282,11 +288,30 @@ class SCTNetcdfDataset(Dataset):
             raise ValueError("First dimension of 'SSH' variable must be "
                              "larger than seq_length.")
 
+    def scale(Fkk_data):
+        (fmin, fmax) = (self.Fkk_min,self.Fkk_max);
+
+        if(fmin == fmax):
+#            return np.zeros_like(Fkk_data); # Need to store mean to invert, can we just do:
+            return Fkk_data;    # ?
+        else:
+            midpoint = (fmin+fmax)/2;
+            return (Fkk_data - midpoint)/(fmax-fmin);
+
+    def unscale(Fkk_scaled):
+        (fmin, fmax) = (self.Fkk_min,self.Fkk_max);
+        if(fmin == fmax):
+            return Fkk_scaled;  # See above
+        else:
+            midpoint = (fmin+fmax)/2;
+            return Fkk_scaled*(fmax-fmin) + midpoint;
+
+        
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('Dataset index out of range.')
-
-        seq = self.data[index:index + self.seq_length + 1]
+        
+        seq = scale(self.data[index:index + self.seq_length + 1])
         seq = seq.reshape([self.seq_length + 1, -1])
 
         inputs, labels, pred_labels = utils.split_train_label_pred(
@@ -303,3 +328,27 @@ class SCTNetcdfDataset(Dataset):
 
     def __len__(self):
         return self.nr_sequences
+
+    def open_output(self,output_path):
+        nout = Dataset(output_path,"w");
+
+        o_time = nout.createDimension('time',self.data.shape[0]);
+        o_nlat = nout.createDimension('nlat',self.xdims[0]);
+        o_nlon = nout.createDimension('nlon',self.xdims[1]);
+        o_nlat = nout.createDimension('nk1',self.kdims[0]);
+        o_nlon = nout.createDimension('nk2',self.kdims[1]);
+
+        o_full_mask  = nout.createVariable("full_mask",'u1',("nlat","nlon"));
+        o_edge_mask  = nout.createVariable("edge_mask",'u1',("nlat","nlon"));
+        o_time       = nout.createVariable("time",np.float32,("time",));
+        o_basis1     = nout.createVariable("basis1",np.float32,("nlat","nk1"));
+        o_basis2     = nout.createVariable("basis2",np.float32,("nlon","nk2"));
+        
+        o_full_mask[:,:]  = full_mask[:,:];
+        o_edge_mask[:,:]  = edges[:,:];
+        o_time[:] = self.time[:]; # TODO: Re-add time to world data
+
+        o_basis1[:,:] = self.basis1[:,:];
+        o_basis2[:,:] = self.basis2[:,:];
+        
+        return nout;
