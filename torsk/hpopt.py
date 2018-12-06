@@ -41,7 +41,7 @@ def _tikhonov_optimize(tikhonov_betas, model, params, inputs, states, labels, pr
 def esn_tikhonov_fitnessfunc(loader, params, dimensions, tikhonov_betas, nr_avg_runs=10):
     """Fitness function for hyper-parameter optimization that automatically
     uses the best regularization parameter out of a given list of tikhonov_betas
-    
+
     Parameters
     ----------
     loader : torch.utils.DataLoader
@@ -60,29 +60,30 @@ def esn_tikhonov_fitnessfunc(loader, params, dimensions, tikhonov_betas, nr_avg_
     """
     @use_named_args(dimensions=dimensions)
     def fitness(**sampled_params):
-    
+
         params.update(sampled_params)
-    
-        metrics = []
+
+        metrics, betas = [], []
         for _ in tqdm(range(nr_avg_runs)):
             model = ESN(params)
-    
+
             # create states
             model.eval()  # because we are not using gradients
             inputs, labels, pred_labels, orig_data = next(loader)
             zero_state = torch.zeros(1, params.hidden_size)
             _, states = model(inputs, zero_state, states_only=True)
-    
+
             # find best tikhonov beta
             tikhonov_beta, metric = _tikhonov_optimize(
                 tikhonov_betas=tikhonov_betas, model=model, params=params,
                 inputs=inputs, states=states, labels=labels, pred_labels=pred_labels)
-    
+
             params.tikhonov_beta = tikhonov_beta
             metrics.append(metric)
+            betas.append(tikhonov_beta)
         logger.info("Tested parameters:")
         for key, val in sampled_params.items():
             logger.info(f"{key}: {val}")
-        logger.info(f"Best tikhonov: {tikhonov_beta}")
-        return np.mean(metric)
+        logger.info(f"Best tikhonov: {np.median(tikhonov_beta)}")
+        return np.median(metric)
     return fitness
