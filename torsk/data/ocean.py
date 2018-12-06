@@ -10,6 +10,8 @@ from torchvision.transforms import functional as tvf
 
 from torsk.data import utils
 
+import matplotlib.pyplot as plt;
+
 _module_dir = pathlib.Path(__file__).absolute().parent
 _data_dir = _module_dir / "../../data"
 logger = logging.getLogger(__name__)
@@ -193,7 +195,7 @@ class DCTNetcdfDataset(Dataset):
         ssh[mask] = 0.
 
         ssh = seq[-self.pred_length:].copy()
-        seq = utils.dct2(seq, self.size)
+        seq = utils.idct2_sequence(seq, self.size)
 
         seq = seq.reshape([self.seq_length + 1, -1])
 
@@ -288,37 +290,40 @@ class SCTNetcdfDataset(Dataset):
             raise ValueError("First dimension of 'SSH' variable must be "
                              "larger than seq_length.")
 
-    def scale(Fkk_data):
+    def scale(self,Fkk_data):
         (fmin, fmax) = (self.Fkk_min,self.Fkk_max);
 
         if(fmin == fmax):
 #            return np.zeros_like(Fkk_data); # Need to store mean to invert, can we just do:
             return Fkk_data;    # ?
         else:
-            midpoint = (fmin+fmax)/2;
-            return (Fkk_data - midpoint)/(fmax-fmin);
+            return Fkk_data/(fmax-fmin);
 
-    def unscale(Fkk_scaled):
+    def unscale(self,Fkk_scaled):
         (fmin, fmax) = (self.Fkk_min,self.Fkk_max);
         if(fmin == fmax):
             return Fkk_scaled;  # See above
         else:
-            midpoint = (fmin+fmax)/2;
-            return Fkk_scaled*(fmax-fmin) + midpoint;
+            return Fkk_scaled*(fmax-fmin);
 
+    def to_image(self,Fkk_scaled):
+        Ftkk = self.unscale(Fkk_scaled).reshape([-1,self.kdims[0],self.kdims[1]]);
+        Ftxx = utils.idct2_sequence(Ftkk,self.xdims);
+        return Ftxx;
         
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('Dataset index out of range.')
-        
-        seq = scale(self.data[index:index + self.seq_length + 1])
+
+        seq = self.scale(self.data[index:index + self.seq_length + 1])
         seq = seq.reshape([self.seq_length + 1, -1])
 
         inputs, labels, pred_labels = utils.split_train_label_pred(
             seq, self.train_length, self.pred_length)
 
-        ssh = utils.sct2(pred_labels, self.basis1, self.basis2)
-
+        (nk1,nk2) = self.kdims;
+        ssh = utils.idct2_sequence(pred_labels.reshape([self.pred_length,nk1,nk2]), self.xdims)
+        
         inputs = torch.Tensor(inputs)
         labels = torch.Tensor(labels)
         pred_labels = torch.Tensor(pred_labels)

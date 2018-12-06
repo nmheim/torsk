@@ -1,5 +1,6 @@
 import numpy as np;
 import scipy as sp;
+import scipy.linalg as la;
 import skimage.morphology as morf;
 import skimage.filters as filt;
 import scipy.ndimage as ndi;
@@ -140,7 +141,6 @@ def idct2(Fkk,nx1,nx2):
     Fxx = idctn(Fkk,norm='ortho',shape=(nx1,nx2));
     return Fxx
 
-
 def smooth_mask_and_ict(frame):
     print("Unmasking")
     Fxx = smooth_mask(frame);
@@ -151,8 +151,8 @@ def smooth_mask_and_ict(frame):
 
     print("Transforming")    
     for i in range(len(ns)):
-        Fkk_sct.append(isct2(Fxx,BASIS1[i],BASIS2[i]));
-        Fkk_dct.append(idct2(Fxx,NK1[i],NK2[i]));
+        Fkk_sct.append(sct2(Fxx,BASIS1[i],BASIS2[i]));
+        Fkk_dct.append(dct2(Fxx,NK1[i],NK2[i]));
         Fkk_sct_min, Fkk_sct_max = np.amin(Fkk_sct[i]), np.amax(Fkk_sct[i]);
         Fkk_dct_min, Fkk_dct_max = np.amin(Fkk_dct[i]), np.amax(Fkk_dct[i]);            
     

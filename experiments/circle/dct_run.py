@@ -8,7 +8,7 @@ from torchvision import transforms
 import torsk
 from torsk.models import ESN
 from torsk.data import DCTCircleDataset, SeqDataLoader
-from torsk.data.utils import idct2
+from torsk.data.utils import idct2_sequence
 from torsk.visualize import animate_double_imshow
 
 
@@ -39,7 +39,7 @@ sigma = 0.2
 
 dataset = DCTCircleDataset(
     params.train_length, params.pred_length,
-    center=center, sigma=sigma, size=[20, 20], resize=[Nfrq, Nfrq])
+    center=center, sigma=sigma, xsize=[20, 20], ksize=[Nfrq, Nfrq])
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
 
@@ -48,11 +48,11 @@ model = ESN(params)
 
 
 logger.info("Training + predicting ...")
-model, outputs, pred_labels, ssh = torsk.train_predict_esn(model, loader, params)
+model, outputs, pred_labels, original = torsk.train_predict_esn(model, loader, params)
 
 
 logger.info("Visualizing results ...")
-ssh = torch.squeeze(ssh).numpy()
+original = torch.squeeze(original).numpy()
 weight = model.esn_cell.res_weight._values().numpy()
 
 hist, bins = np.histogram(weight, bins=100)
@@ -60,12 +60,12 @@ plt.plot(bins[1:], hist)
 plt.show()
 
 outputs = outputs.numpy().reshape([-1, Nfrq, Nfrq])
-outputs = idct2(outputs, size=ssh.shape[1:])
+outputs = idct2_sequence(outputs, xsize=original.shape[1:])
 
 y, x = 10, 10
-plt.plot(ssh[:, y, x])
+plt.plot(original[:, y, x])
 plt.plot(outputs[:, y, x])
 plt.show()
 
-anim = animate_double_imshow(ssh, outputs.real)
+anim = animate_double_imshow(original, outputs.real)
 plt.show()

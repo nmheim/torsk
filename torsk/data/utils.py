@@ -1,86 +1,74 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from scipy.fftpack import dct, idct
+from scipy.fftpack import dct, idct, dctn, idctn
+from scipy.linalg import lstsq
 import scipy as sp
 
 
 # Least-squares approximation to restricted DCT-III / Inverse DCT-II
-def sct_basis(nx, nk):
-    xs = np.arange(nx)
-    ks = np.arange(nk)
-    basis = 2 * np.cos(np.pi * (xs[:, None] + 0.5) * ks[None, :] / nx)
-    return basis
+def sct_basis(nx,nk):
+    xs = np.arange(nx);
+    ks = np.arange(nk);
+    basis = 2*np.cos(np.pi*(xs[:,None]+0.5)*ks[None,:]/nx);        
+    return basis;
 
+def sct(fx,basis):  
+    fk,_,_,_ = lstsq(basis,fx);
+    return fk;
 
-def isct(fx, basis):
-    fk, _, _, _ = sp.linalg.lstsq(basis, fx)
-    return fk
+def isct(fk,basis):
+    fx = np.dot(basis,fk);
+    return fx;
 
-
-def sct(fk, basis):
-    fx = np.dot(basis, fk)
-    return fx
-
-
-def isct2(Fxx, basis1, basis2):
-    Fkx = isct(Fxx.T, basis2)
-    Fkk = isct(Fkx.T, basis1)
+def sct2(Fxx,basis1, basis2):
+    Fkx = sct(Fxx.T,basis2);
+    Fkk = sct(Fkx.T,basis1);
     return Fkk
 
-
-def sct2(Fkk, basis1, basis2):
-    Fkx = sct(Fkk.T, basis1)
-    Fxx = sct(Fkx.T, basis2)
+def isct2(Fkk,basis1, basis2):
+    Fkx = isct(Fkk.T,basis2);
+    Fxx = isct(Fkx.T,basis1);
     return Fxx
 
+def dct2(Fxx,nk1,nk2):
+    Fkk = dctn(Fxx,norm='ortho')[:nk1,:nk2];
+    return Fkk
 
-def _dct_2d(image):
-    return dct(dct(image.T, norm='ortho').T, norm='ortho')
+def idct2(Fkk,nx1,nx2):
+    Fxx = idctn(Fkk,norm='ortho',shape=(nx1,nx2));
+    return Fxx
 
-
-def _idct_2d(coefficient):
-    return idct(idct(coefficient.T, norm='ortho').T, norm='ortho')
-
-
-def dct2(sequence, size):
-    """Discrete Cosine Transform of a sequence of 2D images.
-
-    Params
-    ------
-    sequence : ndarray
-        with shape (time, ydim, xdim)
-    size : (ysize, xsize)
-        determines how many DCT coefficents are kept
-
-    Returns
-    -------
-    ndarray
-        DCT coefficients with shape (time, ysize, xsize)
-    """
-    return np.array([_dct_2d(frame)[:size[0], :size[1]] for frame in sequence])
-
-
-def idct2(sequence, size):
+def idct2_sequence(Ftkk,xsize):
     """Inverse Discrete Cosine Transform of a sequence of 2D images.
 
     Params
     ------
-    sequence : ndarray
-        with shape (time, ydim, xdim)
-    size : (ysize, xsize)
-        Pads the sequence with (nsize - ndim) zeros before calculating the
-        inverse transform. Must be larger than sequence.shape[1:]
+    Ftkk : ndarray with shape (time, nk1, nk2)
+    size : (ny,nx) determines the resolution of the image
 
     Returns
     -------
-    ndarray
-        DCT coefficients with shape (time, ysize, xsize)
-    """
-    ydim, xdim = sequence.shape[1:]
-    padding = [[0, size[0] - ydim], [0, size[1] - xdim]]
-    iseq = [_idct_2d(np.pad(frame, padding, 'constant')) for frame in sequence]
-    return np.array(iseq)
+    Ftxx: ndarray with shape (time, ny,nx)
+    """        
+    Ftxx = idctn(Ftkk,norm='ortho',shape=xsize,axes=[1,2]);
+    return Ftxx;
+
+
+def dct2_sequence(Ftxx, ksize):
+    """Discrete Cosine Transform of a sequence of 2D images.
+
+    Params
+    ------
+    Ftxx : ndarray with shape (time, ydim, xdim)
+    size : (nk1,nk2) determines how many DCT coefficents are kept
+
+    Returns
+    -------
+    Ftkk: ndarray with shape (time, nk1, nk2)
+    """    
+    Ftkk = dctn(Ftxx,norm='ortho',axes=[1,2])[:,:ksize[0],:ksize[1]];
+    return Ftkk;
 
 
 def normalize(data, vmin=None, vmax=None):

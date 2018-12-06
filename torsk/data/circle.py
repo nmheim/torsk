@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torsk.data.utils import normalize, dct2, split_train_label_pred
+from torsk.data.utils import normalize, dct2_sequence, split_train_label_pred
 
 
 def gauss2d(center, sigma, size, borders=[[-2, 2], [-2, 2]]):
@@ -27,7 +27,7 @@ class CircleDataset(Dataset):
 
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
-            raise IndexError('MackeyDataset index out of range.')
+            raise IndexError('CircleDataset index out of range.')
         sub_seq = self.seq[index:index + self.train_length + self.pred_length + 1]
         inputs, labels, pred_labels = split_train_label_pred(
             sub_seq, self.train_length, self.pred_length)
@@ -41,22 +41,24 @@ class CircleDataset(Dataset):
 
 
 class DCTCircleDataset(Dataset):
-    def __init__(self, train_length, pred_length, center, sigma, size, resize):
+    def __init__(self, train_length, pred_length, center, sigma, xsize, ksize):
 
         self.train_length = train_length
         self.pred_length = pred_length
         self.nr_sequences = center.shape[0] - train_length - pred_length
 
-        self.seq = np.array(
-            [gauss2d(c, sigma, size) for c in center])
+        self.xsize = xsize;
+        self.ksize = ksize;
+        
+        self.seq = np.array([gauss2d(c, sigma, xsize) for c in center])
 
         self.seq = normalize(self.seq)
-        self.dct = dct2(self.seq, resize)
-        self.dct = self.dct.reshape((-1, resize[0] * resize[1]))
+        self.dct = dct2_sequence(self.seq, ksize)
+        self.dct = self.dct.reshape((-1, ksize[0] * ksize[1]))
 
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
-            raise IndexError('MackeyDataset index out of range.')
+            raise IndexError('DCTCircleDataset index out of range.')
         sub_seq = self.seq[index:index + self.train_length + self.pred_length + 1]
         sub_dct = self.dct[index:index + self.train_length + self.pred_length + 1]
 
