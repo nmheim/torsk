@@ -114,44 +114,31 @@ def sct_basis(nx,nk):
     basis = 2*np.cos(np.pi*(xs[:,None]+0.5)*ks[None,:]/nx);        
     return basis;
 
-def isct(fx,basis):  
-    fk,_,_,_ = sp.linalg.lstsq(basis,fx);
+def sct(fx,basis):  
+    fk,_,_,_ = la.lstsq(basis,fx);
     return fk;
 
-def sct(fk,basis):
+def isct(fk,basis):
     fx = np.dot(basis,fk);
     return fx;
 
-# def svdct_basis(nx,nk):
-#     basis = sct_basis(nx,nx);
-#     U,s,Vh = sp.linalg.svd(basis);
-#     return U[:,nk],s[:nk,:nk],Vh[:nk,:]
-
-# def isvdt(fx,s,Vh):
-#     fk = np.dot(Vh,fx)/s;
-#     return fk;
-
-# def svdt(fk,Uh):
-
-def isct2(Fxx,basis1, basis2):
-    Fkx = isct(Fxx.T,basis2);
-    Fkk = isct(Fkx.T,basis1);
+def sct2(Fxx,basis1, basis2):
+    Fkx = sct(Fxx.T,basis2);
+    Fkk = sct(Fkx.T,basis1);
     return Fkk
 
-def sct2(Fxx,basis1, basis2):
-    Fkx = sct(Fxx.T,basis1);
-    Fxx = sct(Fkx.T,basis2);
+def isct2(Fkk,basis1, basis2):
+    Fkx = isct(Fkk.T,basis2);
+    Fxx = isct(Fkx.T,basis1);
     return Fxx
 
+def dct2(Fxx,nk1,nk2):
+    Fkk = dctn(Fxx,norm='ortho')[:nk1,:nk2];
+    return Fkk
 
-def idct2(Fxx,nk1,nk2):
-    Fkk = dctn(Fxx.T,norm='ortho')[:nk2,:nk1];
-    return Fkk;
-
-def dct2(Fkk,nx1,nx2):
-    Fkk_padded = np.pad(Fkk,[[0,nx2-Fkk.shape[1]],[0,nx1-Fkk.shape[0]]],'constant');
-    Fxx = idctn(Fkk_padded.T,norm='ortho');
-    return Fxx;
+def idct2(Fkk,nx1,nx2):
+    Fxx = idctn(Fkk,norm='ortho',shape=(nx1,nx2));
+    return Fxx
 
 
 def smooth_mask_and_ict(frame):
