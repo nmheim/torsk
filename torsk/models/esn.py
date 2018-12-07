@@ -11,6 +11,7 @@ from torsk.models.utils import dense_esn_reservoir, scale_weight
 from torsk.models.sparse_esn import SparseESNCell
 
 from scipy.linalg import lstsq
+from numpy import abs,log2,log10
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
@@ -27,9 +28,18 @@ def _extended_states(inputs, states):
 
 def pseudo_inverse(inputs, states, labels):
     X = _extended_states(inputs, states)
+
     # Solve least-squares system instead of calculating pseudo-inverse
-    wout,_ = torch.gels(labels,X.t()) # Torch likes RHS on left and LHS on the right.
-    return wout.t()
+# Torch's least squares function swaps dimensions when X.shape[0] < X.shape[1]. 
+# Also doesn't give conditioning number!
+#    wout,_ = torch.gels(labels,X.t()) # Torch likes RHS on left and LHS on the right.
+# Use numpy for now. TODO: Use Torch SVD and also deal with huge condition numbers
+    wout,_,_,s = lstsq(X.t(),labels);
+    condition  = s[0]/s[-1];
+    if(log2(abs(condition)) > 16):
+        print("Huge condition number in pseudoinverse, losing more than 16 bits. Expect numerical instability!");
+        
+    return torch.Tensor(wout.T)
 
 
 def tikhonov(inputs, states, labels, beta):
@@ -38,9 +48,8 @@ def tikhonov(inputs, states, labels, beta):
     Id  = torch.eye(X.size(0));
     A = torch.mm(X,X.t()) + beta*Id;
     B = torch.mm(X,labels);
-    
     # Solve linear system instead of calculating inverse
-    wout,_ = torch.gesv(B,A);   
+    wout,_ = torch.gesv(B,A);
     return wout.t()
 
 
@@ -229,5 +238,8 @@ class ESN(nn.Module):
         else:
             raise ValueError(f'Unkown training method: {method}')
 
-        assert wout.size() == self.out.weight.size()
+        if(wout.size() != self.out.weight.size()):
+            print("wout:",wout.shape,", weight:",self.out.weight.shape);
+            raise;
+        
         self.out.weight = Parameter(wout, requires_grad=False)
