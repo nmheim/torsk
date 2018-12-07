@@ -10,8 +10,9 @@ from torsk import Params
 from torsk.models.utils import dense_esn_reservoir, scale_weight
 from torsk.models.sparse_esn import SparseESNCell
 
-from scipy.linalg import lstsq
+from scipy.linalg import lstsq, svd
 from numpy import abs,log2,log10
+import numpy as np
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
@@ -26,21 +27,37 @@ def _extended_states(inputs, states):
     return torch.cat([ones, inputs, states], dim=1).t()
 
 
-def pseudo_inverse(inputs, states, labels):
+def pseudo_inverse_lstsq(inputs, states, labels):
     X = _extended_states(inputs, states)
 
-    # Solve least-squares system instead of calculating pseudo-inverse
-# Torch's least squares function swaps dimensions when X.shape[0] < X.shape[1]. 
-# Also doesn't give conditioning number!
-#    wout,_ = torch.gels(labels,X.t()) # Torch likes RHS on left and LHS on the right.
-# Use numpy for now. TODO: Use Torch SVD and also deal with huge condition numbers
     wout,_,_,s = lstsq(X.t(),labels);
     condition  = s[0]/s[-1];
-    if(log2(abs(condition)) > 16):
-        print("Huge condition number in pseudoinverse, losing more than 16 bits. Expect numerical instability!");
+
+    if(log2(abs(condition)) > 12): # More than half of the bits in the data are lost
+        print("Large condition number in pseudoinverse:", condition," losing more than half of the digits. "
+              "Expect numerical blowup!");
+        print("Largest and smallest singular values:",s[0],s[-1])
         
     return torch.Tensor(wout.T)
 
+def pseudo_inverse_svd(inputs, states, labels):
+    X = _extended_states(inputs, states)
+
+    U,s,Vh = svd(X.numpy());
+    L      = labels.numpy().T;
+    condition  = s[0]/s[-1];
+
+    scale = s[0]
+    n = len(s[abs(s/scale)>1e-4]); # Ensure condition number less than 10.000
+    v  = Vh[:n,:].T;
+    uh = U[:,:n].T;
+
+    wout = np.dot(np.dot(L,v) * (1/s[:n]),uh);
+    return torch.Tensor(wout)
+    
+
+def pseudo_inverse(inputs, states, labels):
+    return pseudo_inverse_svd(inputs, states, labels);
 
 def tikhonov(inputs, states, labels, beta):
     X = _extended_states(inputs, states)
@@ -165,7 +182,8 @@ class ESN(nn.Module):
             bias=False)
 
         self.ones = torch.ones([1, 1])
-
+        
+        
     def forward(self, inputs, state, states_only=True):
         if inputs.size(1) != 1:
             raise ValueError("Supports only batch size of one -.-")
