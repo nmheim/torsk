@@ -7,8 +7,8 @@ from torchvision import transforms
 
 import torsk
 from torsk.models import ESN
-from torsk.data import DCTNetcdfDataset, SeqDataLoader
-from torsk.data.utils import idct2_sequence
+from torsk.data import SCTNetcdfDataset, SeqDataLoader
+from torsk.data.utils import dct2, idct2, isct2, sct2, dct2_sequence, idct2_sequence
 from torsk.visualize import animate_double_imshow
 
 
@@ -17,24 +17,24 @@ logging.basicConfig(level=logging.DEBUG)
 
 #region = [[90,190],[90,190]];
 #region = [[200,300],[100,200]];
-region = [[0,300],[0,200]]
-Nfrq = 64
+#nk1,nk2=48,73;
+nk1,nk2=48,73;
+CTmethod="SCT";
+
 params = torsk.Params("fft_params.json")
-params.input_size  = Nfrq**2
-params.output_size = Nfrq**2 
+params.input_size  = nk1*nk2
+params.output_size = nk1*nk2
 
 logger.info(params)
 
 logger.info("Loading + resampling of kuro window ...")
-ncpath = pathlib.Path('../../data/ocean/kuro_SSH_3daymean_scaled.nc')
-dataset = DCTNetcdfDataset(
+ncpath = pathlib.Path(f'../../data/ocean/kuro_SSH_3daymean_{CTmethod}_{nk1}_{nk2}.nc')
+dataset = SCTNetcdfDataset(
     ncpath,
     params.train_length,
-    params.pred_length,
-    xslice=slice(region[0][0], region[0][1]),
-    yslice=slice(region[1][0], region[1][1]),
-    size=[Nfrq, Nfrq])
+    params.pred_length)
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
+#writer = dataset.open_output(f"output/kuro_SSH_3daymean_{CTmethod}_{nk1}x{nk2}.nc");
 
 logger.info("Building model ...")
 model = ESN(params)
@@ -49,9 +49,8 @@ weight = model.esn_cell.res_weight._values().numpy()
 # plt.plot(bins[1:], hist)
 # plt.show()
 
-outputs = outputs.numpy().reshape([-1, Nfrq, Nfrq])
-
-outputs = idct2_sequence(outputs, xsize=ssh.shape[1:])
+#        o_full_mask  = nout.createVariable("full_mask",'u1',("nlat","nlon"));
+outputs = dataset.to_image(outputs.numpy())
 anim = animate_double_imshow(ssh, outputs.real)
 plt.show()
 
