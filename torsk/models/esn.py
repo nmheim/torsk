@@ -10,6 +10,7 @@ from torsk import Params
 from torsk.models.utils import dense_esn_reservoir, scale_weight
 from torsk.models.sparse_esn import SparseESNCell
 
+from scipy.linalg import lstsq
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
@@ -26,18 +27,21 @@ def _extended_states(inputs, states):
 
 def pseudo_inverse(inputs, states, labels):
     X = _extended_states(inputs, states)
-    pinv = torch.pinverse(X)
-    wout = torch.mm(labels.t(), pinv)
-    return wout
+    # Solve least-squares system instead of calculating pseudo-inverse
+    wout,_ = torch.gels(labels,X.t()) # Torch likes RHS on left and LHS on the right.
+    return wout.t()
 
 
 def tikhonov(inputs, states, labels, beta):
     X = _extended_states(inputs, states)
-    XT = X.t()
-    XXT = torch.mm(X, XT)
-    inv = torch.inverse(XXT + beta * torch.eye(XXT.size(0)))
-    wout = torch.mm(labels.t(), torch.mm(XT, inv))
-    return wout
+
+    Id  = torch.eye(X.size(0));
+    A = torch.mm(X,X.t()) + beta*Id;
+    B = torch.mm(X,labels);
+    
+    # Solve linear system instead of calculating inverse
+    wout,_ = torch.gesv(B,A);   
+    return wout.t()
 
 
 class ESNCell(RNNCellBase):
