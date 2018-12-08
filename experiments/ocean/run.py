@@ -14,11 +14,14 @@ from torsk.visualize import animate_double_imshow
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG)
 
-Nx, Ny = 80, 80
+Nx, Ny = 30, 30
 
 params = torsk.Params("params.json")
 params.input_size  = Nx*Ny
 params.output_size = Nx*Ny
+params.train_length = 1500
+params.train_method = "tikhonov"
+params.tikhonov_beta = 3e1
 logger.info(params)
 
 logger.info("Loading + resampling of kuro window ...")
@@ -33,14 +36,22 @@ model = ESN(params)
 logger.info("Training + predicting ...")
 model, outputs, pred_labels, _ = torsk.train_predict_esn(model, loader, params)
 
-weight = model.esn_cell.res_weight._values().numpy()
-
-hist, bins = np.histogram(weight, bins=100)
-plt.plot(bins[1:], hist)
-plt.show()
+# weight = model.esn_cell.res_weight._values().numpy()
+# 
+# hist, bins = np.histogram(weight, bins=100)
+# plt.plot(bins[1:], hist)
+# plt.show()
 
 labels = pred_labels.numpy().reshape([-1, Nx, Ny])
 outputs = outputs.numpy().reshape([-1, Nx, Ny])
-anim = animate_double_imshow(labels, outputs)
+
+y, x = 10, 10
+plt.plot(labels[:, y, x])
+plt.plot(outputs[:, y, x])
+plt.show()
+
+anim = animate_double_imshow(
+    labels,# labels[params.train_length - 50: params.train_length + 50],
+    outputs)#outputs[params.train_length - 50: params.train_length + 50])
 plt.show()
 
