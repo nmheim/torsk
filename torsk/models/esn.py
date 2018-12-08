@@ -10,6 +10,9 @@ from torsk import Params
 from torsk.models.utils import dense_esn_reservoir, scale_weight
 from torsk.models.sparse_esn import SparseESNCell
 
+from scipy.linalg import lstsq, svd
+from numpy import abs,log2,log10
+import numpy as np
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
@@ -24,20 +27,47 @@ def _extended_states(inputs, states):
     return torch.cat([ones, inputs, states], dim=1).t()
 
 
-def pseudo_inverse(inputs, states, labels):
+def pseudo_inverse_lstsq(inputs, states, labels):
     X = _extended_states(inputs, states)
-    pinv = torch.pinverse(X)
-    wout = torch.mm(labels.t(), pinv)
-    return wout
 
+    wout,_,_,s = lstsq(X.t(),labels);
+    condition  = s[0]/s[-1];
+
+    if(log2(abs(condition)) > 12): # More than half of the bits in the data are lost
+        print("Large condition number in pseudoinverse:", condition," losing more than half of the digits. "
+              "Expect numerical blowup!");
+        print("Largest and smallest singular values:",s[0],s[-1])
+        
+    return torch.Tensor(wout.T)
+
+def pseudo_inverse_svd(inputs, states, labels):
+    X = _extended_states(inputs, states)
+
+    U,s,Vh = svd(X.numpy());
+    L      = labels.numpy().T;
+    condition  = s[0]/s[-1];
+
+    scale = s[0]
+    n = len(s[abs(s/scale)>1e-4]); # Ensure condition number less than 10.000
+    v  = Vh[:n,:].T;
+    uh = U[:,:n].T;
+
+    wout = np.dot(np.dot(L,v) * (1/s[:n]),uh);
+    return torch.Tensor(wout)
+    
+
+def pseudo_inverse(inputs, states, labels):
+    return pseudo_inverse_svd(inputs, states, labels);
 
 def tikhonov(inputs, states, labels, beta):
     X = _extended_states(inputs, states)
-    XT = X.t()
-    XXT = torch.mm(X, XT)
-    inv = torch.inverse(XXT + beta * torch.eye(XXT.size(0)))
-    wout = torch.mm(labels.t(), torch.mm(XT, inv))
-    return wout
+
+    Id  = torch.eye(X.size(0));
+    A = torch.mm(X,X.t()) + beta*Id;
+    B = torch.mm(X,labels);
+    # Solve linear system instead of calculating inverse
+    wout,_ = torch.gesv(B,A);
+    return wout.t()
 
 
 class ESNCell(RNNCellBase):
@@ -152,7 +182,8 @@ class ESN(nn.Module):
             bias=False)
 
         self.ones = torch.ones([1, 1])
-
+        
+        
     def forward(self, inputs, state, states_only=True):
         if inputs.size(1) != 1:
             raise ValueError("Supports only batch size of one -.-")
@@ -225,5 +256,8 @@ class ESN(nn.Module):
         else:
             raise ValueError(f'Unkown training method: {method}')
 
-        assert wout.size() == self.out.weight.size()
+        if(wout.size() != self.out.weight.size()):
+            print("wout:",wout.shape,", weight:",self.out.weight.shape);
+            raise;
+        
         self.out.weight = Parameter(wout, requires_grad=False)

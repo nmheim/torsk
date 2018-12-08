@@ -4,40 +4,67 @@ from netCDF4 import Dataset
 from tqdm import tqdm
 
 
+def get_dims(src, variable):
+    dim_names = src[variable].dimensions
+    dims = {(name, dim.size) for name, dim in src.dimensions.items()
+            if name in dim_names}
+    return dims
+
+
 def get_metadata(src, variable):
     ncattrs = {name: src[variable].getncattr(name)
                for name in src[variable].ncattrs()}
-    dim_names = src[variable].dimensions
-    dims = [(name, dim.size) for name, dim in src.dimensions.items() if name in dim_names]
+    dims = get_dims(src, variable)
     dtype = src[variable].dtype
     return ncattrs, dims, dtype
 
 
+def create_dims(dst, dims):
+    for name, dim in dims:
+        if not name in dst.dimensions:
+            if name == "time":
+                dim = None
+            dst.createDimension(name, dim)
+
+
 @click.command("ncextract",
     short_help="Extract a variable from a number of .nc files")
-@click.option("--in-dir", "-i", type=pathlib.Path, required=True)
+@click.argument("infiles", type=pathlib.Path, nargs=-1)
 @click.option("--outfile", "-o", type=pathlib.Path, required=True)
-@click.option("--pattern", "-p", type=str, default="*.nc")
 @click.option("--variable", "-V", type=str, default="SSH")
-def cli(in_dir, outfile, pattern, variable):
+def cli(infiles, outfile, variable):
+
+    if len(infiles) == 0:
+        text = click.get_text_stream("stdin").read()
+        infiles = text.split("\n")
 
     if outfile.exists():
         raise ValueError(f"{outfile} already exists!")
 
-    print("Matching files ...")
-    infiles = sorted(list(in_dir.glob(pattern)))
-
-    with Dataset(infiles[0], "r") as src:
-        ncattrs, dims, dtype = get_metadata(src, variable)
-
     with Dataset(outfile, "w") as dst:
-        for name, dim in dims:
-            if name == "time":
-                dim = None
-            dst.createDimension(name, dim)
-        dst.createVariable(variable, dtype, [name for name, _ in dims])
 
-        for ii, infile in tqdm(enumerate(infiles), desc="Extracting variables", total=len(infiles)):
+        with Dataset(infiles[0], "r") as src:
+            for var in [variable, "TLAT", "TLONG"]:
+                dims = get_dims(src, var)
+                create_dims(dst, dims)
+
+                dtype = src[var].dtype
+                dst.createVariable(var, dtype, src[var].dimensions)
+
+                ncattrs = {name: src[var].getncattr(name)
+                           for name in src[var].ncattrs()}
+                dst[var].setncatts(ncattrs)
+
+            tlat, tlon = src["TLAT"][:], src["TLONG"][:]
+
+        dst.createVariable("time", dtype, ["time"])
+
+        dst["TLAT"][:] = tlat
+        dst["TLONG"][:] = tlon
+
+        desc = "Extracting variables"
+        total = len(infiles)
+        for ii, infile in tqdm(enumerate(infiles), desc=desc, total=total):
             with Dataset(infile, "r") as src:
                 data = src[variable][...]
             dst[variable][ii] = data[0]

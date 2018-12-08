@@ -195,7 +195,7 @@ class DCTNetcdfDataset(Dataset):
         ssh[mask] = 0.
 
         ssh = seq[-self.pred_length:].copy()
-        seq = utils.idct2_sequence(seq, self.size)
+        seq = utils.dct2_sequence(seq, self.size)
 
         seq = seq.reshape([self.seq_length + 1, -1])
 
