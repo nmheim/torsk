@@ -34,6 +34,10 @@ def create_dims(dst, dims):
 @click.option("--variable", "-V", type=str, default="SSH")
 def cli(infiles, outfile, variable):
 
+    if len(infiles) == 0:
+        text = click.get_text_stream("stdin").read()
+        infiles = text.split("\n")
+
     if outfile.exists():
         raise ValueError(f"{outfile} already exists!")
 
