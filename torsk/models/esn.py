@@ -104,7 +104,8 @@ class ESNCell(RNNCellBase):
     def __init__(
             self, input_size, hidden_size,
             spectral_radius, in_weight_init, in_bias_init, density):
-        super(ESNCell, self).__init__()
+        super(ESNCell, self).__init__(
+            input_size, hidden_size, bias=True, num_chunks=1)
 
         self.input_size = input_size
         self.hidden_size = hidden_size
