@@ -1,7 +1,7 @@
 {
-  "input_size": 900,
+  "input_size": 400,
   "hidden_size": 10000,
-  "output_size": 900,
+  "output_size": 400,
 
   "reservoir_representation": "sparse",
   "spectral_radius" : 2.0,
