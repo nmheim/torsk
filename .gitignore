@@ -1,3 +1,5 @@
+*.nc
+
 # vim
 *.swp
 data
