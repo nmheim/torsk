@@ -6,4 +6,4 @@ from torsk.data.utils import SeqDataLoader
 
 __all__ = [
     "NetcdfDataset", "DCTNetcdfDataset", "MackeyDataset", "SineDataset",
-    "CircleDataset","SeqDataLoader"]
+    "CircleDataset", "SeqDataLoader", "SCTNetcdfDataset"]

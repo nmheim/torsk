@@ -36,8 +36,8 @@ def test_esn_cell():
         in_weight_init=weight_init,
         in_bias_init=bias_init,
         density=density)
-    assert cell.res_weight.size() == (hidden_size, hidden_size)
-    assert not cell.res_weight.requires_grad
+    assert cell.weight_hh.size() == (hidden_size, hidden_size)
+    assert not cell.weight_hh.requires_grad
     assert cell.in_weight.size() == (hidden_size, input_size)
     assert not cell.in_weight.requires_grad
 

@@ -4,7 +4,6 @@ import logging
 import torch
 import netCDF4 as nc
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -74,17 +73,44 @@ def dump_outputs(fname, outputs, labels, attrs=None, mode="w"):
         dst["labels"][:] = labels
 
 
-def save_model(fname, model):
-    torch.save(model.state_dict(), fname)
+def save_model(model, fname):
+    state_dict = model.state_dict()
+    
+    # save sparse tensor
+    # TODO: can be removed when save/load is implemented for sparse tensors
+    # discussion: https://github.com/pytorch/pytorch/issues/9674
+
+    key = "esn_cell.weight_hh"
+    if isinstance(state_dict[key], torch.sparse.FloatTensor):
+        weight = state_dict.pop(key)
+        state_dict[key + "_indices"] = weight.coalesce().indices()
+        state_dict[key + "_values"] = weight.coalesce().values()
+    # print(new_state_dict.keys())
+    # print(new_state_dict['esn_cell.weight_hh_indices'])
+    torch.save(state_dict, fname)
 
 
 def load_model(modeldir):
     from torsk.models import ESN
     if isinstance(modeldir, str):
         modeldir = pathlib.Path(modeldir)
+
     params = Params(modeldir / "params.json")
     model = ESN(params)
-    model.load_state_dict(torch.load(modeldir / "model.pth"))
+    state_dict = torch.load(modeldir / "model.pth")
+
+    key = "esn_cell.weight_hh"
+    key_idx = key + "_indices"
+    key_val = key + "_values"
+    if key_idx in state_dict:
+        weight_idx = state_dict.pop(key_idx)
+        weight_val = state_dict.pop(key_val)
+        hidden_size = params.hidden_size
+        weight_hh = torch.sparse.FloatTensor(
+            weight_idx, weight_val, [hidden_size, hidden_size])
+        state_dict[key] = weight_hh
+
+    model.load_state_dict(state_dict)
     return model
 
 
@@ -112,7 +138,7 @@ def train_predict_esn(model, loader, params, outfile=None, modelfile=None):
         beta=params.tikhonov_beta)
     if modelfile is not None:
         logger.debug(f"Saving model to {modelfile}")
-        save_model(modelfile, model)
+        save_model(model, modelfile)
 
     logger.debug(f"Predicting the next {params.pred_length} frames")
     init_inputs = labels[-1]
