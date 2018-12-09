@@ -1,8 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torsk.data.utils import normalize, dct2_sequence, split_train_label_pred
-
+from torsk.data.utils import normalize, dct2_sequence, idct2_sequence, split_train_label_pred
 
 def gauss2d(center, sigma, size, borders=[[-2, 2], [-2, 2]]):
     yc, xc = center
@@ -14,17 +13,38 @@ def gauss2d(center, sigma, size, borders=[[-2, 2], [-2, 2]]):
 
 
 class CircleDataset(Dataset):
-    def __init__(self, train_length, pred_length, center, sigma, size):
+    def __init__(self, train_length, pred_length, center, sigma, xsize,ksize=None,domain="pixels"):
 
         self.train_length = train_length
         self.pred_length = pred_length
         self.nr_sequences = center.shape[0] - train_length - pred_length
 
-        self.seq = np.array(
-            [gauss2d(c, sigma, size) for c in center])
-        self.seq = normalize(self.seq)
-        self.seq = self.seq.reshape((-1, size[0] * size[1]))
+        seq = np.array([gauss2d(c, sigma, xsize) for c in center])
+        seq = normalize(seq)
 
+        if(domain=="DCT"):
+            if(ksize==None):
+                ksize = xsize;
+            seq = dct2_sequence(seq,ksize);
+            seq = seq.reshape((-1, ksize[0] * ksize[1]))            
+        else:
+            seq = seq.reshape((-1, xsize[0] * xsize[1]))
+
+        print("seq:",seq.shape)
+        self.seq = seq;
+
+        self.xsize  = xsize;
+        self.ksize  = ksize;
+        self.domain = domain;
+        
+    def to_image(self,data):
+        seq = data.numpy();
+        if(self.domain=="DCT"):
+            seq = seq.reshape((-1,self.ksize[0],self.ksize[1]));
+            return idct2_sequence(seq,self.xsize);
+        else:
+            return seq.reshape((-1,self.xsize[0],self.xsize[1]));
+        
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('CircleDataset index out of range.')
@@ -35,43 +55,6 @@ class CircleDataset(Dataset):
         labels = torch.Tensor(labels)
         pred_labels = torch.Tensor(pred_labels)
         return inputs, labels, pred_labels, torch.Tensor([[0]])
-
-    def __len__(self):
-        return self.nr_sequences
-
-
-class DCTCircleDataset(Dataset):
-    def __init__(self, train_length, pred_length, center, sigma, xsize, ksize):
-
-        self.train_length = train_length
-        self.pred_length = pred_length
-        self.nr_sequences = center.shape[0] - train_length - pred_length
-
-        self.xsize = xsize;
-        self.ksize = ksize;
-        
-        self.seq = np.array([gauss2d(c, sigma, xsize) for c in center])
-
-        self.seq = normalize(self.seq)
-        self.dct = dct2_sequence(self.seq, ksize)
-        self.dct = self.dct.reshape((-1, ksize[0] * ksize[1]))
-
-    def __getitem__(self, index):
-        if (index < 0) or (index >= self.nr_sequences):
-            raise IndexError('DCTCircleDataset index out of range.')
-        sub_seq = self.seq[index:index + self.train_length + self.pred_length + 1]
-        sub_dct = self.dct[index:index + self.train_length + self.pred_length + 1]
-
-        inputs, labels, pred_labels = split_train_label_pred(
-            sub_dct, self.train_length, self.pred_length)
-        _, _, real_labels = split_train_label_pred(
-            sub_seq, self.train_length, self.pred_length)
-
-        inputs = torch.Tensor(inputs)
-        labels = torch.Tensor(labels)
-        pred_labels = torch.Tensor(pred_labels)
-        real_labels = torch.Tensor(real_labels)
-        return inputs, labels, pred_labels, real_labels
 
     def __len__(self):
         return self.nr_sequences

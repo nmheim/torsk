@@ -12,6 +12,11 @@
   "train_length": 800,
   "pred_length": 300,
   "transient_length": 100,
-  "train_method": "tikhonov",
-  "tikhonov_beta": 5
+  "train_method": "pinv",
+  "tikhonov_beta": 5,
+
+  "sigma": 0.2,
+  "xsize": [20,20],
+  "ksize": [10,10],
+  "domain": "pixels"
 }
