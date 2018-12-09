@@ -30,7 +30,6 @@ class CircleDataset(Dataset):
         else:
             seq = seq.reshape((-1, xsize[0] * xsize[1]))
 
-        print("seq:",seq.shape)
         self.seq = seq;
 
         self.xsize  = xsize;
