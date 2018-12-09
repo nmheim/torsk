@@ -128,7 +128,7 @@ class ESNCell(RNNCellBase):
     def forward(self, inputs, state):
         self.check_forward_input(inputs)
         self.check_forward_hidden(inputs, state)
-        return self._backend.RNNTanhCell(
+        return torch._C._VariableFunctions.rnn_tanh_cell(
             inputs, state, self.in_weight, self.res_weight,
             self.in_bias, self.res_bias)
 
