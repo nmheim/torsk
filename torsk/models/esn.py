@@ -114,11 +114,11 @@ class ESNCell(RNNCellBase):
         in_weight = scale_weight(in_weight, in_weight_init)
         self.in_weight = Parameter(in_weight, requires_grad=False)
 
-        res_weight = dense_esn_reservoir(
+        weight_hh = dense_esn_reservoir(
             dim=hidden_size, spectral_radius=spectral_radius,
             density=density, symmetric=False)
-        self.res_weight = Parameter(
-            torch.tensor(res_weight, dtype=torch.float32), requires_grad=False)
+        self.weight_hh = Parameter(
+            torch.tensor(weight_hh, dtype=torch.float32), requires_grad=False)
 
         in_bias = torch.rand([hidden_size])
         in_bias = scale_weight(in_bias, in_bias_init)
@@ -129,7 +129,7 @@ class ESNCell(RNNCellBase):
         self.check_forward_input(inputs)
         self.check_forward_hidden(inputs, state)
         return torch._C._VariableFunctions.rnn_tanh_cell(
-            inputs, state, self.in_weight, self.res_weight,
+            inputs, state, self.in_weight, self.weight_hh,
             self.in_bias, self.res_bias)
 
 
