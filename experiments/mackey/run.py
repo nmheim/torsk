@@ -30,7 +30,8 @@ predictions, labels = [], []
 for i in tqdm(range(20)):
 
     model, outputs, pred_labels, _ = torsk.train_predict_esn(
-        model=model, loader=loader, params=params)
+        model=model, loader=loader, params=params,
+        outfile="results.nc", modelfile="model.pth")
 
     predictions.append(outputs.squeeze().numpy())
     labels.append(pred_labels.squeeze().numpy())

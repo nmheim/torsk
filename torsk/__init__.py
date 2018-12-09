@@ -1,3 +1,4 @@
+import pathlib
 import json
 import logging
 import torch
@@ -73,9 +74,21 @@ def dump_outputs(fname, outputs, labels, attrs=None, mode="w"):
         dst["labels"][:] = labels
 
 
-def train_predict_esn(model, loader, params, outfile=None):
-    if outfile is None:
-        outfile = "result.nc"
+def save_model(fname, model):
+    torch.save(model.state_dict(), fname)
+
+
+def load_model(modeldir):
+    from torsk.models import ESN
+    if isinstance(modeldir, str):
+        modeldir = pathlib.Path(modeldir)
+    params = Params(modeldir / "params.json")
+    model = ESN(params)
+    model.load_state_dict(torch.load(modeldir / "model.pth"))
+    return model
+
+
+def train_predict_esn(model, loader, params, outfile=None, modelfile=None):
 
     model.eval()  # because we are not using gradients
     tlen = params.transient_length
@@ -85,8 +98,10 @@ def train_predict_esn(model, loader, params, outfile=None):
     logger.debug(f"Creating {inputs.size(0)} training states")
     zero_state = torch.zeros(1, params.hidden_size)
     _, states = model(inputs, zero_state, states_only=True)
-    logger.debug(f"Saving states to {outfile}")
-    dump_states(outfile, states.squeeze().numpy())
+
+    if outfile is not None:
+        logger.debug(f"Saving states to {outfile}")
+        dump_states(outfile, states.squeeze().numpy())
 
     logger.debug("Optimizing output weights")
     model.optimize(
@@ -95,17 +110,25 @@ def train_predict_esn(model, loader, params, outfile=None):
         labels=labels[tlen:],
         method=params.train_method,
         beta=params.tikhonov_beta)
+    if modelfile is not None:
+        logger.debug(f"Saving model to {modelfile}")
+        save_model(modelfile, model)
 
     logger.debug(f"Predicting the next {params.pred_length} frames")
     init_inputs = labels[-1]
     outputs, _ = model.predict(
         init_inputs, states[-1], nr_predictions=params.pred_length)
 
-    logger.debug(f"Saving outputs to {outfile}")
-    dump_outputs(
-        fname=outfile,
-        outputs=loader.dataset.to_image(outputs),
-        labels=loader.dataset.to_image(pred_labels),
-        mode="a")
+    if outfile is not None:
+        logger.debug(f"Saving outputs to {outfile}")
+        if hasattr(loader.dataset, "to_image"):
+            np_outputs = loader.dataset.to_image(outputs)
+            np_labels = loader.dataset.to_image(pred_labels)
+        else:
+            np_outputs = outputs.numpy()
+            np_labels = pred_labels.numpy()
+
+        dump_outputs(
+            fname=outfile, outputs=np_outputs, labels=np_labels, mode="a")
 
     return model, outputs, pred_labels, orig_data
