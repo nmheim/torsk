@@ -2,7 +2,6 @@ import logging
 import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
-from torchvision import transforms
 
 import torch
 import torsk
@@ -42,9 +41,7 @@ center = np.array([y, x]).T
 sigma = params.sigma
 
 #TODO: Just pass params-parameter instead of extracting everything as arguments?
-dataset = CircleDataset(
-    params.train_length, params.pred_length,
-    center=center, sigma=sigma, xsize=params.xsize,ksize=params.ksize,domain=params.domain)
+dataset = CircleDataset(params, center=center, sigma=sigma)
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
 
@@ -54,11 +51,11 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels, _ = torsk.train_predict_esn(
-    model, loader, params, outfile="results.nc", modelfile=None)
+    model, loader, params, outfile="results.nc", modelfile="model.pth")
 
 logger.info("Visualizing results ...")
 
-weight = model.esn_cell.res_weight._values().numpy()
+weight = model.esn_cell.weight_hh._values().numpy()
 hist, bins = np.histogram(weight, bins=100)
 plt.plot(bins[1:], hist)
 plt.show()

@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset
 from torsk.data.utils import normalize, dct2_sequence, idct2_sequence, split_train_label_pred
 
+
 def gauss2d(center, sigma, size, borders=[[-2, 2], [-2, 2]]):
     yc, xc = center
     yy = np.linspace(borders[0][0], borders[0][1], size[0])
@@ -13,37 +14,39 @@ def gauss2d(center, sigma, size, borders=[[-2, 2], [-2, 2]]):
 
 
 class CircleDataset(Dataset):
-    def __init__(self, train_length, pred_length, center, sigma, xsize,ksize=None,domain="pixels"):
+    def __init__(self, params, center, sigma):
 
-        self.train_length = train_length
-        self.pred_length = pred_length
-        self.nr_sequences = center.shape[0] - train_length - pred_length
+        self.train_length = params.train_length
+        self.pred_length = params.pred_length
+        self.domain = params.domain
+        self.nr_sequences = center.shape[0] - self.train_length - self.pred_length
+
+        xsize = params.xsize
+        ksize = params.ksize
 
         seq = np.array([gauss2d(c, sigma, xsize) for c in center])
         seq = normalize(seq)
 
-        if(domain=="DCT"):
-            if(ksize==None):
-                ksize = xsize;
-            seq = dct2_sequence(seq,ksize);
-            seq = seq.reshape((-1, ksize[0] * ksize[1]))            
+        if self.domain == "DCT":
+            if ksize is None:
+                ksize = xsize
+            seq = dct2_sequence(seq, ksize)
+            seq = seq.reshape((-1, ksize[0] * ksize[1]))
         else:
             seq = seq.reshape((-1, xsize[0] * xsize[1]))
 
-        self.seq = seq;
+        self.seq = seq
+        self.xsize = xsize
+        self.ksize = ksize
 
-        self.xsize  = xsize;
-        self.ksize  = ksize;
-        self.domain = domain;
-        
-    def to_image(self,data):
-        seq = data.numpy();
-        if(self.domain=="DCT"):
-            seq = seq.reshape((-1,self.ksize[0],self.ksize[1]));
-            return idct2_sequence(seq,self.xsize);
+    def to_image(self, data):
+        seq = data.numpy()
+        if(self.domain == "DCT"):
+            seq = seq.reshape((-1, self.ksize[0], self.ksize[1]))
+            return idct2_sequence(seq, self.xsize)
         else:
-            return seq.reshape((-1,self.xsize[0],self.xsize[1]));
-        
+            return seq.reshape((-1, self.xsize[0], self.xsize[1]))
+
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
             raise IndexError('CircleDataset index out of range.')
