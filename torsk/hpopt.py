@@ -12,9 +12,7 @@ from torsk import utils
 logger = logging.getLogger(__name__)
 
 
-SECOND_LEVEL_HYPERPARAMETERS = [
-    "sigma", "domain", "transient_length", "pred_length"
-]
+SECOND_LEVEL_HYPERPARAMETERS = ["transient_length", "pred_length"]
 
 
 def is_second_level_param(param_name):
