@@ -34,7 +34,8 @@ def pseudo_inverse_lstsq(inputs, states, labels):
     condition  = s[0]/s[-1];
 
     if(log2(abs(condition)) > 12): # More than half of the bits in the data are lost
-        print("Large condition number in pseudoinverse:", condition," losing more than half of the digits. "
+        print("Large condition number in pseudoinverse:",
+              condition," losing more than half of the digits.",
               "Expect numerical blowup!");
         print("Largest and smallest singular values:",s[0],s[-1])
         
@@ -160,6 +161,7 @@ class ESN(nn.Module):
     """
     def __init__(self, params):
         super(ESN, self).__init__()
+        self.params = params
         if params.input_size != params.output_size:
             raise ValueError(
                 "Currently input and output dimensions must be the same.")
@@ -225,7 +227,7 @@ class ESN(nn.Module):
             states.append(state)
         return torch.stack(outputs, dim=0), torch.stack(states, dim=0)
 
-    def optimize(self, inputs, states, labels, method='pinv', beta=None):
+    def optimize(self, inputs, states, labels):
         """Train the output layer.
 
         Parameters
@@ -241,6 +243,9 @@ class ESN(nn.Module):
             inputs = inputs.reshape([-1, inputs.size(2)])
             states = states.reshape([-1, states.size(2)])
             labels = labels.reshape([-1, labels.size(2)])
+
+        method = self.params.train_method
+        beta = self.params.tikhonov_beta
 
         if method == 'tikhonov':
             if beta is None:
