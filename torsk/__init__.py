@@ -1,4 +1,3 @@
-import pathlib
 import json
 import logging
 import torch
@@ -43,75 +42,6 @@ class Params():
 def mse(predictions, labels):
     err = (predictions - labels)**2
     return torch.mean(err).item()
-
-
-def dump_states(fname, states, attrs=None, mode="w"):
-    with nc.Dataset(fname, mode) as dst:
-
-        dst.createDimension("train_length", states.shape[0])
-        dst.createDimension("hidden_size", states.shape[1])
-        dst.createVariable("states", float, ["train_length", "hidden_size"])
-
-        if attrs is not None:
-            dst.setncatts(attrs)
-
-        dst["states"][:] = states
-
-def dump_outputs(fname, outputs, labels, attrs=None, mode="w"):
-    with nc.Dataset(fname, mode) as dst:
-
-        dst.createDimension("pred_length", outputs.shape[0])
-        dst.createDimension("ydim", outputs.shape[1])
-        dst.createDimension("xdim", outputs.shape[2])
-        dst.createVariable("outputs", float, ["pred_length", "ydim", "xdim"])
-        dst.createVariable("labels", float, ["pred_length", "ydim", "xdim"])
-
-        if attrs is not None:
-            dst.setncatts(attrs)
-
-        dst["outputs"][:] = outputs
-        dst["labels"][:] = labels
-
-
-def save_model(model, fname):
-    state_dict = model.state_dict()
-    
-    # save sparse tensor
-    # TODO: can be removed when save/load is implemented for sparse tensors
-    # discussion: https://github.com/pytorch/pytorch/issues/9674
-
-    key = "esn_cell.weight_hh"
-    if isinstance(state_dict[key], torch.sparse.FloatTensor):
-        weight = state_dict.pop(key)
-        state_dict[key + "_indices"] = weight.coalesce().indices()
-        state_dict[key + "_values"] = weight.coalesce().values()
-    # print(new_state_dict.keys())
-    # print(new_state_dict['esn_cell.weight_hh_indices'])
-    torch.save(state_dict, fname)
-
-
-def load_model(modeldir):
-    from torsk.models import ESN
-    if isinstance(modeldir, str):
-        modeldir = pathlib.Path(modeldir)
-
-    params = Params(modeldir / "params.json")
-    model = ESN(params)
-    state_dict = torch.load(modeldir / "model.pth")
-
-    key = "esn_cell.weight_hh"
-    key_idx = key + "_indices"
-    key_val = key + "_values"
-    if key_idx in state_dict:
-        weight_idx = state_dict.pop(key_idx)
-        weight_val = state_dict.pop(key_val)
-        hidden_size = params.hidden_size
-        weight_hh = torch.sparse.FloatTensor(
-            weight_idx, weight_val, [hidden_size, hidden_size])
-        state_dict[key] = weight_hh
-
-    model.load_state_dict(state_dict)
-    return model
 
 
 def train_predict_esn(model, loader, params, outfile=None, modelfile=None):
