@@ -273,13 +273,13 @@ class SCTNetcdfDataset(Dataset):
         self.Fkk_min = ranges[2];
         self.Fkk_max = ranges[3];
 
-        self.kdims = self.data.shape[1:];
-        self.xdims = (
+        self.ksize = self.data.shape[1:];
+        self.xsize = (
             self.ncfile.dimensions["nlat"].size,
             self.ncfile.dimensions["nlon"].size)
         
-        (nlat, nlon) = self.xdims
-        (nk1, nk2) = self.kdims
+        (nlat, nlon) = self.xsize
+        (nk1, nk2) = self.ksize
         self.basis1 = utils.sct_basis(nlat, nk1)
         self.basis2 = utils.sct_basis(nlon, nk2)
 
@@ -307,8 +307,8 @@ class SCTNetcdfDataset(Dataset):
             return Fkk_scaled*(fmax-fmin);
 
     def to_image(self,Fkk_scaled):
-        Ftkk = self.unscale(Fkk_scaled).reshape([-1,self.kdims[0],self.kdims[1]]);
-        Ftxx = utils.idct2_sequence(Ftkk,self.xdims);
+        Ftkk = self.unscale(Fkk_scaled).reshape([-1,self.ksize[0],self.ksize[1]]);
+        Ftxx = utils.idct2_sequence(Ftkk,self.xsize);
         return Ftxx;
         
     def __getitem__(self, index):
@@ -321,8 +321,8 @@ class SCTNetcdfDataset(Dataset):
         inputs, labels, pred_labels = utils.split_train_label_pred(
             seq, self.train_length, self.pred_length)
 
-        (nk1,nk2) = self.kdims;
-        ssh = utils.idct2_sequence(pred_labels.reshape([self.pred_length,nk1,nk2]), self.xdims)
+        (nk1,nk2) = self.ksize;
+        ssh = utils.idct2_sequence(pred_labels.reshape([self.pred_length,nk1,nk2]), self.xsize)
         
         inputs = torch.Tensor(inputs)
         labels = torch.Tensor(labels)
@@ -338,10 +338,10 @@ class SCTNetcdfDataset(Dataset):
         nout = Dataset(output_path,"w");
 
         o_time = nout.createDimension('time',self.data.shape[0]);
-        o_nlat = nout.createDimension('nlat',self.xdims[0]);
-        o_nlon = nout.createDimension('nlon',self.xdims[1]);
-        o_nlat = nout.createDimension('nk1',self.kdims[0]);
-        o_nlon = nout.createDimension('nk2',self.kdims[1]);
+        o_nlat = nout.createDimension('nlat',self.xsize[0]);
+        o_nlon = nout.createDimension('nlon',self.xsize[1]);
+        o_nlat = nout.createDimension('nk1',self.ksize[0]);
+        o_nlon = nout.createDimension('nk2',self.ksize[1]);
 
         o_full_mask  = nout.createVariable("full_mask",'u1',("nlat","nlon"));
         o_edge_mask  = nout.createVariable("edge_mask",'u1',("nlat","nlon"));
