@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import torsk
+import torsk.utils
 from torsk.models import ESN
 
 
@@ -30,7 +30,6 @@ def test_save_load(tmpdir):
     }
     """
     params_json = tmpdir.join("params.json")
-    model_pth = tmpdir.join("model.pth")
     with open(params_json, "w") as dst:
         dst.write(params_string)
 
@@ -41,9 +40,9 @@ def test_save_load(tmpdir):
 
     _, out1 = model(inputs, state)
 
-    torsk.save_model(model, str(model_pth))
+    torsk.utils.save_model(tmpdir, model)
 
-    model = torsk.load_model(str(tmpdir))
+    model = torsk.utils.load_model(str(tmpdir))
     _, out2 = model(inputs, state)
 
     assert np.all(out1.numpy() == out2.numpy())
