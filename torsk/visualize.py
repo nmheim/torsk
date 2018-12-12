@@ -2,6 +2,42 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import animation
+from matplotlib import cm
+from torsk.data.utils import normalize
+import av
+
+# Assumes data is already in range [0,1]
+def to_byte(data,mask):
+    return (data*255*(mask==0)).astype(np.uint8);
+
+# This generates a video directly from a numpy array, much faster than matplotlib
+def write_video(filename,Ftxx,mask,fps=24,colormap=cm.viridis,codec='h264'):   
+    (nt,ny,nx) = Ftxx.shape;
+
+    container = av.open(filename, mode='w')
+
+    stream = container.add_stream(codec, rate=fps)
+    stream.width  = nx
+    stream.height = ny
+    stream.pix_fmt = "yuv420p"
+
+    data = normalize(Ftxx);
+    
+    for i in range(nt):                
+        img_rgbaf = colormap(data[i]);
+        frame=to_byte(img_rgbaf[:,:,:3],mask[:,:,None]);
+        
+        av_frame = av.VideoFrame.from_ndarray(np.flip(frame,axis=0).copy())
+    
+        for packet in stream.encode(av_frame):
+            container.mux(packet)
+
+    # Flush stream
+    for packet in stream.encode():
+        container.mux(packet)
+
+    # Close the file
+    container.close()
 
 
 def animate_double_imshow(frames1, frames2,
