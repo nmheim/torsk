@@ -5,7 +5,6 @@ import netCDF4 as nc
 import torch
 
 import torsk
-from torsk.models import ESN
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +48,8 @@ def save_model(modeldir, model, prefix=None):
 
 
 def load_model(modeldir, prefix=None):
+    # TODO: fix circular import
+    from torsk.models import ESN
     if isinstance(modeldir, str):
         modeldir = pathlib.Path(modeldir)
     prefix = _fix_prefix(prefix)
