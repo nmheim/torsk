@@ -72,18 +72,18 @@ def optimize_wout(outdir, model, inputs, states, train_labels, pred_labels):
 
 
 def _evaluate_hyperparams(outdir, model, loader, level2_params_list):
-    logger.info(f"Dumping model at {outdir}")
+    logger.debug(f"Dumping model at {outdir}")
     utils.save_model(outdir, model, prefix="untrained")
 
-    logger.info("Loading dataset")
+    logger.debug("Loading dataset")
     inputs, labels, pred_labels, orig_data = next(loader)
 
-    logger.info(f"Creating {inputs.size(0)} training states")
+    logger.debug(f"Creating {inputs.size(0)} training states")
     states = utils.create_training_states(model, inputs)
 
     # TODO: save orig_data?
     train_data_nc = outdir / "train_data.nc"
-    logger.info(f"Dumping training data at {train_data_nc}")
+    logger.debug(f"Dumping training data at {train_data_nc}")
     utils.dump_training(
         fname=train_data_nc,
         inputs=inputs.reshape([-1, model.params.input_size]),
@@ -110,11 +110,11 @@ def evaluate_hyperparams(outdir, params, level2_params_list, loader, iters=1):
 
     for ii in range(1, iters + 1):
 
-        logger.info("Building model")
+        logger.debug("Building model")
         model = ESN(params)
 
         rundir = outdir.joinpath(f"run-{ii:03d}")
-        logger.info(f"Evaluation run: {rundir}")
+        logger.debug(f"Evaluation run: {rundir}")
 
         _evaluate_hyperparams(
             outdir=rundir, model=model, loader=loader,
@@ -149,6 +149,7 @@ def esn_tikhonov_fitnessfunc(outdir, loader, params, dimensions,
     def fitness(**sampled_params):
 
         params.update(sampled_params)
+        logger.info(f"Sampled params: {params}")
 
         subdir = utils.create_path(outdir, sampled_params)
 
