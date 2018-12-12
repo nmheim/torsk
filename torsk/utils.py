@@ -10,20 +10,29 @@ from torsk.models import ESN
 logger = logging.getLogger(__name__)
 
 
+def _fix_prefix(prefix):
+    if prefix is not None:
+        prefix = prefix.strip("-") + "-"
+    else:
+        prefix = ""
+    return prefix
+
+
 def create_training_states(model, inputs):
     zero_state = torch.zeros(1, model.params.hidden_size)
     _, states = model(inputs, zero_state, states_only=True)
     return states
 
 
-def save_model(modeldir, model):
+def save_model(modeldir, model, prefix=None):
     if not isinstance(modeldir, pathlib.Path):
         modeldir = pathlib.Path(modeldir)
     if not modeldir.exists():
         modeldir.mkdir(parents=True)
+    prefix = _fix_prefix(prefix)
 
-    model_pth = modeldir / "model.pth"
-    params_json = modeldir / "params.json"
+    model_pth = modeldir / f"{prefix}model.pth"
+    params_json = modeldir / f"{prefix}params.json"
     state_dict = model.state_dict()
 
     # convert sparse tensor
@@ -39,13 +48,14 @@ def save_model(modeldir, model):
     torch.save(state_dict, model_pth.as_posix())
 
 
-def load_model(modeldir):
+def load_model(modeldir, prefix=None):
     if isinstance(modeldir, str):
         modeldir = pathlib.Path(modeldir)
+    prefix = _fix_prefix(prefix)
 
-    params = torsk.Params(modeldir / "params.json")
+    params = torsk.Params(modeldir / f"{prefix}params.json")
     model = ESN(params)
-    state_dict = torch.load(modeldir / "model.pth")
+    state_dict = torch.load(modeldir / f"{prefix}model.pth")
 
     # restore sparse tensor
     key = "esn_cell.weight_hh"
@@ -140,12 +150,13 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst["rmse"][:] = rmse
 
 
-def create_path(root, param_dict, prefix='level2', postfix=None):
+def create_path(root, param_dict, prefix=None, postfix=None):
     if not isinstance(root, pathlib.Path):
         root = pathlib.Path(root)
-    folder = prefix
+    folder = _fix_prefix(prefix)
     for key, val in param_dict.items():
-        folder += f"-{key}:{val}"
+        folder += f"{key}:{val}-"
+    folder = folder[:-1]
     if postfix is not None:
         folder += f"-{postfix}"
     return root / folder

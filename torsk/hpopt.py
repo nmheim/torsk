@@ -2,6 +2,8 @@ import pathlib
 import logging
 
 import numpy as np
+import netCDF4 as nc
+import pandas as pd
 from skopt.utils import use_named_args
 import torch
 from tqdm import tqdm
@@ -12,7 +14,9 @@ from torsk import utils
 logger = logging.getLogger(__name__)
 
 
-SECOND_LEVEL_HYPERPARAMETERS = ["transient_length", "pred_length"]
+SECOND_LEVEL_HYPERPARAMETERS = [
+    "transient_length", "pred_length", "tikhonov_beta", "train_method"
+]
 
 
 def is_second_level_param(param_name):
@@ -26,17 +30,53 @@ def valid_second_level_params(params):
     return True
 
 
-def evaluate_hyperparams(outdir, default_params, hyper_params, loader, tikhonov_betas):
-    if not isinstance(outdir, pathlib.Path):
-        outdir = pathlib.Path(outdir)
-    if not outdir.exists():
-        outdir.mkdir(parents=True)
+def get_hpopt_dirs(rootdir):
+    """Yields all subdirectories that contain a trained-model.pth"""
+    if not isinstance(rootdir, pathlib.Path):
+        rootdir = pathlib.Path(rootdir)
 
-    logger.info("Building model")
-    model = ESN(default_params)
+    for trained_path in rootdir.glob("**"):
+        if trained_path.joinpath("trained-model.pth").exists():
+            yield trained_path
 
-    logger.info(f"Dumping model at {outdir}/[params.json, model.pth]")
-    utils.save_model(outdir, model)
+
+def read_metric(trained_model_dir, metric="rmse"):
+    with nc.Dataset(trained_model_dir / "pred_data.nc", "r") as src:
+        metric = src["rmse"][:]
+    return metric[0]
+
+
+def optimize_wout(outdir, model, inputs, states, train_labels, pred_labels):
+
+    tlen = model.params.transient_length
+    plen = model.params.pred_length
+    init_input = train_labels[-1]
+    init_state = states[-1]
+
+    logger.debug(f"Optimizing Wout with method:{model.params.train_method}"
+                  " / beta:{mdoel.params.tikhonov_beta}")
+    model.optimize(
+        inputs=inputs[tlen:], states=states[tlen:], labels=train_labels[tlen:])
+
+    logger.debug(f"Predicting {plen} steps")
+    outputs, out_states = model.predict(
+        init_input, init_state, nr_predictions=plen)
+
+    pred_data_nc = outdir / "pred_data.nc"
+    logger.debug(f"Dumping prediction data at {pred_data_nc}")
+    utils.dump_prediction(
+        fname=pred_data_nc,
+        outputs=outputs.reshape([-1, model.params.output_size]),
+        labels=pred_labels.reshape([-1, model.params.output_size]),
+        states=out_states.squeeze())
+
+    logger.debug(f"Dumping model at {outdir}")
+    utils.save_model(outdir, model, prefix="trained")
+
+
+def _evaluate_hyperparams(outdir, model, loader, level2_params_list):
+    logger.info(f"Dumping model at {outdir}")
+    utils.save_model(outdir, model, prefix="untrained")
 
     logger.info("Loading dataset")
     inputs, labels, pred_labels, orig_data = next(loader)
@@ -54,138 +94,109 @@ def evaluate_hyperparams(outdir, default_params, hyper_params, loader, tikhonov_
         states=states.squeeze(),
         pred_labels=pred_labels.reshape([-1, model.params.output_size]))
 
-    for hyper in hyper_params:
-        if valid_second_level_params(hyper):
-            model.params.update(hyper)
-            level2_outdir = utils.create_path(outdir, hyper)
+    for level2 in level2_params_list:
+        if valid_second_level_params(level2):
+            model.params.update(level2)
+            level2_outdir = utils.create_path(outdir, level2, prefix="trained")
             optimize_wout(
                 outdir=level2_outdir, model=model, inputs=inputs,
-                states=states, train_labels=labels, pred_labels=pred_labels,
-                tikhonov_betas=tikhonov_betas)
+                states=states, train_labels=labels, pred_labels=pred_labels)
         else:
             raise ValueError(
-                f"Not all hyper_params are of second level: {hyper_params}")
+                f"Not all level2-params are of second level: {level2}")
 
 
-def optimize_wout(outdir, model, inputs, states, train_labels, pred_labels, tikhonov_betas):
-    """Run optimization of last ESN layer (Wout) both with Pseudo Inverse and
-    Tikhonov with a list of regularization parameter values."""
+def evaluate_hyperparams(outdir, params, level2_params_list, loader, iters=1):
+
     if not isinstance(outdir, pathlib.Path):
         outdir = pathlib.Path(outdir)
 
-    tlen = model.params.transient_length
-    plen = model.params.pred_length
-    init_input = train_labels[-1]
-    init_state = states[-1]
+    for ii in range(1, iters + 1):
 
-    def _optimize(model, method, beta):
-        model.params.train_method = method
-        model.params.tikhonov_beta = beta
-        logger.info(f"Optimizing Wout with method:{method} / beta:{beta}")
-        model.optimize(
-            inputs=inputs[tlen:], states=states[tlen:], labels=train_labels[tlen:])
+        logger.info("Building model")
+        model = ESN(params)
 
-        logger.info(f"Predicting {plen} steps")
-        outputs, out_states = model.predict(
-            init_input, init_state, nr_predictions=plen)
+        rundir = outdir.joinpath(f"run-{ii:03d}")
+        logger.info(f"Evaluation run: {rundir}")
 
-        if method == "pinv":
-            method_outdir = outdir / "pinv"
-        elif method == "tikhonov":
-            method_outdir = outdir / f"tik{beta}"
-
-        pred_data_nc = method_outdir / "pred_data.nc"
-        logger.info(f"Dumping prediction data at {pred_data_nc}")
-        utils.dump_prediction(
-            fname=pred_data_nc,
-            outputs=outputs.reshape([-1, model.params.output_size]),
-            labels=pred_labels.reshape([-1, model.params.output_size]),
-            states=out_states.squeeze())
-
-        logger.info(f"Dumping model at {method_outdir}/[params.json, model.pth]")
-        utils.save_model(method_outdir, model)
-
-    _optimize(model, method="pinv", beta=None)
-
-    for beta in tikhonov_betas:
-        _optimize(model, method="tikhonov", beta=beta)
+        _evaluate_hyperparams(
+            outdir=rundir, model=model, loader=loader,
+            level2_params_list=level2_params_list)
 
 
-def _tikhonov_optimize(tikhonov_betas, model, params, inputs, states, labels, pred_labels):
-    """Find optimal regularization parameter beta out of a given list of tikhonov_betas.
-    The generated states would be always the same for varying beta, so this can be
-    run independently of the other hyper-parameter searches.
-    """
-    tlen = params.transient_length
+# def _tikhonov_optimize(tikhonov_betas, model, params, inputs, states, labels, pred_labels):
+#     """Find optimal regularization parameter beta out of a given list of tikhonov_betas.
+#     The generated states would be always the same for varying beta, so this can be
+#     run independently of the other hyper-parameter searches.
+#     """
+#     tlen = params.transient_length
+# 
+#     metrics = []
+#     for beta in tikhonov_betas:
+#         model.optimize(
+#             inputs=inputs[tlen:],
+#             states=states[tlen:],
+#             labels=labels[tlen:],
+#             method="tikhonov",
+#             beta=beta)
+# 
+#         init_inputs = labels[-1]
+#         outputs, _ = model.predict(
+#             init_inputs, states[-1], nr_predictions=params.pred_length)
+# 
+#         error = (outputs - pred_labels)**2
+#         metric = torch.mean(error).item()
+#         if not np.isfinite(metric):
+#             metric = 1e7
+#         metrics.append(metric)
+#     min_tik = np.argmin(metrics)
+#     return tikhonov_betas[min_tik], metrics[min_tik]
 
-    metrics = []
-    for beta in tikhonov_betas:
-        model.optimize(
-            inputs=inputs[tlen:],
-            states=states[tlen:],
-            labels=labels[tlen:],
-            method="tikhonov",
-            beta=beta)
 
-        init_inputs = labels[-1]
-        outputs, _ = model.predict(
-            init_inputs, states[-1], nr_predictions=params.pred_length)
-
-        error = (outputs - pred_labels)**2
-        metric = torch.mean(error).item()
-        if not np.isfinite(metric):
-            metric = 1e7
-        metrics.append(metric)
-    min_tik = np.argmin(metrics)
-    return tikhonov_betas[min_tik], metrics[min_tik]
-
-
-def esn_tikhonov_fitnessfunc(loader, params, dimensions, tikhonov_betas, nr_avg_runs=10):
+def esn_tikhonov_fitnessfunc(outdir, loader, params, dimensions,
+                             level2_params_list, nr_avg_runs=10):
     """Fitness function for hyper-parameter optimization that automatically
     uses the best regularization parameter out of a given list of tikhonov_betas
 
     Parameters
     ----------
+    outdir : pathlib.Path
+        output directory
     loader : torch.utils.DataLoader
         loads the necessary inputs/labels/pred_labels
     params : torsk.Params
         model/training parameters
     dimensions : list of skopt.Dimesion
         defining the hyper-parameter search space
-    tikhonov_betas : list
-        contains the tikhonov regularization parameters that will be tested
+    level2_params_list : list(dict)
+        second level hyper-parameters to test for each sampled params set
 
     Returns
     -------
     fitness : function
         function to be passed to skopt.gp_minimize
     """
+
     @use_named_args(dimensions=dimensions)
     def fitness(**sampled_params):
 
         params.update(sampled_params)
 
-        metrics, betas = [], []
-        for _ in tqdm(range(nr_avg_runs)):
-            model = ESN(params)
+        subdir = utils.create_path(outdir, sampled_params)
 
-            # create states
-            model.eval()  # because we are not using gradients
-            inputs, labels, pred_labels, orig_data = next(loader)
-            zero_state = torch.zeros(1, params.hidden_size)
-            _, states = model(inputs, zero_state, states_only=True)
+        evaluate_hyperparams(
+            outdir=subdir, params=params, level2_params_list=level2_params_list,
+            loader=loader, iters=nr_avg_runs)
 
-            # find best tikhonov beta
-            tikhonov_beta, metric = _tikhonov_optimize(
-                tikhonov_betas=tikhonov_betas, model=model, params=params,
-                inputs=inputs, states=states, labels=labels, pred_labels=pred_labels)
+        trained_model_dirs = get_hpopt_dirs(subdir)
+        runs = []
+        for model_dir in trained_model_dirs:
+            data = {"level2":model_dir.name}
+            data["metric"] = read_metric(model_dir)
+            data["run"] = int(model_dir.parent.name.split("-")[-1])
+            runs.append(data)
 
-            params.tikhonov_beta = tikhonov_beta
-            metrics.append(metric)
-            betas.append(tikhonov_beta)
-        logger.info("Tested parameters:")
-        for key, val in sampled_params.items():
-            logger.info(f"{key}: {val}")
-        logger.info(f"Best tikhonov: {np.median(tikhonov_beta)}")
-        return np.median(metric)
+        dataframe = pd.DataFrame(runs)
+        grouped = dataframe.groupby("level2").median()
+        return grouped["metric"].min()
     return fitness
