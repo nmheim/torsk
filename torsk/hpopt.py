@@ -1,12 +1,9 @@
 import pathlib
 import logging
 
-import numpy as np
 import netCDF4 as nc
 import pandas as pd
 from skopt.utils import use_named_args
-import torch
-from tqdm import tqdm
 
 from torsk.models import ESN
 from torsk import utils
@@ -54,7 +51,7 @@ def optimize_wout(outdir, model, inputs, states, train_labels, pred_labels):
     init_state = states[-1]
 
     logger.debug(f"Optimizing Wout with method:{model.params.train_method}"
-                  " / beta:{mdoel.params.tikhonov_beta}")
+                 " / beta:{mdoel.params.tikhonov_beta}")
     model.optimize(
         inputs=inputs[tlen:], states=states[tlen:], labels=train_labels[tlen:])
 
@@ -124,35 +121,6 @@ def evaluate_hyperparams(outdir, params, level2_params_list, loader, iters=1):
             level2_params_list=level2_params_list)
 
 
-# def _tikhonov_optimize(tikhonov_betas, model, params, inputs, states, labels, pred_labels):
-#     """Find optimal regularization parameter beta out of a given list of tikhonov_betas.
-#     The generated states would be always the same for varying beta, so this can be
-#     run independently of the other hyper-parameter searches.
-#     """
-#     tlen = params.transient_length
-# 
-#     metrics = []
-#     for beta in tikhonov_betas:
-#         model.optimize(
-#             inputs=inputs[tlen:],
-#             states=states[tlen:],
-#             labels=labels[tlen:],
-#             method="tikhonov",
-#             beta=beta)
-# 
-#         init_inputs = labels[-1]
-#         outputs, _ = model.predict(
-#             init_inputs, states[-1], nr_predictions=params.pred_length)
-# 
-#         error = (outputs - pred_labels)**2
-#         metric = torch.mean(error).item()
-#         if not np.isfinite(metric):
-#             metric = 1e7
-#         metrics.append(metric)
-#     min_tik = np.argmin(metrics)
-#     return tikhonov_betas[min_tik], metrics[min_tik]
-
-
 def esn_tikhonov_fitnessfunc(outdir, loader, params, dimensions,
                              level2_params_list, nr_avg_runs=10):
     """Fitness function for hyper-parameter optimization that automatically
@@ -191,7 +159,7 @@ def esn_tikhonov_fitnessfunc(outdir, loader, params, dimensions,
         trained_model_dirs = get_hpopt_dirs(subdir)
         runs = []
         for model_dir in trained_model_dirs:
-            data = {"level2":model_dir.name}
+            data = {"level2": model_dir.name}
             data["metric"] = read_metric(model_dir)
             data["run"] = int(model_dir.parent.name.split("-")[-1])
             runs.append(data)
