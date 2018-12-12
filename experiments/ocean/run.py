@@ -8,7 +8,7 @@ from torchvision import transforms
 import torsk
 from torsk.models import ESN
 from torsk.data import NetcdfDataset, SeqDataLoader
-from torsk.visualize import animate_double_imshow
+from torsk.visualize import animate_double_imshow, write_video
 
 
 logger = logging.getLogger(__file__)

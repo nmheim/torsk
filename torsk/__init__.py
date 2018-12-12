@@ -1,8 +1,9 @@
-import pathlib
 import json
+import pathlib
 import logging
 import torch
 import netCDF4 as nc
+from torsk.utils import dump_training, dump_prediction, save_model, load_model
 
 logger = logging.getLogger(__name__)
 
@@ -45,76 +46,9 @@ def mse(predictions, labels):
     return torch.mean(err).item()
 
 
-def dump_states(fname, states, attrs=None, mode="w"):
-    with nc.Dataset(fname, mode) as dst:
-
-        dst.createDimension("train_length", states.shape[0])
-        dst.createDimension("hidden_size", states.shape[1])
-        dst.createVariable("states", float, ["train_length", "hidden_size"])
-
-        if attrs is not None:
-            dst.setncatts(attrs)
-
-        dst["states"][:] = states
-
-def dump_outputs(fname, outputs, labels, attrs=None, mode="w"):
-    with nc.Dataset(fname, mode) as dst:
-
-        dst.createDimension("pred_length", outputs.shape[0])
-        dst.createDimension("ydim", outputs.shape[1])
-        dst.createDimension("xdim", outputs.shape[2])
-        dst.createVariable("outputs", float, ["pred_length", "ydim", "xdim"])
-        dst.createVariable("labels", float, ["pred_length", "ydim", "xdim"])
-
-        if attrs is not None:
-            dst.setncatts(attrs)
-
-        dst["outputs"][:] = outputs
-        dst["labels"][:] = labels
-
-
-def save_model(model, fname):
-    state_dict = model.state_dict()
-    
-    # save sparse tensor
-    # TODO: can be removed when save/load is implemented for sparse tensors
-    # discussion: https://github.com/pytorch/pytorch/issues/9674
-
-    key = "esn_cell.weight_hh"
-    if isinstance(state_dict[key], torch.sparse.FloatTensor):
-        weight = state_dict.pop(key)
-        state_dict[key + "_indices"] = weight.coalesce().indices()
-        state_dict[key + "_values"] = weight.coalesce().values()
-    # print(new_state_dict.keys())
-    # print(new_state_dict['esn_cell.weight_hh_indices'])
-    torch.save(state_dict, fname)
-
-
-def load_model(modeldir):
-    from torsk.models import ESN
-    if isinstance(modeldir, str):
-        modeldir = pathlib.Path(modeldir)
-
-    params = Params(modeldir / "params.json")
-    model = ESN(params)
-    state_dict = torch.load(modeldir / "model.pth")
-
-    key = "esn_cell.weight_hh"
-    key_idx = key + "_indices"
-    key_val = key + "_values"
-    if key_idx in state_dict:
-        weight_idx = state_dict.pop(key_idx)
-        weight_val = state_dict.pop(key_val)
-        hidden_size = params.hidden_size
-        weight_hh = torch.sparse.FloatTensor(
-            weight_idx, weight_val, [hidden_size, hidden_size])
-        state_dict[key] = weight_hh
-
-    model.load_state_dict(state_dict)
-    return model
-
-
-def train_predict_esn(model, loader, params, outfile=None, modelfile=None):
+def train_predict_esn(model, loader, params, outdir=None):
+    if outdir is not None and not isinstance(outdir, pathlib.Path):
+        outdir = pathlib.Path(outdir)
 
     model.eval()  # because we are not using gradients
     tlen = params.transient_length
@@ -125,36 +59,34 @@ def train_predict_esn(model, loader, params, outfile=None, modelfile=None):
     zero_state = torch.zeros(1, params.hidden_size)
     _, states = model(inputs, zero_state, states_only=True)
 
-    if outfile is not None:
-        logger.debug(f"Saving states to {outfile}")
-        dump_states(outfile, states.squeeze().numpy())
+    if outdir is not None:
+        outfile = outdir / "train_data.nc"
+        logger.debug(f"Saving training to {outfile}")
+        dump_training(
+            outfile,
+            inputs=inputs.reshape([-1, params.input_size]),
+            labels=labels.reshape([-1, params.output_size]),
+            states=states.reshape([-1, params.hidden_size]),
+            pred_labels=pred_labels.reshape([-1, params.output_size]))
 
     logger.debug("Optimizing output weights")
-    model.optimize(
-        inputs=inputs[tlen:],
-        states=states[tlen:],
-        labels=labels[tlen:],
-        method=params.train_method,
-        beta=params.tikhonov_beta)
-    if modelfile is not None:
+    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
+    if outdir is not None:
+        modelfile = outdir / "model.pth"
         logger.debug(f"Saving model to {modelfile}")
-        save_model(model, modelfile)
+        save_model(modelfile.parent, model)
 
     logger.debug(f"Predicting the next {params.pred_length} frames")
     init_inputs = labels[-1]
-    outputs, _ = model.predict(
+    outputs, out_states = model.predict(
         init_inputs, states[-1], nr_predictions=params.pred_length)
 
-    if outfile is not None:
-        logger.debug(f"Saving outputs to {outfile}")
-        if hasattr(loader.dataset, "to_image"):
-            np_outputs = loader.dataset.to_image(outputs)
-            np_labels = loader.dataset.to_image(pred_labels)
-        else:
-            np_outputs = outputs.numpy()
-            np_labels = pred_labels.numpy()
-
-        dump_outputs(
-            fname=outfile, outputs=np_outputs, labels=np_labels, mode="a")
+    if outdir is not None:
+        outfile = outdir / "pred_data.nc"
+        logger.debug(f"Saving prediction to {outfile}")
+        dump_prediction(outfile,
+            outputs=outputs.reshape([-1, params.input_size]),
+            labels=pred_labels.reshape([-1, params.output_size]),
+            states=out_states.reshape([-1, params.hidden_size]))
 
     return model, outputs, pred_labels, orig_data

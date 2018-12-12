@@ -51,7 +51,7 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels, _ = torsk.train_predict_esn(
-    model, loader, params, outfile="results.nc", modelfile="model.pth")
+    model, loader, params, outdir=".")
 
 logger.info("Visualizing results ...")
 
