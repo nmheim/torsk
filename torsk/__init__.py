@@ -60,12 +60,7 @@ def train_predict_esn(model, loader, params, outfile=None, modelfile=None):
         dump_states(outfile, states.squeeze().numpy())
 
     logger.debug("Optimizing output weights")
-    model.optimize(
-        inputs=inputs[tlen:],
-        states=states[tlen:],
-        labels=labels[tlen:],
-        method=params.train_method,
-        beta=params.tikhonov_beta)
+    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
     if modelfile is not None:
         logger.debug(f"Saving model to {modelfile}")
         save_model(model, modelfile)
