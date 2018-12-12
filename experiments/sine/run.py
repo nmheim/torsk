@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -7,6 +8,10 @@ import torsk
 from torsk.models import ESN
 from torsk.visualize import plot_mackey
 from torsk.data import SineDataset, SeqDataLoader
+from torsk import utils
+
+
+logging.basicConfig(level="INFO")
 
 
 # Parameters and model initialization
@@ -17,6 +22,13 @@ dataset = SineDataset(
     train_length=params.train_length,
     pred_length=params.pred_length)
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
+
+
+model = ESN(params)
+inputs, train_labels, pred_labels, orig_data = next(loader)
+
+zero_state = torch.zeros(1, params.hidden_size)
+_, states = model(inputs, zero_state, states_only=True)
 
 predictions, labels = [], []
 for i in tqdm(range(30)):
