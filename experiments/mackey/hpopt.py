@@ -19,20 +19,20 @@ opt_steps = 50
 tik_steps = 20
 tik_start = -5
 tik_stop = 2
-tikhonov_betas = np.logspace(tik_start, tik_stop, tik_steps)
+tik_betas = np.logspace(tik_start, tik_stop, tik_steps)
+level2 = [{"tikhonov_beta":beta, "train_method":"tikhonov"} for beta in tik_betas]
+level2.append({"tikhonov_beta":None, "train_method":"pinv"})
 
-output_dir = pathlib.Path("hpopt")
+output_dir = pathlib.Path("hpopt_output")
 
 dimensions = [
     Real(low=0.5, high=2.0, name="spectral_radius"),
     Real(low=0.0, high=2.0, name="in_weight_init"),
-    Real(low=0.0, high=2.0, name="in_bias_init"),
 ]
 
 starting_params = [
     1.0,    # esn_spectral_radius
     1.0,    # in_weight_init
-    1.0,    # in_bias_init
 ]
 
 params = torsk.Params("hpopt_params.json")
@@ -42,9 +42,9 @@ dataset = MackeyDataset(
     simulation_steps=params.train_length + params.pred_length + opt_steps * 10)
 loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
-fitness = esn_tikhonov_fitnessfunc(loader, params, dimensions, tikhonov_betas)
+fitness = esn_tikhonov_fitnessfunc(
+    output_dir, loader, params, dimensions, level2, nr_avg_runs=3)
 
-# TODO: add callback that saves checkpoints
 result = skopt.gp_minimize(
     n_calls=opt_steps,
     func=fitness,
