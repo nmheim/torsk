@@ -47,7 +47,7 @@ def mse(predictions, labels):
 
 
 def train_predict_esn(model, loader, params, outdir=None):
-    if not isinstance(outdir, pathlib.Path):
+    if outdir is not None and not isinstance(outdir, pathlib.Path):
         outdir = pathlib.Path(outdir)
 
     model.eval()  # because we are not using gradients
