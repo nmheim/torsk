@@ -10,8 +10,6 @@ from torchvision.transforms import functional as tvf
 
 from torsk.data import utils
 
-import matplotlib.pyplot as plt;
-
 _module_dir = pathlib.Path(__file__).absolute().parent
 _data_dir = _module_dir / "../../data"
 logger = logging.getLogger(__name__)

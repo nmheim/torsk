@@ -1,9 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from scipy.fftpack import dct, idct, dctn, idctn
-from scipy.linalg import lstsq
-import scipy as sp
+from scipy.fftpack import dct, idct
 
 
 # Least-squares approximation to restricted DCT-III / Inverse DCT-II

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.nn.modules.rnn import RNNCellBase
 
-from torsk.models.utils import scale_weight, sparse_esn_reservoir
+from torsk.models.utils import sparse_esn_reservoir
 from torsk.models.esn import tikhonov, pseudo_inverse
 
 logger = logging.getLogger(__name__)
@@ -62,17 +62,16 @@ class ConvESNCell(RNNCellBase):
         values = torch.FloatTensor(matrix.data)
 
         self.weight_hh = Parameter(torch.sparse.FloatTensor(
-            indices, values, [self.hidden_size]*2), requires_grad=False)
+            indices, values, [self.hidden_size] * 2), requires_grad=False)
 
         # biases
         self.bias_ih = self.register_parameter('bias_ih', None)
         self.bias_hh = self.register_parameter('bias_hh', None)
 
-
     def forward(self, inputs, state):
         if not inputs.size(0) == state.size(0) == 1:
             raise ValueError("SparseESNCell can only process batch_size==1")
-        
+
         inputs = inputs.reshape([1, 1, inputs.size(1), inputs.size(2)])
         state = state.reshape([-1, 1])
 
@@ -86,7 +85,6 @@ class ConvESNCell(RNNCellBase):
         new_state = torch.tanh(x_inputs + x_state)
 
         return new_state.reshape([1, -1])
-
 
     def get_hidden_size(self, input_shape, kernels):
         size = 0
@@ -116,8 +114,7 @@ class ConvESN(torch.nn.Module):
             input_size, bias=False)
 
         self.ones = torch.ones([1, 1])
-        
-        
+
     def forward(self, inputs, state, states_only=True):
         if inputs.size(1) != 1:
             raise ValueError("Supports only batch size of one -.-")
@@ -180,21 +177,21 @@ class ConvESN(torch.nn.Module):
         if method == 'tikhonov':
             if beta is None:
                 raise ValueError(
-                    'For Tikhonov training the beta parameter cannot be None.')
+                    "For Tikhonov training the beta parameter cannot be None.")
             wout = tikhonov(inputs, states, labels, beta)
 
         elif method == 'pinv':
             if beta is not None:
-                logger.warning('With pseudo inverse training the '
-                               'beta parameter has no effect.')
+                logger.warning("With pseudo inverse training the "
+                               "beta parameter has no effect.")
             wout = pseudo_inverse(inputs, states, labels)
 
         else:
-            raise ValueError(f'Unkown training method: {method}')
+            raise ValueError(f"Unkown training method: {method}")
 
         if(wout.size() != self.out.weight.size()):
             raise ValueError(
                 f"Wout shape: {wout.shape} "
                 "is not as expected: {self.out.weight.shape}")
-        
+
         self.out.weight = Parameter(wout, requires_grad=False)
