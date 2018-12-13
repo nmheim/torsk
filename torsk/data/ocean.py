@@ -102,7 +102,7 @@ class NetcdfDataset(Dataset):
     labels : torch.Tensor
         sequence of shape (seq_length, ydim, xdim)
     """
-    def __init__(self, ncpath, train_length, pred_length, xslice, yslice, size=None):
+    def __init__(self, ncpath, train_length, pred_length, xslice, yslice, size=None, flatten=True):
 
         self.train_length = train_length
         self.pred_length = pred_length
@@ -111,6 +111,7 @@ class NetcdfDataset(Dataset):
         self.xslice = xslice
         self.yslice = yslice
         self.size = size
+        self.flatten = flatten
 
         self.seq_length = train_length + pred_length
         self.nr_sequences = self.data.shape[0] - self.seq_length
@@ -130,7 +131,8 @@ class NetcdfDataset(Dataset):
 
         if self.size is not None:
             seq = resample(seq, self.size)
-        seq = seq.reshape([self.seq_length + 1, -1])
+        if self.flatten:
+            seq = seq.reshape([self.seq_length + 1, -1])
 
         inputs, labels, pred_labels = utils.split_train_label_pred(
             seq, self.train_length, self.pred_length)
