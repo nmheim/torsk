@@ -56,7 +56,7 @@ def train_predict_esn(model, loader, params, outdir=None):
     inputs, labels, pred_labels, orig_data = next(loader)
 
     logger.debug(f"Creating {inputs.size(0)} training states")
-    zero_state = torch.zeros(1, params.hidden_size)
+    zero_state = torch.zeros(1, model.esn_cell.hidden_size)
     _, states = model(inputs, zero_state, states_only=True)
 
     if outdir is not None:

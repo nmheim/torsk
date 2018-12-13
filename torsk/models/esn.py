@@ -1,18 +1,16 @@
 import pathlib
 import logging
 
+import numpy as np
+from scipy.linalg import lstsq, svd
 import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 from torch.nn.modules.rnn import RNNCellBase
 
 from torsk import Params
-from torsk.models.utils import dense_esn_reservoir, scale_weight
-from torsk.models.sparse_esn import SparseESNCell
-
-from scipy.linalg import lstsq, svd
-from numpy import abs,log2,log10
-import numpy as np
+from torsk.models.utils import (
+        dense_esn_reservoir, scale_weight, sparse_esn_reservoir)
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
@@ -23,6 +21,7 @@ def get_default_params():
 
 
 def _extended_states(inputs, states):
+    print(inputs.shape, states.shape)
     ones = torch.ones([inputs.size(0), 1])
     return torch.cat([ones, inputs, states], dim=1).t()
 
@@ -30,44 +29,45 @@ def _extended_states(inputs, states):
 def pseudo_inverse_lstsq(inputs, states, labels):
     X = _extended_states(inputs, states)
 
-    wout,_,_,s = lstsq(X.t(),labels);
-    condition  = s[0]/s[-1];
+    wout, _, _, s = lstsq(X.t(),labels)
+    condition = s[0]/s[-1]
 
-    if(log2(abs(condition)) > 12): # More than half of the bits in the data are lost
-        print("Large condition number in pseudoinverse:",
-              condition," losing more than half of the digits.",
-              "Expect numerical blowup!");
-        print("Largest and smallest singular values:",s[0],s[-1])
+    if(np.log2(np.abs(condition)) > 12):  # More than half of the bits in the data are lost
+        logger.warning(
+            f"Large condition number in pseudoinverse: {condition}"
+            " losing more than half of the digits. Expect numerical blowup!")
+        logger.warning(f"Largest and smallest singular values: {s[0]}  {s[-1]}")
         
     return torch.Tensor(wout.T)
 
 def pseudo_inverse_svd(inputs, states, labels):
     X = _extended_states(inputs, states)
 
-    U,s,Vh = svd(X.numpy());
-    L      = labels.numpy().T;
-    condition  = s[0]/s[-1];
+    U, s, Vh = svd(X.numpy())
+    L = labels.numpy().T
+    condition = s[0] / s[-1]
 
     scale = s[0]
-    n = len(s[abs(s/scale)>1e-4]); # Ensure condition number less than 10.000
-    v  = Vh[:n,:].T;
-    uh = U[:,:n].T;
+    n = len(s[np.abs(s / scale) > 1e-4])  # Ensure condition number less than 10.000
+    v = Vh[:n, :].T
+    uh = U[:, :n].T
 
-    wout = np.dot(np.dot(L,v) * (1/s[:n]),uh);
+    wout = np.dot(np.dot(L, v) * (1 / s[:n]), uh)
     return torch.Tensor(wout)
     
 
 def pseudo_inverse(inputs, states, labels):
-    return pseudo_inverse_svd(inputs, states, labels);
+    return pseudo_inverse_svd(inputs, states, labels)
+
 
 def tikhonov(inputs, states, labels, beta):
     X = _extended_states(inputs, states)
 
-    Id  = torch.eye(X.size(0));
-    A = torch.mm(X,X.t()) + beta*Id;
-    B = torch.mm(X,labels);
+    Id  = torch.eye(X.size(0))
+    A = torch.mm(X, X.t()) + beta * Id
+    B = torch.mm(X, labels)
     # Solve linear system instead of calculating inverse
-    wout,_ = torch.gesv(B,A);
+    wout,_ = torch.gesv(B, A)
     return wout.t()
 
 
@@ -132,6 +132,88 @@ class ESNCell(RNNCellBase):
         return torch._C._VariableFunctions.rnn_tanh_cell(
             inputs, state, self.in_weight, self.weight_hh,
             self.in_bias, self.res_bias)
+
+
+class SparseESNCell(RNNCellBase):
+    """An Echo State Network (ESN) cell with a sparsely represented reservoir
+    matrix. Can currently only handle batch==1.
+
+    Parameters
+    ----------
+    input_size : int
+        Number of input features
+    hidden_size : int
+        Number of features in the hidden state
+    spectral_radius : float
+        Largest eigenvalue of the reservoir matrix
+    in_weight_init : float
+        Input matrix will be chosen from a random uniform like
+        (-in_weight_init, in_weight_init)
+    in_bias_init : float
+        Input matrix will be chosen from a random uniform like
+        (-in_bias_init, in_bias_init)
+
+
+    Inputs
+    ------
+    input : torch.Tensor
+        contains input features of shape (batch, input_size)
+    state : torch.Tensor
+        current hidden state of shape (batch, hidden_size)
+
+    Outputs
+    -------
+    state' : torch.Tensor
+        contains the next hidden state of shape (batch, hidden_size)
+    """
+
+    def __init__(self, input_size, hidden_size,
+                 spectral_radius, in_weight_init, in_bias_init, density):
+        super(SparseESNCell, self).__init__(
+            input_size, hidden_size, bias=True, num_chunks=1)
+
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+
+        # input matrix
+        in_weight = torch.rand([hidden_size, input_size])
+        in_weight = scale_weight(in_weight, in_weight_init)
+        self.weight_ih = Parameter(in_weight, requires_grad=False)
+
+        # sparse reservoir matrix
+        matrix = sparse_esn_reservoir(
+            dim=hidden_size,
+            spectral_radius=spectral_radius,
+            density=density,
+            symmetric=False)
+
+        matrix = matrix.tocoo()
+        indices = torch.LongTensor([matrix.row, matrix.col])
+        values = torch.FloatTensor(matrix.data)
+
+        self.weight_hh = Parameter(torch.sparse.FloatTensor(
+            indices, values, [hidden_size, hidden_size]), requires_grad=False)
+
+        # biases
+        in_bias = torch.rand([hidden_size, 1])
+        in_bias = scale_weight(in_bias, in_bias_init)
+        self.bias_ih = Parameter(torch.Tensor(in_bias), requires_grad=False)
+        self.bias_hh = self.register_parameter('bias_hh', None)
+
+    def forward(self, inputs, state):
+        if not inputs.size(0) == state.size(0) == 1:
+            raise ValueError("SparseESNCell can only process batch_size==1")
+
+        # reshape for matrix multiplication
+        inputs = inputs.reshape([-1, 1])
+        state = state.reshape([-1, 1])
+
+        # next state
+        x_inputs = torch.mm(self.weight_ih, inputs)
+        x_state = torch.mm(self.weight_hh, state)
+        new_state = torch.tanh(x_inputs + x_state + self.bias_ih)
+
+        return new_state.reshape([1, -1])
 
 
 class ESN(nn.Module):
