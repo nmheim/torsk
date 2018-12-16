@@ -21,7 +21,6 @@ def get_default_params():
 
 
 def _extended_states(inputs, states):
-    print(inputs.shape, states.shape)
     ones = torch.ones([inputs.size(0), 1])
     return torch.cat([ones, inputs, states], dim=1).t()
 

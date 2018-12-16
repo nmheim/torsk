@@ -8,6 +8,7 @@ from torsk import Params
 from torsk.models.utils import (
         dense_esn_reservoir, scale_weight, sparse_esn_reservoir)
 
+DTYPE = np.float32
 _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
 
@@ -78,21 +79,22 @@ class ESNCell(object):
         self.weight_ih = np.random.uniform(
             low=-in_weight_init,
             high=in_weight_init,
-            size=[hidden_size, input_size])
+            size=[hidden_size, input_size]).astype(DTYPE)
 
         self.weight_hh = dense_esn_reservoir(
             dim=hidden_size, spectral_radius=spectral_radius,
             density=density, symmetric=False)
+        self.weight_hh = self.weight_hh.astype(DTYPE)
 
         self.bias_ih = np.random.uniform(
             low=-in_bias_init,
             high=in_bias_init,
-            size=[hidden_size, 1])
+            size=[hidden_size, 1]).astype(DTYPE)
 
     def forward(self, inputs, state):
         # reshape for matrix multiplication
-        inputs = inputs.reshape([-1, 1])
-        state = state.reshape([-1, 1])
+        inputs = inputs.reshape([-1, 1]).astype(DTYPE)
+        state = state.reshape([-1, 1]).astype(DTYPE)
 
         # next state
         x_inputs = np.dot(self.weight_ih, inputs)
@@ -184,8 +186,6 @@ class ESN(object):
         for ii in range(nr_predictions):
             state = self.esn_cell.forward(inp, state)
             ext_state = np.concatenate([self.ones, inp, state], axis=1).T
-            print(ext_state.dtype)
-            raise
             output = np.dot(self.wout, ext_state)
             inp = output
 
