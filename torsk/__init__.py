@@ -1,63 +1,8 @@
-import json
 import pathlib
 import logging
-import netCDF4 as nc
 from torsk.utils import dump_training, dump_prediction, save_model, load_model
 
 logger = logging.getLogger(__name__)
-
-
-class Params():
-    """Class that loads hyperparameters from a json file.
-    Example:
-    ```
-    params = Params(json_path)
-    print(params.learning_rate)
-    params.learning_rate = 0.5  # change the value of learning_rate in params
-    ```
-    """
-
-    def __init__(self, json_path=None, params=None):
-        if json_path is not None and params is not None:
-            raise ValueError("json_path and params are mutually exclusive args")
-        if json_path is not None:
-            with open(json_path) as f:
-                params = json.load(f)
-                self.__dict__.update(params)
-        if dict is not None:
-            self.__dict__.update(params)
-
-    def save(self, json_path):
-        with open(json_path, 'w') as f:
-            json.dump(self.__dict__, f, indent=4)
-
-    def update(self, params):
-        """Updates parameters based on a dictionary."""
-        self.__dict__.update(params)
-
-    @property
-    def dict(self):
-        """Gives dict-like access to Params instance by
-        `params.dict['learning_rate']"""
-        return self.__dict__
-
-    def __str__(self):
-        return json.dumps(self.__dict__, indent=2, sort_keys=True)
-
-
-def default_params():
-    params = {
-        "train_length": 500,
-        "pred_length": 300,
-        "backend": "numpy",
-        "dtype": "float64",
-        "feature_specs": [
-          {"type": "pixels", "xsize": [10, 10]},
-          {"type": "dct", "ksize": [10, 10]},
-          {"type": "conv", "kernel_type": "mean", "kernel_shape": [10, 10]}
-        ]
-      }
-    return Params(params=params)
 
 
 def mse(predictions, labels):

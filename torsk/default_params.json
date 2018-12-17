@@ -1,0 +1,21 @@
+{
+  "input_size": 100,
+  "hidden_size": 1000,
+  "reservoir_representation": "dense",
+  "spectral_radius": 1.0,
+  "density": 1.0,
+
+  "train_length": 500,
+  "pred_length": 300,
+  "transient_length": 100,
+  "train_method": "pinv",
+
+  "feature_specs": [
+    {"type": "pixels", "size": [10, 10]},
+    {"type": "dct", "size": [10, 10]},
+    {"type": "conv", "size": [10, 10], "kernel_type": "mean"}
+  ],
+
+  "backend": "numpy",
+  "dtype": "float64"
+}
