@@ -2,7 +2,6 @@ import logging
 import pathlib
 import numpy as np
 import netCDF4 as nc
-import torch
 
 import torsk
 
