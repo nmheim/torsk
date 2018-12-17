@@ -1,19 +1,33 @@
-import numpy as np
+#import numpy as np
+import bohrium as np
+
 import matplotlib.pyplot as plt
 import seaborn as sns
-import torch
 from tqdm import tqdm
+import json
+from bh_junk import *
 
-import torsk
-from torsk.models.bh_esn import ESN, train_predict_esn
-from torsk.data import MackeyDataset, SeqDataLoader
-from torsk.visualize import plot_mackey
+print("Assigning BH array")
+a = np.linspace(0,1,100);
+print("Printing BH array")
+print(a)
+
+import pathlib
+import logging
+
+import numpy as np
+#import bohrium as np
+import scipy as sp
 
 
+_module_dir = pathlib.Path(__file__).absolute().parent
+logger = logging.getLogger(__name__)
+
+    
 sns.set_style("whitegrid")
 
-params = torsk.Params("params.json")
-params.train_method = "pinv"
+params = Params("params.json")
+#params.train_method = "pinv"
 
 train_length = params.train_length
 pred_length = params.pred_length
@@ -22,20 +36,27 @@ beta = params.tikhonov_beta
 print(params)
 
 dataset = MackeyDataset(train_length, pred_length, simulation_steps=3000)
-loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
 model = ESN(params)
 
 predictions, labels = [], []
-for i in tqdm(range(20)):
+for i in tqdm(range(5)):
 
     model, outputs, pred_labels, _ = train_predict_esn(
-        model=model, loader=loader, params=params, outdir=".")
+        model=model, loader=dataset, params=params, outdir=".")
 
     predictions.append(outputs.squeeze())
     labels.append(pred_labels.squeeze())
 
+print(predictions)
+print(labels)
+print("Completed predictions")
 predictions, labels = np.array(predictions), np.array(labels)
 
+print("Copied to BH")
+print("Plotting")
 plot_mackey(predictions, labels, weights=model.wout)
+print("Show()")
 plt.show()
+
+
