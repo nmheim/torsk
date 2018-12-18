@@ -1,18 +1,11 @@
 {
-  "input_size": 1,
-  "hidden_size": 100,
-  "output_size": 1,
-
-  "reservoir_representation": "dense",
-  "spectral_radius" : 1.0,
-  "in_weight_init" : 0.1,
-  "in_bias_init": 0.1,
-  "density": 0.2,
-
   "train_length": 500,
-  "pred_length": 500,
-  "transient_length": 100,
-  
-  "train_method": "tikhonov",
-  "tikhonov_beta": 0.01
+  "pred_length": 300,
+  "backend": "numpy",
+  "dtype": "float64",
+  "feature_spec": [
+    {"type": "pixels", "xsize": [10, 10]},
+    {"type": "dct", "ksize": [10, 10]},
+    {"type": "conv", "filter": "gauss", "kernel_size": [10, 10]}
+  ]
 }

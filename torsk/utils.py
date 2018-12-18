@@ -5,9 +5,22 @@ import netCDF4 as nc
 from scipy.fftpack import dctn, idctn
 from scipy.linalg import lstsq
 from scipy.signal import convolve2d
-from PIL import Image
+# from PIL import Image
+import skimage.transform as skt
 
 logger = logging.getLogger(__name__)
+
+
+def gauss2d(centers, sigma, size, borders=[[-2, 2], [-2, 2]]):
+    yc, xc = centers[:, 0], centers[:, 1]
+    yy = np.linspace(borders[0][0], borders[0][1], size[0])
+    xx = np.linspace(borders[1][0], borders[1][1], size[1])
+
+    xx = xx[None, :, None] - xc[:, None, None]
+    yy = yy[None, None, :] - yc[:, None, None]
+
+    gauss = (xx**2 + yy**2) / (2 * sigma**2)
+    return np.exp(-gauss)
 
 
 def _mean_kernel(kernel_shape):
@@ -35,18 +48,16 @@ def _conv_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1):
     return num // stride + 1
 
 
-def conv2d_output_shape(in_shape, kernel_shape, padding=0, dilation=1, stride=1):
+def conv2d_output_shape(in_size, size, padding=0, dilation=1, stride=1):
     """Calculate output shape of a convolution of an image of in_shape.
     Formula taken form pytorch conv2d
     """
-    height = _conv_out_size(
-        in_shape[0], kernel_shape[0], padding, dilation, stride)
-    width = _conv_out_size(
-        in_shape[1], kernel_shape[1], padding, dilation, stride)
+    height = _conv_out_size(in_size[0], size[0], padding, dilation, stride)
+    width = _conv_out_size(in_size[1], size[1], padding, dilation, stride)
     return (height, width)
 
 
-def conv2d(sequence, kernel_type, kernel_shape):
+def conv2d(sequence, kernel_type, size):
     """2D convolution of a sequence of images. Convolution mode is valid, which
     means that only values which do not need to be padded are calculated.
 
@@ -56,7 +67,7 @@ def conv2d(sequence, kernel_type, kernel_shape):
         with shape (time, ydim, xdim)
     kernel_type : str
         one of `gauss`, `mean`, `random`
-    kernel_shape : tuple
+    size : tuple
         shape of created convolution kernel
 
     Returns
@@ -65,14 +76,14 @@ def conv2d(sequence, kernel_type, kernel_shape):
         convoluted squence of shape (time, height, width). Height and width
         can be calculated with conv2d_output_shape
     """
-    kernel = get_kernel(kernel_shape, kernel_type)
+    kernel = get_kernel(size, kernel_type)
     return np.array([convolve2d(img, kernel, mode="valid") for img in sequence])
 
 
 def resample2d(sequence, size):
     """Resample a squence of 2d-arrays to size using PIL.Image.resize"""
-    sequence = [Image.fromarray(img, mode="F") for img in sequence]
-    sequence = [np.asarray(img.resize(size)) for img in sequence]
+    sequence = [skt.resize(img, size, mode="reflect", anti_aliasing=True)
+                for img in sequence]
     return np.asarray(sequence)
 
 

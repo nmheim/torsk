@@ -35,7 +35,7 @@ class ParamsSchema(Schema):
 
     train_method = fields.String(
         validate=validate.OneOf(["pinv", "tikhonov"]), required=True)
-    tikhonov_beta = fields.Float()
+    tikhonov_beta = fields.Float(missing=None)
 
     backend = fields.String(
         validate=validate.OneOf(["numpy", "torch"]), required=True)

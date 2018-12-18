@@ -1,5 +1,5 @@
 import numpy as np
-from torsk.data import utils
+from torsk import utils
 
 
 # DTYPES = ["float32", "float64"]
@@ -57,14 +57,14 @@ class NumpyImageDataset:
         for spec in self.feature_specs:
 
             if spec["type"] == "pixels":
-                xsize = spec["xsize"]
+                xsize = spec["size"]
                 nr_img_features = xsize[0] * xsize[1]
                 img_features = utils.resample2d(images, xsize)
                 img_features = img_features.reshape([seq_len, nr_img_features])
                 _features.append(img_features)
 
             elif spec["type"] == "dct":
-                ksize = spec["ksize"]
+                ksize = spec["size"]
                 nr_dct_features = ksize[0] * ksize[1]
                 dct_features = utils.dct2_sequence(images, ksize)
                 dct_features = dct_features.reshape([seq_len, nr_dct_features])
@@ -84,18 +84,15 @@ class NumpyImageDataset:
 
         return np.concatenate(_features, axis=1)
 
-
-def gauss2d(centers, sigma, size, borders=[[-2, 2], [-2, 2]]):
-    yc, xc = centers[:, 0], centers[:, 1]
-    yy = np.linspace(borders[0][0], borders[0][1], size[0])
-    xx = np.linspace(borders[1][0], borders[1][1], size[1])
-
-    xx = xx[None, :, None] - xc[:, None, None]
-    yy = yy[None, None, :] - yc[:, None, None]
-
-    gauss = (xx**2 + yy**2) / (2 * sigma**2)
-    return np.exp(-gauss)
-
+    def to_images(self, features):
+        types = np.array([spec["type"] for spec in self.feature_specs])
+        idx = np.where(types == "pixels")
+        if len(idx):
+            size = self.feature_specs[0]["size"]
+            nr_img_features = size[0] * size[1]
+            return features[:, :nr_img_features].reshape([-1, size[0], size[1]])
+        else:
+            raise NotImplementedError
 
 # class TorchImageDataset(Dataset):
 #     def __init__(self, asdf):

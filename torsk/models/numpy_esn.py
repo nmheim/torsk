@@ -2,40 +2,13 @@ import pathlib
 import logging
 
 import numpy as np
-import scipy as sp
 
 from torsk import Params
-from torsk.models.utils import (
-        dense_esn_reservoir, scale_weight, sparse_esn_reservoir)
+from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir
+from torsk.models.optimize import pseudo_inverse
 
-DTYPE = np.float32
 _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
-
-
-def pseudo_inverse_svd(inputs, states, labels):
-    X = _extended_states(inputs, states)
-
-    U, s, Vh = sp.linalg.svd(X)
-    L = labels.T
-    condition = s[0] / s[-1]
-
-    scale = s[0]
-    n = len(s[np.abs(s / scale) > 1e-4])  # Ensure condition number less than 10.000
-    v = Vh[:n, :].T
-    uh = U[:, :n].T
-
-    wout = np.dot(np.dot(L, v) * (1 / s[:n]), uh)
-    return wout
-    
-
-def pseudo_inverse(inputs, states, labels):
-    return pseudo_inverse_svd(inputs, states, labels)
-
-
-def _extended_states(inputs, states):
-    ones = np.ones([inputs.shape[0], 1])
-    return np.concatenate([ones, inputs, states], axis=1).T
 
 
 class ESNCell(object):
@@ -71,37 +44,40 @@ class ESNCell(object):
     """
     def __init__(
             self, input_size, hidden_size,
-            spectral_radius, in_weight_init, in_bias_init, density):
+            spectral_radius, in_weight_init, in_bias_init, density, dtype):
 
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.dtype = np.dtype(dtype)
 
         self.weight_ih = np.random.uniform(
             low=-in_weight_init,
             high=in_weight_init,
-            size=[hidden_size, input_size]).astype(DTYPE)
+            size=[hidden_size, input_size]).astype(dtype)
 
         self.weight_hh = dense_esn_reservoir(
             dim=hidden_size, spectral_radius=spectral_radius,
             density=density, symmetric=False)
-        self.weight_hh = self.weight_hh.astype(DTYPE)
+        self.weight_hh = self.weight_hh.astype(dtype)
 
         self.bias_ih = np.random.uniform(
             low=-in_bias_init,
             high=in_bias_init,
-            size=[hidden_size, 1]).astype(DTYPE)
+            size=[hidden_size,]).astype(dtype)
+
+    def check_dtypes(self, *args):
+        for arg in args:
+            assert arg.dtype == self.dtype
 
     def forward(self, inputs, state):
-        # reshape for matrix multiplication
-        inputs = inputs.reshape([-1, 1]).astype(DTYPE)
-        state = state.reshape([-1, 1]).astype(DTYPE)
+        self.check_dtypes(inputs, state)
 
         # next state
         x_inputs = np.dot(self.weight_ih, inputs)
         x_state = np.dot(self.weight_hh, state)
         new_state = np.tanh(x_inputs + x_state + self.bias_ih)
 
-        return new_state.reshape([1, -1])
+        return new_state
 
 
 class ESN(object):
@@ -132,9 +108,6 @@ class ESN(object):
     def __init__(self, params):
         super(ESN, self).__init__()
         self.params = params
-        if params.input_size != params.output_size:
-            raise ValueError(
-                "Currently input and output dimensions must be the same.")
 
         if params.reservoir_representation == "dense":
             esn_cell = ESNCell
@@ -145,17 +118,15 @@ class ESN(object):
             spectral_radius=params.spectral_radius,
             in_weight_init=params.in_weight_init,
             in_bias_init=params.in_bias_init,
-            density=params.density)
+            density=params.density,
+            dtype=params.dtype)
 
         self.wout = np.zeros(
-            [params.output_size, params.hidden_size + params.input_size + 1])
+            [params.input_size, params.hidden_size + params.input_size + 1])
 
-        self.ones = np.ones([1, 1])
-        
+        self.ones = np.ones([1,])
         
     def forward(self, inputs, state, states_only=True):
-        if inputs.shape[1] != 1:
-            raise ValueError("Supports only batch size of one -.-")
         if states_only:
             return self._forward_states_only(inputs, state)
         else:
@@ -172,7 +143,7 @@ class ESN(object):
         outputs, states = [], []
         for inp in inputs:
             state = self.esn_cell.forward(inp, state)
-            ext_state = np.concatenate([self.ones, inp, state], axis=1).T
+            ext_state = np.concatenate([self.ones, inp, state], axis=0)
             output = np.dot(self.wout, ext_state)
             outputs.append(output)
             states.append(state)
@@ -185,7 +156,7 @@ class ESN(object):
 
         for ii in range(nr_predictions):
             state = self.esn_cell.forward(inp, state)
-            ext_state = np.concatenate([self.ones, inp, state], axis=1).T
+            ext_state = np.concatenate([self.ones, inp, state], axis=0)
             output = np.dot(self.wout, ext_state)
             inp = output
 
@@ -205,10 +176,10 @@ class ESN(object):
         labels : Tensor
             A batch of labels with shape (batch, output_size)
         """
-        if len(inputs.shape) == 3:
-            inputs = inputs.reshape([-1, inputs.shape[2]])
-            states = states.reshape([-1, states.shape[2]])
-            labels = labels.reshape([-1, labels.shape[2]])
+        # if len(inputs.shape) == 3:
+        #     inputs = inputs.reshape([-1, inputs.shape[2]])
+        #     states = states.reshape([-1, states.shape[2]])
+        #     labels = labels.reshape([-1, labels.shape[2]])
 
         method = self.params.train_method
         beta = self.params.tikhonov_beta
