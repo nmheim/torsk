@@ -32,12 +32,22 @@ def _random_kernel(kernel_shape):
     return np.random.uniform(size=kernel_shape, low=-1, high=1)
 
 
+def _gauss_kernel(kernel_shape):
+    ysize, xsize = kernel_shape
+    yy = np.linspace(-ysize/2., ysize/2., ysize)
+    xx = np.linspace(-xsize/2., xsize/2., xsize)
+    sigma = min(kernel_shape) / 4.
+    yy, xx = np.meshgrid(yy, xx)
+    return np.exp(-(xx**2 + yy**2) / (2 * sigma**2))
+
+
 def get_kernel(kernel_shape, kernel_type):
-    # TODO: gaussian kernel
     if kernel_type == "mean":
         kernel = _mean_kernel(kernel_shape)
     elif kernel_type == "random":
         kernel = _random_kernel(kernel_shape)
+    elif kernel_type == "gauss":
+        kernel = _gauss_kernel(kernel_shape)
     else:
         raise NotImplementedError(f"Unkown kernel type `{kernel_type}`")
     return kernel
@@ -45,7 +55,8 @@ def get_kernel(kernel_shape, kernel_type):
 
 def _conv_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1):
     num = in_size + 2 * padding - dilation * (kernel_size - 1) - 1
-    return num // stride + 1
+    size = num // stride + 1
+    return size
 
 
 def conv2d_output_shape(in_size, size, padding=0, dilation=1, stride=1):
@@ -77,14 +88,16 @@ def conv2d(sequence, kernel_type, size):
         can be calculated with conv2d_output_shape
     """
     kernel = get_kernel(size, kernel_type)
-    return np.array([convolve2d(img, kernel, mode="valid") for img in sequence])
+    conv = [convolve2d(img, kernel, mode="valid") for img in sequence]
+    return np.asarray(conv, dtype=sequence.dtype)
 
 
 def resample2d(sequence, size):
     """Resample a squence of 2d-arrays to size using PIL.Image.resize"""
+    dtype = sequence.dtype
     sequence = [skt.resize(img, size, mode="reflect", anti_aliasing=True)
                 for img in sequence]
-    return np.asarray(sequence)
+    return np.asarray(sequence, dtype=dtype)
 
 
 def sct_basis(nx, nk):
