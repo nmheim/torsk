@@ -94,19 +94,21 @@ class NumpyImageDataset:
         return self.nr_sequences
 
 
-# class CircleDataset(NumpyImageDataset):
-#     def __init__(self, params, centers=None, sigma=0.5, orig_size=[20, 20]):
-# 
-#         if centers is None:
-#             t = np.arange(0, 200*np.pi, 0.1)
-#             x = np.sin(t)
-#             y = np.cos(0.25 * t)
-#             centers = np.array([y, x]).T
-# 
-#         images = utils.gauss2d(centers, sigma=sigma, size=orig_size)
-#         super(CircleDataset, self).__init__(images, params)
+class NumpyScalarDataset:
+    def __init__(self, sequence, params):
+        self.train_length = params.train_length
+        self.pred_length = params.pred_length
+        self.nr_sequences = sequence.shape[0] - self.train_length - self.pred_length
 
+        self.seq = utils.normalize(sequence[:, None])
 
-# class TorchImageDataset(Dataset):
-#     def __init__(self, asdf):
-#         pass
+    def __getitem__(self, index):
+        if (index < 0) or (index >= self.nr_sequences):
+            raise IndexError('MackeyDataset index out of range.')
+        sub_seq = self.seq[index:index + self.train_length + self.pred_length + 1]
+        inputs, labels, pred_labels = split_train_label_pred(
+            sub_seq, self.train_length, self.pred_length)
+        return inputs, labels, pred_labels
+
+    def __len__(self):
+        return self.nr_sequences
