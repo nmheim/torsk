@@ -1,8 +1,6 @@
 import logging
-import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torsk import utils
 from torsk.data.numpy_dataset import NumpyImageDataset
 
 logger = logging.getLogger(__name__)
@@ -37,7 +35,6 @@ class TorchImageDataset(Dataset):
         # TODO: should this return a tensor?
         #       normally we only call this when plotting...
         return self._numpy_dataset.to_images(features.numpy())
-        
 
     def __len__(self):
         return len(self._numpy_dataset)

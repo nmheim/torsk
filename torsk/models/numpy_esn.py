@@ -3,9 +3,8 @@ import logging
 
 import numpy as np
 
-from torsk import Params
-from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir
-from torsk.models.optimize import pseudo_inverse
+from torsk.models.initialize import dense_esn_reservoir
+import torsk.models.numpy_optimize as opt
 
 _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ class NumpyESNCell(object):
         self.bias_ih = np.random.uniform(
             low=-in_bias_init,
             high=in_bias_init,
-            size=[hidden_size,]).astype(dtype)
+            size=[hidden_size]).astype(dtype)
 
     def check_dtypes(self, *args):
         for arg in args:
@@ -124,8 +123,8 @@ class NumpyESN(object):
         self.wout = np.zeros(
             [params.input_size, params.hidden_size + params.input_size + 1])
 
-        self.ones = np.ones([1,])
-        
+        self.ones = np.ones([1])
+
     def forward(self, inputs, state, states_only=True):
         if states_only:
             return self._forward_states_only(inputs, state)
@@ -183,19 +182,18 @@ class NumpyESN(object):
             if beta is None:
                 raise ValueError(
                     'For Tikhonov training the beta parameter cannot be None.')
-            wout = tikhonov(inputs, states, labels, beta)
+            wout = opt.tikhonov(inputs, states, labels, beta)
 
         elif method == 'pinv':
             if beta is not None:
                 logger.debug('With pseudo inverse training the '
                              'beta parameter has no effect.')
-            wout = pseudo_inverse(inputs, states, labels)
+            wout = opt.pseudo_inverse(inputs, states, labels)
 
         else:
             raise ValueError(f'Unkown training method: {method}')
 
         if(wout.shape != self.wout.shape):
-            print("wout:",wout.shape,", weight:",self.out.weight.shape);
-            raise;
-        
+            raise ValueError("Optimized and original Wout shape do not match."
+                             f"{wout.shape} / {self.wout.shape}")
         self.wout = wout

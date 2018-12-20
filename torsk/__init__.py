@@ -12,14 +12,6 @@ __all__ = ["Params", "default_params", "load_model", "save_model"]
 logger = logging.getLogger(__name__)
 
 
-def _fix_prefix(prefix):
-    if prefix is not None:
-        prefix = prefix.strip("-") + "-"
-    else:
-        prefix = ""
-    return prefix
-
-
 def _save_numpy_model(model_pth, model, prefix):
     joblib.dump(model, model_pth)
 
@@ -44,7 +36,16 @@ def _save_torch_model(model_pth, model, prefix):
     torch.save(state_dict, model_pth.as_posix())
 
 
+def _fix_prefix(prefix):
+    if prefix is not None:
+        prefix = prefix.strip("-") + "-"
+    else:
+        prefix = ""
+    return prefix
+
+
 def _load_torch_model(model_pth, params):
+    import torch
     from torsk.models.torch_esn import TorchESN
     model = TorchESN(params)
     state_dict = torch.load(model_pth)
@@ -94,13 +95,14 @@ def load_model(modeldir, prefix=None):
         modeldir = pathlib.Path(modeldir)
     prefix = _fix_prefix(prefix)
 
-    params = torsk.Params(modeldir / f"{prefix}params.json")
+    params = Params(modeldir / f"{prefix}params.json")
     model_pth = modeldir / f"{prefix}model.pth"
 
     if params.backend == "numpy":
         model = _load_numpy_model(model_pth)
     elif params.backen == "torch":
         model = _load_torch_model(model_pth, params)
+    return model
 
 
 def initial_state(hidden_size, dtype, backend):
@@ -197,7 +199,6 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=True):
 
     tlen = model.params.transient_length
     hidden_size = model.params.hidden_size
-    input_size = model.params.input_size
     backend = model.params.backend
     dtype = model.esn_cell.dtype
 
@@ -233,4 +234,3 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=True):
 
     logger.info(f"Done")
     return model, outputs, pred_labels
-

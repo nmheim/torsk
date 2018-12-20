@@ -1,5 +1,8 @@
+import logging
 import numpy as np
 from scipy.signal import convolve2d
+
+logger = logging.getLogger(__name__)
 
 
 def _mean_kernel(kernel_shape):
@@ -7,14 +10,14 @@ def _mean_kernel(kernel_shape):
 
 
 def _random_kernel(kernel_shape):
-    print("Random kernel created with hard coded uniform dist")
+    logging.warning("Random kernel created with hard coded uniform dist")
     return np.random.uniform(size=kernel_shape, low=-1, high=1)
 
 
 def _gauss_kernel(kernel_shape):
     ysize, xsize = kernel_shape
-    yy = np.linspace(-ysize/2., ysize/2., ysize)
-    xx = np.linspace(-xsize/2., xsize/2., xsize)
+    yy = np.linspace(-ysize / 2., ysize / 2., ysize)
+    xx = np.linspace(-xsize / 2., xsize / 2., xsize)
     sigma = min(kernel_shape) / 4.
     yy, xx = np.meshgrid(yy, xx)
     return np.exp(-(xx**2 + yy**2) / (2 * sigma**2))

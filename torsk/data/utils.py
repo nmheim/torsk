@@ -35,7 +35,7 @@ def min_max_scale(data, vmin=0., vmax=1.):
 def gauss2d_sequence(centers=None, sigma=0.5, size=[20, 20], borders=[[-2, 2], [-2, 2]]):
     """Creates a moving gaussian blob on grid with `size`"""
     if centers is None:
-        t = np.arange(0, 200*np.pi, 0.1)
+        t = np.arange(0, 200 * np.pi, 0.1)
         x = np.sin(t)
         y = np.cos(0.25 * t)
         centers = np.array([y, x]).T

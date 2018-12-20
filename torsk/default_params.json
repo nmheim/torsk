@@ -13,7 +13,7 @@
   "feature_specs": [
     {"type": "pixels", "size": [10, 10]},
     {"type": "dct", "size": [10, 10]},
-    {"type": "conv", "size": [10, 10], "kernel_type": "mean"}
+    {"type": "conv", "size": [2, 2], "kernel_type": "gauss"}
   ],
 
   "backend": "numpy",

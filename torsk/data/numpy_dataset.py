@@ -35,7 +35,6 @@ def conv_features(images, spec):
     seq_len = images.shape[0]
     kwargs = {k: v for k, v in spec.items() if k != "type"}
     conv_features = conv2d(images, **kwargs)
-    print(conv_features.shape)
     kwargs = {k: v for k, v in kwargs.items() if k != "kernel_type"}
     size = conv2d_output_shape(images.shape[1:], **kwargs)
     return conv_features.reshape([seq_len, size[0] * size[1]])
