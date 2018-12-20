@@ -3,7 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib import cm
-from torsk.utils import normalize
+from torsk.data.utils import normalize
 import av
 
 # Assumes data is already in range [0,1]
