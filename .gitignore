@@ -1,5 +1,7 @@
+# data files
 *.nc
 *.pth
+*.pkl
 
 # vim
 *.swp
