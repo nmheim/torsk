@@ -9,7 +9,7 @@ from torch.nn.parameter import Parameter
 from torch.nn.modules.rnn import RNNCellBase
 
 from torsk import Params
-from torsk.models.utils import (
+from torsk.models.initialize import (
         dense_esn_reservoir, scale_weight, sparse_esn_reservoir)
 
 _module_dir = pathlib.Path(__file__).absolute().parent
@@ -70,7 +70,7 @@ def tikhonov(inputs, states, labels, beta):
     return wout.t()
 
 
-class ESNCell(RNNCellBase):
+class TorchESNCell(RNNCellBase):
     """An Echo State Network (ESN) cell.
 
     Parameters
@@ -103,14 +103,15 @@ class ESNCell(RNNCellBase):
     """
     def __init__(
             self, input_size, hidden_size,
-            spectral_radius, in_weight_init, in_bias_init, density):
-        super(ESNCell, self).__init__(
+            spectral_radius, in_weight_init, in_bias_init, density, dtype):
+        super(TorchESNCell, self).__init__(
             input_size, hidden_size, bias=True, num_chunks=1)
 
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.dtype = getattr(torch, dtype)
 
-        in_weight = torch.rand([hidden_size, input_size])
+        in_weight = torch.rand([hidden_size, input_size], dtype=self.dtype)
         in_weight = scale_weight(in_weight, in_weight_init)
         self.in_weight = Parameter(in_weight, requires_grad=False)
 
@@ -118,11 +119,11 @@ class ESNCell(RNNCellBase):
             dim=hidden_size, spectral_radius=spectral_radius,
             density=density, symmetric=False)
         self.weight_hh = Parameter(
-            torch.tensor(weight_hh, dtype=torch.float32), requires_grad=False)
+            torch.tensor(weight_hh, dtype=self.dtype), requires_grad=False)
 
-        in_bias = torch.rand([hidden_size])
+        in_bias = torch.rand([hidden_size], dtype=self.dtype)
         in_bias = scale_weight(in_bias, in_bias_init)
-        self.in_bias = Parameter(torch.Tensor(in_bias), requires_grad=False)
+        self.in_bias = Parameter(in_bias, requires_grad=False)
         self.res_bias = self.register_parameter('res_bias', None)
 
     def forward(self, inputs, state):
@@ -133,7 +134,7 @@ class ESNCell(RNNCellBase):
             self.in_bias, self.res_bias)
 
 
-class SparseESNCell(RNNCellBase):
+class SparseTorchESNCell(RNNCellBase):
     """An Echo State Network (ESN) cell with a sparsely represented reservoir
     matrix. Can currently only handle batch==1.
 
@@ -168,7 +169,7 @@ class SparseESNCell(RNNCellBase):
 
     def __init__(self, input_size, hidden_size,
                  spectral_radius, in_weight_init, in_bias_init, density):
-        super(SparseESNCell, self).__init__(
+        super(SparseTorchESNCell, self).__init__(
             input_size, hidden_size, bias=True, num_chunks=1)
 
         self.input_size = input_size
@@ -201,7 +202,7 @@ class SparseESNCell(RNNCellBase):
 
     def forward(self, inputs, state):
         if not inputs.size(0) == state.size(0) == 1:
-            raise ValueError("SparseESNCell can only process batch_size==1")
+            raise ValueError("SparseTorchESNCell can only process batch_size==1")
 
         # reshape for matrix multiplication
         inputs = inputs.reshape([-1, 1])
@@ -215,7 +216,7 @@ class SparseESNCell(RNNCellBase):
         return new_state.reshape([1, -1])
 
 
-class ESN(nn.Module):
+class TorchESN(nn.Module):
     """Complete ESN with output layer. Only supports batch=1 for now!!!
 
     Parameters
@@ -236,21 +237,21 @@ class ESN(nn.Module):
     -------
     outputs : Tensor
         Predicitons nr_predictions into the future
-        shape (seq, batch, output_size)
+        shape (seq, batch, input_size)
     states' : Tensor
         Accumulated states of the ESN with shape (seq, batch, hidden_size)
     """
     def __init__(self, params):
-        super(ESN, self).__init__()
+        super(TorchESN, self).__init__()
         self.params = params
-        if params.input_size != params.output_size:
+        if params.input_size != params.input_size:
             raise ValueError(
                 "Currently input and output dimensions must be the same.")
 
         if params.reservoir_representation == "dense":
-            esn_cell = ESNCell
+            esn_cell = TorchESNCell
         elif params.reservoir_representation == "sparse":
-            esn_cell = SparseESNCell
+            esn_cell = SparseTorchESNCell
 
         self.esn_cell = esn_cell(
             input_size=params.input_size,
@@ -258,11 +259,12 @@ class ESN(nn.Module):
             spectral_radius=params.spectral_radius,
             in_weight_init=params.in_weight_init,
             in_bias_init=params.in_bias_init,
-            density=params.density)
+            density=params.density,
+            dtype=params.dtype)
 
         self.out = nn.Linear(
             params.hidden_size + params.input_size + 1,
-            params.output_size,
+            params.input_size,
             bias=False)
 
         self.ones = torch.ones([1, 1])
@@ -318,7 +320,7 @@ class ESN(nn.Module):
         states : Tensor
             A batch of hidden states with shape (batch, hidden_size)
         labels : Tensor
-            A batch of labels with shape (batch, output_size)
+            A batch of labels with shape (batch, input_size)
         """
         if len(inputs.size()) == 3:
             inputs = inputs.reshape([-1, inputs.size(2)])
@@ -348,3 +350,65 @@ class ESN(nn.Module):
             raise;
         
         self.out.weight = Parameter(wout, requires_grad=False)
+
+
+def train_predict_esn(model, dataset, outdir=None, shuffle=True):
+
+    if outdir is not None and not isinstance(outdir, pathlib.Path):
+        outdir = pathlib.Path(outdir)
+
+    tlen = model.params.transient_length
+    model.eval()  # because we are not using gradients
+
+    ii = np.random.randint(low=0, high=len(dataset)) if shuffle else 0
+    inputs, labels, pred_labels, orig_data = dataset[ii]
+
+    inputs = inputs.unsqueeze(1)
+    labels = labels.unsqueeze(1)
+    pred_labels = pred_labels.unsqueeze(1)
+
+    logger.debug(f"Creating {inputs.size(0)} training states")
+    zero_state = torch.zeros([1, model.esn_cell.hidden_size], dtype=model.esn_cell.dtype)
+    _, states = model.forward(inputs, zero_state, states_only=True)
+
+    logger.debug("Optimizing output weights")
+    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
+
+    logger.debug(f"Predicting the next {model.params.pred_length} frames")
+    init_inputs = labels[-1]
+    outputs, out_states = model.predict(
+        init_inputs, states[-1], nr_predictions=model.params.pred_length)
+
+    # if outdir is not None:
+    #     outfile = outdir / "train_data.nc"
+    #     logger.debug(f"Saving training to {outfile}")
+    #     dump_training(
+    #         outfile,
+    #         inputs=inputs.reshape([-1, params.input_size]),
+    #         labels=labels.reshape([-1, params.output_size]),
+    #         states=states.reshape([-1, params.hidden_size]),
+    #         pred_labels=pred_labels.reshape([-1, params.output_size]))
+
+    # logger.debug("Optimizing output weights")
+    # model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
+
+    # if outdir is not None:
+    #     modelfile = outdir / "model.pth"
+    #     logger.debug(f"Saving model to {modelfile}")
+    #     save_model(modelfile.parent, model)
+
+    # logger.debug(f"Predicting the next {params.pred_length} frames")
+    # init_inputs = labels[-1]
+    # outputs, out_states = model.predict(
+    #     init_inputs, states[-1], nr_predictions=model.params.pred_length)
+
+    # if outdir is not None:
+    #     outfile = outdir / "pred_data.nc"
+    #     logger.debug(f"Saving prediction to {outfile}")
+    #     dump_prediction(outfile,
+    #         outputs=outputs.reshape([-1, params.input_size]),
+    #         labels=pred_labels.reshape([-1, params.output_size]),
+    #         states=out_states.reshape([-1, params.hidden_size]))
+
+    return model, outputs, pred_labels
+

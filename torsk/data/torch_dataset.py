@@ -1,14 +1,15 @@
 import logging
 import numpy as np
 import torch
+from torch.utils.data import Dataset
 from torsk import utils
-from torsk.data.numpy_datasets import NumpyImageDataset
+from torsk.data.numpy_dataset import NumpyImageDataset
 
 logger = logging.getLogger(__name__)
 
 
-class TorchImageDataset(torch.data.utils.Dataset):
-    def __init_(self, images, params):
+class TorchImageDataset(Dataset):
+    def __init__(self, images, params):
         self._numpy_dataset = NumpyImageDataset(images, params)
         self.train_length = self._numpy_dataset.train_length
         self.pred_length = self._numpy_dataset.pred_length
@@ -20,7 +21,7 @@ class TorchImageDataset(torch.data.utils.Dataset):
 
     def __getitem__(self, index):
         output = self._numpy_dataset[index]
-        output = (torch.tensor(arr, dtype=self.dtye) for arr in output)
+        output = (torch.tensor(arr, dtype=self.dtype) for arr in output)
         return output
 
     def to_features(self, images):

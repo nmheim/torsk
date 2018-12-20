@@ -11,7 +11,7 @@ _module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
 
 
-class ESNCell(object):
+class NumpyESNCell(object):
     """An Echo State Network (ESN) cell.
 
     Parameters
@@ -80,7 +80,7 @@ class ESNCell(object):
         return new_state
 
 
-class ESN(object):
+class NumpyESN(object):
     """Complete ESN with output layer. Only supports batch=1 for now!!!
 
     Parameters
@@ -101,16 +101,16 @@ class ESN(object):
     -------
     outputs : Tensor
         Predicitons nr_predictions into the future
-        shape (seq, batch, output_size)
+        shape (seq, batch, input_size)
     states' : Tensor
         Accumulated states of the ESN with shape (seq, batch, hidden_size)
     """
     def __init__(self, params):
-        super(ESN, self).__init__()
+        super(NumpyESN, self).__init__()
         self.params = params
 
         if params.reservoir_representation == "dense":
-            esn_cell = ESNCell
+            esn_cell = NumpyESNCell
 
         self.esn_cell = esn_cell(
             input_size=params.input_size,
@@ -174,7 +174,7 @@ class ESN(object):
         states : Tensor
             A batch of hidden states with shape (batch, hidden_size)
         labels : Tensor
-            A batch of labels with shape (batch, output_size)
+            A batch of labels with shape (batch, input_size)
         """
         # if len(inputs.shape) == 3:
         #     inputs = inputs.reshape([-1, inputs.shape[2]])
@@ -206,27 +206,28 @@ class ESN(object):
         self.wout = wout
 
 
-def train_predict_esn(model, loader, params, outdir=None):
+def train_predict_esn(model, dataset, outdir=None, shuffle=True):
     if outdir is not None and not isinstance(outdir, pathlib.Path):
         outdir = pathlib.Path(outdir)
 
-    tlen = params.transient_length
+    if outdir is not None and not isinstance(outdir, pathlib.Path):
+        outdir = pathlib.Path(outdir)
 
-    inputs, labels, pred_labels, orig_data = next(loader)
-    inputs = inputs.numpy()
-    labels = labels.numpy()
-    pred_labels = pred_labels.numpy()
+    tlen = model.params.transient_length
+
+    ii = np.random.randint(low=0, high=len(dataset)) if shuffle else 0
+    inputs, labels, pred_labels, orig_data = dataset[ii]
 
     logger.debug(f"Creating {inputs.shape[0]} training states")
-    zero_state = np.zeros([model.esn_cell.hidden_size])
+    zero_state = np.zeros([model.esn_cell.hidden_size], dtype=model.esn_cell.dtype)
     _, states = model.forward(inputs, zero_state, states_only=True)
 
     logger.debug("Optimizing output weights")
     model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
 
-    logger.debug(f"Predicting the next {params.pred_length} frames")
+    logger.debug(f"Predicting the next {model.params.pred_length} frames")
     init_inputs = labels[-1]
     outputs, out_states = model.predict(
-        init_inputs, states[-1], nr_predictions=params.pred_length)
+        init_inputs, states[-1], nr_predictions=model.params.pred_length)
 
-    return model, outputs, pred_labels, orig_data
+    return model, outputs, pred_labels
