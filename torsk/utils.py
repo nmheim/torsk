@@ -2,33 +2,10 @@ import logging
 import pathlib
 import numpy as np
 import netCDF4 as nc
+import joblib
 
 logger = logging.getLogger(__name__)
 
-
-# def _custom_collate(batch):
-#     """Transform batch such that inputs and labels have shape:
-#
-#         (tot_seq_len, batch_size, nr_features)
-#     """
-#     def transpose(tensor):
-#         return torch.transpose(torch.stack(tensor), 0, 1)
-#     batch = [list(b) for b in zip(*batch)]
-#     batch = [transpose(b) for b in batch]
-#     return batch
-#
-#
-# class SeqDataLoader(DataLoader):
-#     """Custom Dataloader that defines a fixed custom collate function, so that
-#     the loader returns batches of shape (seq_len, batch, nr_features).
-#     """
-#     def __init__(self, dataset, **kwargs):
-#         if 'collate_fn' in kwargs:
-#             raise ValueError(
-#                 'SeqDataLoader does not accept a custom collate_fn '
-#                 'because it already implements one.')
-#         kwargs['collate_fn'] = _custom_collate
-#         super(SeqDataLoader, self).__init__(dataset, **kwargs)
 
 def _fix_prefix(prefix):
     if prefix is not None:
@@ -38,21 +15,16 @@ def _fix_prefix(prefix):
     return prefix
 
 
-# def create_training_states(model, inputs):
-#     zero_state = torch.zeros(1, model.params.hidden_size)
-#     _, states = model(inputs, zero_state, states_only=True)
-#     return states
+def _save_numpy_model(model_pth, model, prefix):
+    joblib.dump(model, model_pth)
 
 
-def save_model(modeldir, model, prefix=None):
-    if not isinstance(modeldir, pathlib.Path):
-        modeldir = pathlib.Path(modeldir)
-    if not modeldir.exists():
-        modeldir.mkdir(parents=True)
-    prefix = _fix_prefix(prefix)
+def _load_numpy_model(model_pth):
+    return joblib.load(model_pth)
 
-    model_pth = modeldir / f"{prefix}model.pth"
-    params_json = modeldir / f"{prefix}params.json"
+
+def _save_torch_model(model_pth, model, prefix):
+    import torch
     state_dict = model.state_dict()
 
     # convert sparse tensor
@@ -64,20 +36,13 @@ def save_model(modeldir, model, prefix=None):
         state_dict[key + "_indices"] = weight.coalesce().indices()
         state_dict[key + "_values"] = weight.coalesce().values()
 
-    model.params.save(params_json.as_posix())
     torch.save(state_dict, model_pth.as_posix())
 
 
-def load_model(modeldir, prefix=None):
-    # TODO: fix circular import
-    from torsk.models import ESN
-    if isinstance(modeldir, str):
-        modeldir = pathlib.Path(modeldir)
-    prefix = _fix_prefix(prefix)
-
-    params = torsk.Params(modeldir / f"{prefix}params.json")
-    model = ESN(params)
-    state_dict = torch.load(modeldir / f"{prefix}model.pth")
+def _load_torch_model(model_pth, params):
+    from torsk.models.torch_esn import TorchESN
+    model = TorchESN(params)
+    state_dict = torch.load(model_pth)
 
     # restore sparse tensor
     key = "esn_cell.weight_hh"
@@ -94,8 +59,97 @@ def load_model(modeldir, prefix=None):
         state_dict[key] = weight_hh
 
     model.load_state_dict(state_dict)
-
     return model
+
+
+def save_model(modeldir, model, prefix=None):
+    if not isinstance(modeldir, pathlib.Path):
+        modeldir = pathlib.Path(modeldir)
+    if not modeldir.exists():
+        modeldir.mkdir(parents=True)
+    prefix = _fix_prefix(prefix)
+
+    params_json = modeldir / f"{prefix}params.json"
+    logger.debug(f"Saving model parameters to {params_json}")
+    model.params.save(params_json)
+
+    if model.params.backend == "numpy":
+        modelfile = modeldir / f"{prefix}model.pkl"
+        logger.debug(f"Saving model to {modelfile}")
+        _save_numpy_model(modelfile, model, prefix)
+    elif model.params.backend == "torch":
+        modelfile = modeldir / f"{prefix}model.pth"
+        logger.debug(f"Saving model to {modelfile}")
+        _save_torch_model(modelfile, model, prefix)
+
+
+def load_model(modeldir, prefix=None):
+    # TODO: fix circular import
+    if isinstance(modeldir, str):
+        modeldir = pathlib.Path(modeldir)
+    prefix = _fix_prefix(prefix)
+
+    params = torsk.Params(modeldir / f"{prefix}params.json")
+    model_pth = modeldir / f"{prefix}model.pth"
+
+    if params.backend == "numpy":
+        model = _load_numpy_model(model_pth)
+    elif params.backen == "torch":
+        model = _load_torch_model(model_pth, params)
+
+
+def initial_state(hidden_size, dtype, backend):
+    if backend == "numpy":
+        zero_state = np.zeros([hidden_size], dtype=dtype)
+    elif backend == "torch":
+        import torch
+        zero_state = torch.zeros([1, hidden_size], dtype=dtype)
+    else:
+        raise ValueError("Unkown backend: {backend}")
+    return zero_state
+
+
+def train_predict_esn(model, dataset, outdir=None, shuffle=True):
+    if outdir is not None and not isinstance(outdir, pathlib.Path):
+        outdir = pathlib.Path(outdir)
+
+    if outdir is not None and not isinstance(outdir, pathlib.Path):
+        outdir = pathlib.Path(outdir)
+
+    tlen = model.params.transient_length
+
+    ii = np.random.randint(low=0, high=len(dataset)) if shuffle else 0
+    inputs, labels, pred_labels, orig_data = dataset[ii]
+
+    logger.debug(f"Creating {inputs.shape[0]} training states")
+    zero_state = initial_state(
+        hidden_size=model.params.hidden_size,
+        dtype=model.esn_cell.dtype,
+        backend=model.params.backend)
+    _, states = model.forward(inputs, zero_state, states_only=True)
+
+    # if outdir is not None:
+    #     outfile = outdir / "train_data.nc"
+    #     logger.debug(f"Saving training to {outfile}")
+    #     dump_training(
+    #         outfile,
+    #         inputs=inputs.reshape([-1, params.input_size]),
+    #         labels=labels.reshape([-1, params.output_size]),
+    #         states=states.reshape([-1, params.hidden_size]),
+    #         pred_labels=pred_labels.reshape([-1, params.output_size]))
+
+    logger.debug("Optimizing output weights")
+    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
+
+    if outdir is not None:
+        save_model(outdir, model)
+
+    logger.debug(f"Predicting the next {model.params.pred_length} frames")
+    init_inputs = labels[-1]
+    outputs, out_states = model.predict(
+        init_inputs, states[-1], nr_predictions=model.params.pred_length)
+
+    return model, outputs, pred_labels
 
 
 def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
@@ -170,28 +224,3 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst["labels"][:] = labels
         dst["states"][:] = states
         dst["rmse"][:] = rmse
-
-
-def create_path(root, param_dict, prefix=None, postfix=None):
-    if not isinstance(root, pathlib.Path):
-        root = pathlib.Path(root)
-    folder = _fix_prefix(prefix)
-    for key, val in param_dict.items():
-        folder += f"{key}:{val}-"
-    folder = folder[:-1]
-    if postfix is not None:
-        folder += f"-{postfix}"
-    return root / folder
-
-
-def parse_path(path):
-    param_dict = {}
-    for string in path.name.split("-"):
-        if ":" in string:
-            key, val = string.split(":")
-            try:
-                val = eval(val)
-            except Exception:
-                pass
-            param_dict[key] = val
-    return param_dict

@@ -176,11 +176,6 @@ class NumpyESN(object):
         labels : Tensor
             A batch of labels with shape (batch, input_size)
         """
-        # if len(inputs.shape) == 3:
-        #     inputs = inputs.reshape([-1, inputs.shape[2]])
-        #     states = states.reshape([-1, states.shape[2]])
-        #     labels = labels.reshape([-1, labels.shape[2]])
-
         method = self.params.train_method
         beta = self.params.tikhonov_beta
 
@@ -204,30 +199,3 @@ class NumpyESN(object):
             raise;
         
         self.wout = wout
-
-
-def train_predict_esn(model, dataset, outdir=None, shuffle=True):
-    if outdir is not None and not isinstance(outdir, pathlib.Path):
-        outdir = pathlib.Path(outdir)
-
-    if outdir is not None and not isinstance(outdir, pathlib.Path):
-        outdir = pathlib.Path(outdir)
-
-    tlen = model.params.transient_length
-
-    ii = np.random.randint(low=0, high=len(dataset)) if shuffle else 0
-    inputs, labels, pred_labels, orig_data = dataset[ii]
-
-    logger.debug(f"Creating {inputs.shape[0]} training states")
-    zero_state = np.zeros([model.esn_cell.hidden_size], dtype=model.esn_cell.dtype)
-    _, states = model.forward(inputs, zero_state, states_only=True)
-
-    logger.debug("Optimizing output weights")
-    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
-
-    logger.debug(f"Predicting the next {model.params.pred_length} frames")
-    init_inputs = labels[-1]
-    outputs, out_states = model.predict(
-        init_inputs, states[-1], nr_predictions=model.params.pred_length)
-
-    return model, outputs, pred_labels

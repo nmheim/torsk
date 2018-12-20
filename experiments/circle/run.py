@@ -33,12 +33,10 @@ if params.backend == "numpy":
     logger.info("Running with Numpy backend")
     from torsk.data.numpy_dataset import NumpyImageDataset as ImageDataset
     from torsk.models.numpy_esn import NumpyESN as ESN
-    from torsk.models.numpy_esn import train_predict_esn
 elif params.backend == "torch":
     logger.info("Running with PyTorch backend")
     from torsk.data.torch_dataset import TorchImageDataset as ImageDataset
     from torsk.models.torch_esn import TorchESN as ESN
-    from torsk.models.torch_esn import train_predict_esn
     # TODO: fix dtypes !!!
     params.dtype = "float32"
 
@@ -55,7 +53,7 @@ logger.info("Building model ...")
 model = ESN(params)
 
 logger.info("Training + predicting ...")
-model, outputs, pred_labels = train_predict_esn(model, dataset)
+model, outputs, pred_labels = torsk.train_predict_esn(model, dataset, outdir=".")
 
 logger.info("Visualizing results ...")
 

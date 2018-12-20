@@ -21,7 +21,7 @@ class TorchImageDataset(Dataset):
 
     def __getitem__(self, index):
         output = self._numpy_dataset[index]
-        output = (torch.tensor(arr, dtype=self.dtype) for arr in output)
+        output = (torch.tensor(arr[:, None, :], dtype=self.dtype) for arr in output)
         return output
 
     def to_features(self, images):

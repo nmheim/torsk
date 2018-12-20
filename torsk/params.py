@@ -46,7 +46,7 @@ class ParamsSchema(Schema):
         unkown = EXCLUDE
 
 
-class Params():
+class Params:
     """Class that loads hyperparameters from a json file.
     Example:
     ```
@@ -60,24 +60,24 @@ class Params():
         if json_path is not None and params is not None:
             raise ValueError("json_path and params are mutually exclusive args")
 
-        self.schema = ParamsSchema()
+        schema = ParamsSchema()
 
         if json_path is not None:
             with open(json_path) as f:
-                self.__dict__ = self.schema.loads(f.read())
+                self.__dict__ = schema.loads(f.read())
 
         if params is not None:
-            self.__dict__ = self.schema.load(params)
+            self.__dict__ = schema.load(params)
 
     def save(self, json_path):
         with open(json_path, 'w') as f:
-            dump = self.schema.dump(self.__dict__)
+            dump = ParamsSchema().dump(self.__dict__)
             json.dump(dump, f, indent=4)
 
     def update(self, params):
         """Updates parameters based on a dictionary."""
         self.__dict__.update(params)
-        self.__dict__ = self.schema.load(self.__dict__)
+        self.__dict__ = ParamsSchema().load(self.__dict__)
 
     @property
     def dict(self):
