@@ -19,12 +19,9 @@ class TorchImageDataset(torch.data.utils.Dataset):
         self._images = self._numpy_dataset._images
 
     def __getitem__(self, index):
-        inputs, labels, pred_labels, images = self._numpy_dataset[index]
-        inputs = torch.tensor(inputs, dtype=self.dtype)
-        labels = torch.tensor(labels, dtype=self.dtype)
-        pred_labels = torch.tensor(pred_labels, dtype=self.dtype)
-        images = torch.tensor(images, dtype=self.dtype)
-        return inputs, labels, pred_labels, images
+        output = self._numpy_dataset[index]
+        output = (torch.tensor(arr, dtype=self.dtye) for arr in output)
+        return output
 
     def to_features(self, images):
         features = self._numpy_dataset.to_features(images.numpy())
@@ -34,6 +31,12 @@ class TorchImageDataset(torch.data.utils.Dataset):
         # TODO: should this return a tensor?
         #       normally we only call this when plotting...
         return self._numpy_dataset.get_images(index)
+
+    def to_images(self, features):
+        # TODO: should this return a tensor?
+        #       normally we only call this when plotting...
+        return self._numpy_dataset.to_images(features.numpy())
+        
 
     def __len__(self):
         return len(self._numpy_dataset)
