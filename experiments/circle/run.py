@@ -8,8 +8,7 @@ from torsk.data.utils import gauss2d_sequence
 from torsk.visualize import animate_double_imshow
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(level=logging.DEBUG)
-logging.getLogger("matplotlib").setLevel(logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 
 def update_params(params,args):

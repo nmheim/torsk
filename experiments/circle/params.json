@@ -1,11 +1,6 @@
 {
-    "hidden_size": 2000,
-    "pred_length": 300,
-    "train_length": 800,
-    "spectral_radius": 1.0,
-    "tikhonov_beta": null,
-    "dtype": "float32",
-    "transient_length": 100,
+    "train_method": "pinv",
+    "in_weight_init": 1.0,
     "feature_specs": [
         {
             "type": "pixels",
@@ -15,10 +10,15 @@
             ]
         }
     ],
+    "spectral_radius": 1.0,
+    "transient_length": 100,
     "backend": "torch",
-    "density": 1.0,
-    "reservoir_representation": "dense",
-    "in_weight_init": 1.0,
     "input_size": 100,
-    "train_method": "pinv"
+    "pred_length": 300,
+    "density": 1.0,
+    "tikhonov_beta": null,
+    "dtype": "float32",
+    "train_length": 800,
+    "reservoir_representation": "dense",
+    "hidden_size": 2000
 }

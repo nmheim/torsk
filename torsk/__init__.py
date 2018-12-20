@@ -75,16 +75,16 @@ def save_model(modeldir, model, prefix=None):
     prefix = _fix_prefix(prefix)
 
     params_json = modeldir / f"{prefix}params.json"
-    logger.debug(f"Saving model parameters to {params_json}")
+    logger.info(f"Saving model parameters to {params_json}")
     model.params.save(params_json)
 
     if model.params.backend == "numpy":
         modelfile = modeldir / f"{prefix}model.pkl"
-        logger.debug(f"Saving model to {modelfile}")
+        logger.info(f"Saving model to {modelfile}")
         _save_numpy_model(modelfile, model, prefix)
     elif model.params.backend == "torch":
         modelfile = modeldir / f"{prefix}model.pth"
-        logger.debug(f"Saving model to {modelfile}")
+        logger.info(f"Saving model to {modelfile}")
         _save_torch_model(modelfile, model, prefix)
 
 
@@ -114,58 +114,15 @@ def initial_state(hidden_size, dtype, backend):
     return zero_state
 
 
-def train_predict_esn(model, dataset, outdir=None, shuffle=True):
-    if outdir is not None and not isinstance(outdir, pathlib.Path):
-        outdir = pathlib.Path(outdir)
-
-    if outdir is not None and not isinstance(outdir, pathlib.Path):
-        outdir = pathlib.Path(outdir)
-
-    tlen = model.params.transient_length
-
-    ii = np.random.randint(low=0, high=len(dataset)) if shuffle else 0
-    inputs, labels, pred_labels, orig_data = dataset[ii]
-
-    logger.debug(f"Creating {inputs.shape[0]} training states")
-    zero_state = initial_state(
-        hidden_size=model.params.hidden_size,
-        dtype=model.esn_cell.dtype,
-        backend=model.params.backend)
-    _, states = model.forward(inputs, zero_state, states_only=True)
-
-    # if outdir is not None:
-    #     outfile = outdir / "train_data.nc"
-    #     logger.debug(f"Saving training to {outfile}")
-    #     dump_training(
-    #         outfile,
-    #         inputs=inputs.reshape([-1, params.input_size]),
-    #         labels=labels.reshape([-1, params.output_size]),
-    #         states=states.reshape([-1, params.hidden_size]),
-    #         pred_labels=pred_labels.reshape([-1, params.output_size]))
-
-    logger.debug("Optimizing output weights")
-    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
-
-    if outdir is not None:
-        save_model(outdir, model)
-
-    logger.debug(f"Predicting the next {model.params.pred_length} frames")
-    init_inputs = labels[-1]
-    outputs, out_states = model.predict(
-        init_inputs, states[-1], nr_predictions=model.params.pred_length)
-
-    return model, outputs, pred_labels
-
-
 def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
-    if isinstance(inputs, torch.Tensor):
-        inputs = inputs.numpy()
-    if isinstance(labels, torch.Tensor):
-        labels = labels.numpy()
-    if isinstance(states, torch.Tensor):
-        states = states.numpy()
-    if isinstance(pred_labels, torch.Tensor):
-        pred_labels = pred_labels.numpy()
+    if not isinstance(inputs, np.ndarray):
+        msg = "Inputs are not numpy arrays. " \
+              "Assuming Tensors of shape [time, batch, features]"
+        logger.debug(msg)
+        inputs = inputs.numpy().reshape([-1, inputs.size(2)])
+        labels = labels.numpy().reshape([-1, labels.size(2)])
+        states = states.numpy().reshape([-1, states.size(2)])
+        pred_labels = pred_labels.numpy().reshape([-1, pred_labels.size(2)])
 
     if not isinstance(fname, pathlib.Path):
         fname = pathlib.Path(fname)
@@ -177,13 +134,12 @@ def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
         dst.createDimension("train_length", inputs.shape[0])
         dst.createDimension("pred_length", pred_labels.shape[0])
         dst.createDimension("inputs_size", inputs.shape[1])
-        dst.createDimension("outputs_size", labels.shape[1])
         dst.createDimension("hidden_size", states.shape[1])
 
         dst.createVariable("inputs", float, ["train_length", "inputs_size"])
-        dst.createVariable("labels", float, ["train_length", "outputs_size"])
+        dst.createVariable("labels", float, ["train_length", "inputs_size"])
         dst.createVariable("states", float, ["train_length", "hidden_size"])
-        dst.createVariable("pred_labels", float, ["pred_length", "outputs_size"])
+        dst.createVariable("pred_labels", float, ["pred_length", "inputs_size"])
 
         if attrs is not None:
             dst.setncatts(attrs)
@@ -195,12 +151,13 @@ def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
 
 
 def dump_prediction(fname, outputs, labels, states, attrs=None):
-    if isinstance(outputs, torch.Tensor):
-        outputs = outputs.numpy()
-    if isinstance(labels, torch.Tensor):
-        labels = labels.numpy()
-    if isinstance(states, torch.Tensor):
-        states = states.numpy()
+    if not isinstance(outputs, np.ndarray):
+        msg = "Inputs are not numpy arrays. " \
+              "Assuming Tensors of shape [time, batch, features]"
+        logger.debug(msg)
+        outputs = outputs.numpy().reshape([-1, outputs.size(2)])
+        labels = labels.numpy().reshape([-1, labels.size(2)])
+        states = states.numpy().reshape([-1, states.size(2)])
 
     if not isinstance(fname, pathlib.Path):
         fname = pathlib.Path(fname)
@@ -229,3 +186,51 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst["labels"][:] = labels
         dst["states"][:] = states
         dst["rmse"][:] = rmse
+
+
+def train_predict_esn(model, dataset, outdir=None, shuffle=True):
+    if outdir is not None and not isinstance(outdir, pathlib.Path):
+        outdir = pathlib.Path(outdir)
+
+    if outdir is not None and not isinstance(outdir, pathlib.Path):
+        outdir = pathlib.Path(outdir)
+
+    tlen = model.params.transient_length
+    hidden_size = model.params.hidden_size
+    input_size = model.params.input_size
+    backend = model.params.backend
+    dtype = model.esn_cell.dtype
+
+    ii = np.random.randint(low=0, high=len(dataset)) if shuffle else 0
+    inputs, labels, pred_labels, orig_data = dataset[ii]
+
+    logger.info(f"Creating {inputs.shape[0]} training states")
+    zero_state = initial_state(hidden_size, dtype, backend)
+    _, states = model.forward(inputs, zero_state, states_only=True)
+
+    if outdir is not None:
+        outfile = outdir / "train_data.nc"
+        logger.info(f"Saving training to {outfile}")
+        dump_training(outfile, inputs=inputs, labels=labels, states=states,
+                      pred_labels=pred_labels)
+
+    logger.info("Optimizing output weights")
+    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
+
+    if outdir is not None:
+        save_model(outdir, model)
+
+    logger.info(f"Predicting the next {model.params.pred_length} frames")
+    init_inputs = labels[-1]
+    outputs, out_states = model.predict(
+        init_inputs, states[-1], nr_predictions=model.params.pred_length)
+
+    if outdir is not None:
+        outfile = outdir / "pred_data.nc"
+        logger.info(f"Saving prediction to {outfile}")
+        dump_prediction(
+            outfile, outputs=outputs, labels=pred_labels, states=out_states)
+
+    logger.info(f"Done")
+    return model, outputs, pred_labels
+
