@@ -27,6 +27,31 @@ def valid_second_level_params(params):
     return True
 
 
+def create_path(root, param_dict, prefix=None, postfix=None):
+    if not isinstance(root, pathlib.Path):
+        root = pathlib.Path(root)
+    folder = _fix_prefix(prefix)
+    for key, val in param_dict.items():
+        folder += f"{key}:{val}-"
+    folder = folder[:-1]
+    if postfix is not None:
+        folder += f"-{postfix}"
+    return root / folder
+
+
+def parse_path(path):
+    param_dict = {}
+    for string in path.name.split("-"):
+        if ":" in string:
+            key, val = string.split(":")
+            try:
+                val = eval(val)
+            except Exception:
+                pass
+            param_dict[key] = val
+    return param_dict
+
+
 def get_hpopt_dirs(rootdir):
     """Yields all subdirectories that contain a trained-model.pth"""
     if not isinstance(rootdir, pathlib.Path):
