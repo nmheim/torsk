@@ -110,6 +110,8 @@ class NumpyESN(object):
 
         if params.reservoir_representation == "dense":
             esn_cell = NumpyESNCell
+        elif params.reservoir_representation == "sparse":
+            raise NotImplementedError
 
         self.esn_cell = esn_cell(
             input_size=params.input_size,

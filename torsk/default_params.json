@@ -4,6 +4,8 @@
   "reservoir_representation": "dense",
   "spectral_radius": 1.0,
   "density": 1.0,
+  "in_weight_init": 1.0,
+  "in_bias_init": 1.0,
 
   "train_length": 500,
   "pred_length": 300,
