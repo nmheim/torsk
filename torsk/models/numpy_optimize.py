@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 def _extended_states(inputs, states):
-    ones = np.ones([inputs.shape[0], 1])
+    ones = np.ones([inputs.shape[0], 1], dtype=inputs.dtype)
     return np.concatenate([ones, inputs, states], axis=1).T
 
 

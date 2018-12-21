@@ -122,10 +122,10 @@ class NumpyESN(object):
             density=params.density,
             dtype=params.dtype)
 
-        self.wout = np.zeros(
-            [params.input_size, params.hidden_size + params.input_size + 1])
+        wout_shape = [params.input_size, params.hidden_size + params.input_size + 1]
+        self.wout = np.zeros(wout_shape, dtype=self.esn_cell.dtype)
 
-        self.ones = np.ones([1])
+        self.ones = np.ones([1], dtype=self.esn_cell.dtype)
 
     def forward(self, inputs, state, states_only=True):
         if states_only:
