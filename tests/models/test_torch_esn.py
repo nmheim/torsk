@@ -1,23 +1,7 @@
 import numpy as np
 import torch
-from torsk.models import esn, utils
-
-
-def test_reservoir_initialization():
-    dim = 10
-    density = 1.
-    symmetric = True
-    spectral_radius = 1.
-
-    # connection mask
-    mask = utils.connection_mask(dim, density, symmetric)
-    assert mask.sum() == dim * dim
-    assert mask[0, -1] == mask[-1, -1]
-
-    # reservoir matrix
-    res = utils.dense_esn_reservoir(dim, spectral_radius, density, symmetric)
-    # check if symmteric
-    assert np.all(res.T == res)
+import torsk
+from torsk.models.torch_esn import TorchESN, TorchESNCell
 
 
 def test_esn_cell():
@@ -29,13 +13,14 @@ def test_esn_cell():
     batch_size = 3
     density = 1.0
 
-    cell = esn.ESNCell(
+    cell = TorchESNCell(
         input_size=input_size,
         hidden_size=hidden_size,
         spectral_radius=spectral_radius,
         in_weight_init=weight_init,
         in_bias_init=bias_init,
-        density=density)
+        density=density,
+        dtype="float32")
     assert cell.weight_hh.size() == (hidden_size, hidden_size)
     assert not cell.weight_hh.requires_grad
     assert cell.in_weight.size() == (hidden_size, input_size)
@@ -51,15 +36,16 @@ def test_esn_cell():
 def test_esn():
 
     # check default parameters
-    params = esn.get_default_params()
-    assert params.input_size == 1
-    assert params.hidden_size == 100
-    assert params.output_size == 1
+    params = torsk.default_params()
+    params.input_size = 1
+    params.hidden_size = 100
+    params.output_size = 1
 
     # check model
     lag_len = 3
     batch_size = 1
-    model = esn.ESN(params)
+    model = TorchESN(params)
+    torch.set_default_dtype(model.esn_cell.dtype)
     inputs = torch.rand([lag_len, batch_size, params.input_size])
     labels = torch.rand([lag_len, params.output_size, params.output_size])
     state = torch.rand([batch_size, params.hidden_size])
