@@ -19,8 +19,9 @@ class FeatureSpec(Schema):
 
 
 class ParamsSchema(Schema):
-    input_size = fields.Int()
-    in_weight_init = fields.Float()
+    input_size = fields.Int(required=True)
+    in_weight_init = fields.Float(required=True)
+    in_bias_init = fields.Float(required=True)
     feature_specs = fields.List(fields.Nested(FeatureSpec()), required=True)
 
     hidden_size = fields.Int(required=True)

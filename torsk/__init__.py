@@ -96,11 +96,12 @@ def load_model(modeldir, prefix=None):
     prefix = _fix_prefix(prefix)
 
     params = Params(modeldir / f"{prefix}params.json")
-    model_pth = modeldir / f"{prefix}model.pth"
 
     if params.backend == "numpy":
+        model_pth = modeldir / f"{prefix}model.pkl"
         model = _load_numpy_model(model_pth)
-    elif params.backen == "torch":
+    elif params.backend == "torch":
+        model_pth = modeldir / f"{prefix}model.pth"
         model = _load_torch_model(model_pth, params)
     return model
 
