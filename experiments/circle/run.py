@@ -25,6 +25,8 @@ params.spectra_radius = 2.0
 params.hidden_size = 2000
 params.input_size = 100
 params.train_length = 800
+# params.train_method = "tikhonov"
+# params.tikhonov_beta = 0.01
 
 update_params(params,sys.argv[1:]);
 
@@ -36,8 +38,6 @@ elif params.backend == "torch":
     logger.info("Running with PyTorch backend")
     from torsk.data.torch_dataset import TorchImageDataset as ImageDataset
     from torsk.models.torch_esn import TorchESN as ESN
-    # TODO: fix dtypes !!!
-    params.dtype = "float32"
 
 logger.info(params)
 

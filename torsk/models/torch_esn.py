@@ -67,9 +67,14 @@ class TorchESNCell(RNNCellBase):
         self.in_bias = Parameter(in_bias, requires_grad=False)
         self.res_bias = self.register_parameter('res_bias', None)
 
+    def check_dtypes(self, *args):
+        for arg in args:
+            assert arg.dtype == self.dtype
+
     def forward(self, inputs, state):
         self.check_forward_input(inputs)
         self.check_forward_hidden(inputs, state)
+        self.check_dtypes(inputs, state)
         return torch._C._VariableFunctions.rnn_tanh_cell(
             inputs, state, self.in_weight, self.weight_hh,
             self.in_bias, self.res_bias)
@@ -115,6 +120,7 @@ class SparseTorchESNCell(RNNCellBase):
 
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.dtype = getattr(torch, params.dtype)
 
         # input matrix
         in_weight = torch.rand([hidden_size, input_size])
@@ -141,9 +147,16 @@ class SparseTorchESNCell(RNNCellBase):
         self.bias_ih = Parameter(torch.Tensor(in_bias), requires_grad=False)
         self.bias_hh = self.register_parameter('bias_hh', None)
 
+    def check_dtypes(self, *args):
+        for arg in args:
+            assert arg.dtype == self.dtype
+
     def forward(self, inputs, state):
         if not inputs.size(0) == state.size(0) == 1:
             raise ValueError("SparseTorchESNCell can only process batch_size==1")
+        self.check_forward_input(inputs)
+        self.check_forward_hidden(inputs, state)
+        self.check_dtypes(inputs, state)
 
         # reshape for matrix multiplication
         inputs = inputs.reshape([-1, 1])
@@ -190,11 +203,11 @@ class TorchESN(nn.Module):
                 "Currently input and output dimensions must be the same.")
 
         if params.reservoir_representation == "dense":
-            esn_cell = TorchESNCell
+            ESNCell = TorchESNCell
         elif params.reservoir_representation == "sparse":
-            esn_cell = SparseTorchESNCell
+            ESNCell = SparseTorchESNCell
 
-        self.esn_cell = esn_cell(
+        self.esn_cell = ESNCell(
             input_size=params.input_size,
             hidden_size=params.hidden_size,
             spectral_radius=params.spectral_radius,
@@ -202,6 +215,8 @@ class TorchESN(nn.Module):
             in_bias_init=params.in_bias_init,
             density=params.density,
             dtype=params.dtype)
+
+        torch.set_default_dtype(self.esn_cell.dtype)
 
         self.out = nn.Linear(
             params.hidden_size + params.input_size + 1,
