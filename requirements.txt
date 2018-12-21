@@ -1,5 +1,6 @@
 click
 joblib
+marshmallow>=3.0.0b12
 matplotlib
 netCDF4
 numpy
