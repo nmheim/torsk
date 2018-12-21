@@ -41,9 +41,8 @@ class NumpyESNCell(object):
     state' : array
         contains the next hidden state of shape (batch, hidden_size)
     """
-    def __init__(
-            self, input_size, hidden_size,
-            spectral_radius, in_weight_init, in_bias_init, density, dtype):
+    def __init__(self, input_size, hidden_size, spectral_radius,
+                 in_weight_init, in_bias_init, density, dtype):
 
         self.input_size = input_size
         self.hidden_size = hidden_size

@@ -52,9 +52,9 @@ class TorchESNCell(RNNCellBase):
         self.hidden_size = hidden_size
         self.dtype = getattr(torch, dtype)
 
-        in_weight = torch.rand([hidden_size, input_size], dtype=self.dtype)
-        in_weight = scale_weight(in_weight, in_weight_init)
-        self.in_weight = Parameter(in_weight, requires_grad=False)
+        weight_ih = torch.rand([hidden_size, input_size], dtype=self.dtype)
+        weight_ih = scale_weight(weight_ih, in_weight_init)
+        self.weight_ih = Parameter(weight_ih, requires_grad=False)
 
         weight_hh = dense_esn_reservoir(
             dim=hidden_size, spectral_radius=spectral_radius,
@@ -76,11 +76,11 @@ class TorchESNCell(RNNCellBase):
         self.check_forward_hidden(inputs, state)
         self.check_dtypes(inputs, state)
         return torch._C._VariableFunctions.rnn_tanh_cell(
-            inputs, state, self.in_weight, self.weight_hh,
+            inputs, state, self.weight_ih, self.weight_hh,
             self.in_bias, self.res_bias)
 
 
-class SparseTorchESNCell(RNNCellBase):
+class TorchSparseESNCell(RNNCellBase):
     """An Echo State Network (ESN) cell with a sparsely represented reservoir
     matrix. Can currently only handle batch==1.
 
@@ -113,19 +113,20 @@ class SparseTorchESNCell(RNNCellBase):
         contains the next hidden state of shape (batch, hidden_size)
     """
 
-    def __init__(self, input_size, hidden_size,
-                 spectral_radius, in_weight_init, in_bias_init, density):
-        super(SparseTorchESNCell, self).__init__(
+    def __init__(self, input_size, hidden_size, spectral_radius,
+                 in_weight_init, in_bias_init, density, dtype):
+        super(TorchSparseESNCell, self).__init__(
             input_size, hidden_size, bias=True, num_chunks=1)
 
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.dtype = getattr(torch, params.dtype)
+        self.dtype = getattr(torch, dtype)
+        torch.set_default_dtype(self.dtype)
 
         # input matrix
-        in_weight = torch.rand([hidden_size, input_size])
-        in_weight = scale_weight(in_weight, in_weight_init)
-        self.weight_ih = Parameter(in_weight, requires_grad=False)
+        weight_ih = torch.rand([hidden_size, input_size])
+        weight_ih = scale_weight(weight_ih, in_weight_init)
+        self.weight_ih = Parameter(weight_ih, requires_grad=False)
 
         # sparse reservoir matrix
         matrix = sparse_esn_reservoir(
@@ -136,15 +137,16 @@ class SparseTorchESNCell(RNNCellBase):
 
         matrix = matrix.tocoo()
         indices = torch.LongTensor([matrix.row, matrix.col])
-        values = torch.FloatTensor(matrix.data)
+        values = torch.tensor(matrix.data, dtype=self.dtype)
 
         self.weight_hh = Parameter(torch.sparse.FloatTensor(
-            indices, values, [hidden_size, hidden_size]), requires_grad=False)
+            indices, values, [hidden_size, hidden_size]),
+            requires_grad=False)
 
         # biases
-        in_bias = torch.rand([hidden_size, 1])
+        in_bias = torch.rand([hidden_size, 1], dtype=self.dtype)
         in_bias = scale_weight(in_bias, in_bias_init)
-        self.bias_ih = Parameter(torch.Tensor(in_bias), requires_grad=False)
+        self.bias_ih = Parameter(in_bias, requires_grad=False)
         self.bias_hh = self.register_parameter('bias_hh', None)
 
     def check_dtypes(self, *args):
@@ -205,7 +207,7 @@ class TorchESN(nn.Module):
         if params.reservoir_representation == "dense":
             ESNCell = TorchESNCell
         elif params.reservoir_representation == "sparse":
-            ESNCell = SparseTorchESNCell
+            ESNCell = TorchSparseESNCell
 
         self.esn_cell = ESNCell(
             input_size=params.input_size,
