@@ -2,7 +2,11 @@ import numpy as np
 import skimage.transform as skt
 
 
-def resample2d(sequence, size):
+def resample2d(image, size):
+    return skt.resize(image, size, mode="reflect", anti_aliasing=True)
+
+
+def resample2d_sequence(sequence, size):
     """Resample a squence of 2d-arrays to size using PIL.Image.resize"""
     dtype = sequence.dtype
     sequence = [skt.resize(img, size, mode="reflect", anti_aliasing=True)

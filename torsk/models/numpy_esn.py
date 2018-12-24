@@ -1,12 +1,9 @@
-import pathlib
 import logging
-
 import numpy as np
 
 from torsk.models.initialize import dense_esn_reservoir
 import torsk.models.numpy_optimize as opt
 
-_module_dir = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger(__name__)
 
 
@@ -108,11 +105,11 @@ class NumpyESN(object):
         self.params = params
 
         if params.reservoir_representation == "dense":
-            esn_cell = NumpyESNCell
+            ESNCell = NumpyESNCell
         elif params.reservoir_representation == "sparse":
             raise NotImplementedError
 
-        self.esn_cell = esn_cell(
+        self.esn_cell = ESNCell(
             input_size=params.input_size,
             hidden_size=params.hidden_size,
             spectral_radius=params.spectral_radius,

@@ -50,7 +50,13 @@ def conv2d_output_shape(in_size, size, padding=0, dilation=1, stride=1):
     return (height, width)
 
 
-def conv2d(sequence, kernel_type, size):
+def conv2d(image, kernel_type, size):
+    kernel = get_kernel(size, kernel_type)
+    conv = convolve2d(img, kernel, mode="valid")
+    return conv
+
+
+def conv2d_sequence(sequence, kernel_type, size):
     """2D convolution of a sequence of images. Convolution mode is valid, which
     means that only values which do not need to be padded are calculated.
 

@@ -1,11 +1,15 @@
 import logging
 import numpy as np
 
-from torsk.data.utils import resample2d, normalize
-from torsk.data.conv import conv2d, conv2d_output_shape
+from torsk.data.utils import resample2d_sequence, normalize
+from torsk.data.conv import conv2d_sequence, conv2d_output_shape
 from torsk.data.transform import dct2_sequence
 
 logger = logging.getLogger(__name__)
+
+
+def pixel_feature(image, xsize):
+    nr_pxl_features = xsize[0] * xsize[1]
 
 
 def pixel_features(images, xsize):
@@ -14,7 +18,7 @@ def pixel_features(images, xsize):
     """
     seq_len = images.shape[0]
     nr_pxl_features = xsize[0] * xsize[1]
-    pxl_features = resample2d(images, xsize)
+    pxl_features = resample2d_sequence(images, xsize)
     return pxl_features.reshape([seq_len, nr_pxl_features])
 
 
@@ -34,7 +38,7 @@ def conv_features(images, spec):
     """
     seq_len = images.shape[0]
     kwargs = {k: v for k, v in spec.items() if k != "type"}
-    conv_features = conv2d(images, **kwargs)
+    conv_features = conv2d_sequence(images, **kwargs)
     kwargs = {k: v for k, v in kwargs.items() if k != "kernel_type"}
     size = conv2d_output_shape(images.shape[1:], **kwargs)
     return conv_features.reshape([seq_len, size[0] * size[1]])
