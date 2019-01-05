@@ -2,6 +2,7 @@ import logging
 import numpy as np
 
 from torsk.models.initialize import dense_esn_reservoir
+from torsk.models.numpy_map_esn import NumpyMapESNCell
 import torsk.models.numpy_optimize as opt
 
 logger = logging.getLogger(__name__)
@@ -105,20 +106,19 @@ class NumpyESN(object):
         self.params = params
 
         if params.reservoir_representation == "dense":
-            ESNCell = NumpyESNCell
+            ESNCell = NumpyMapESNCell
         elif params.reservoir_representation == "sparse":
             raise NotImplementedError
 
         self.esn_cell = ESNCell(
-            input_size=params.input_size,
-            hidden_size=params.hidden_size,
+            input_shape=params.input_shape,
+            input_map_specs=params.input_map_specs,
             spectral_radius=params.spectral_radius,
-            in_weight_init=params.in_weight_init,
-            in_bias_init=params.in_bias_init,
             density=params.density,
             dtype=params.dtype)
 
-        wout_shape = [params.input_size, params.hidden_size + params.input_size + 1]
+        input_size = params.input_shape[0] * params.input_shape[1]
+        wout_shape = [input_size, self.esn_cell.hidden_size + input_size + 1]
         self.wout = np.zeros(wout_shape, dtype=self.esn_cell.dtype)
 
         self.ones = np.ones([1], dtype=self.esn_cell.dtype)
@@ -140,21 +140,24 @@ class NumpyESN(object):
         outputs, states = [], []
         for inp in inputs:
             state = self.esn_cell.forward(inp, state)
-            ext_state = np.concatenate([self.ones, inp, state], axis=0)
+            ext_state = np.concatenate([self.ones, inp.rehsape(-1), state], axis=0)
             output = np.dot(self.wout, ext_state)
+
             outputs.append(output)
             states.append(state)
-        return np.asarray(outputs), np.asarray(states)
+        return np.asarray(outputs).reshape(inputs.shape), np.asarray(states)
 
     def predict(self, initial_inputs, initial_state, nr_predictions):
+        inp_shape = initial_inputs.shape
         inp = initial_inputs
         state = initial_state
         outputs, states = [], []
 
         for ii in range(nr_predictions):
             state = self.esn_cell.forward(inp, state)
-            ext_state = np.concatenate([self.ones, inp, state], axis=0)
-            output = np.dot(self.wout, ext_state)
+            ext_state = np.concatenate([self.ones, inp.reshape(-1), state], axis=0)
+            output = np.dot(self.wout, ext_state).reshape(inp_shape)
+
             inp = output
 
             outputs.append(output)

@@ -11,10 +11,14 @@ def _extended_states(inputs, states):
 
 
 def _pseudo_inverse_svd(inputs, states, labels):
-    X = _extended_states(inputs, states)
+    train_length = inputs.shape[0]
+    flat_inputs = inputs.reshape([train_length, -1])
+    flat_labels = labels.reshape([train_length, -1])
+
+    X = _extended_states(flat_inputs, states)
 
     U, s, Vh = sp.linalg.svd(X)
-    L = labels.T
+    L = flat_labels.T
     # condition = s[0] / s[-1]  # TODO: never used?
 
     scale = s[0]
