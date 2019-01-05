@@ -119,6 +119,7 @@ def initial_state(hidden_size, dtype, backend):
 
 def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
     if not isinstance(inputs, np.ndarray):
+        raise ValueError("Check that this acutally works...")
         msg = "Inputs are not numpy arrays. " \
               "Assuming Tensors of shape [time, batch, features]"
         logger.debug(msg)
@@ -136,13 +137,18 @@ def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
 
         dst.createDimension("train_length", inputs.shape[0])
         dst.createDimension("pred_length", pred_labels.shape[0])
-        dst.createDimension("inputs_size", inputs.shape[1])
+        dst.createDimension("image_height", inputs.shape[1])
+        dst.createDimension("image_width", inputs.shape[2])
         dst.createDimension("hidden_size", states.shape[1])
 
-        dst.createVariable("inputs", float, ["train_length", "inputs_size"])
-        dst.createVariable("labels", float, ["train_length", "inputs_size"])
-        dst.createVariable("states", float, ["train_length", "hidden_size"])
-        dst.createVariable("pred_labels", float, ["pred_length", "inputs_size"])
+        dst.createVariable(
+            "inputs", float, ["train_length", "image_height", "image_width"])
+        dst.createVariable(
+            "labels", float, ["train_length", "image_height", "image_width"])
+        dst.createVariable(
+            "states", float, ["train_length", "hidden_size"])
+        dst.createVariable(
+            "pred_labels", float, ["pred_length", "image_height", "image_width"])
 
         if attrs is not None:
             dst.setncatts(attrs)
@@ -155,6 +161,7 @@ def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
 
 def dump_prediction(fname, outputs, labels, states, attrs=None):
     if not isinstance(outputs, np.ndarray):
+        raise ValueError("Check that this acutally works...")
         msg = "Inputs are not numpy arrays. " \
               "Assuming Tensors of shape [time, batch, features]"
         logger.debug(msg)
@@ -173,12 +180,15 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
     with nc.Dataset(fname, "w") as dst:
 
         dst.createDimension("pred_length", outputs.shape[0])
-        dst.createDimension("output_size", outputs.shape[1])
+        dst.createDimension("image_height", outputs.shape[1])
+        dst.createDimension("image_width", outputs.shape[2])
         dst.createDimension("hidden_size", states.shape[1])
         dst.createDimension("scalar", 1)
 
-        dst.createVariable("outputs", float, ["pred_length", "output_size"])
-        dst.createVariable("labels", float, ["pred_length", "output_size"])
+        dst.createVariable(
+            "outputs", float, ["pred_length", "image_height", "image_width"])
+        dst.createVariable(
+            "labels", float, ["pred_length", "image_height", "image_width"])
         dst.createVariable("states", float, ["pred_length", "hidden_size"])
         dst.createVariable("rmse", float, ["scalar"])
 
