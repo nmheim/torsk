@@ -53,13 +53,41 @@ def split_train_label_pred(sequence, train_length, pred_length):
     return inputs, labels, pred_labels
 
 
+class NumpyRawImageDataset:
+
+    def __init__(self, images, params):
+        self.train_length = params.train_length
+        self.pred_length = params.pred_length
+        self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
+        self.input_map_specs = params.input_map_specs
+
+        self.dtype = np.dtype(params.dtype)
+        self._images = images.astype(self.dtype)
+        self.image_shape = images.shape[1:]
+
+    def __getitem__(self, index):
+        if (index < 0) or (index >= self.nr_sequences):
+            raise IndexError('ImageDataset index out of range.')
+
+        images = self._images[
+            index:index + self.train_length + self.pred_length + 1]
+
+        inputs, labels, pred_labels = split_train_label_pred(
+            images, self.train_length, self.pred_length)
+
+        return inputs, labels, pred_labels, images
+
+    def __len__(self):
+        return self.nr_sequences
+
+
 class NumpyImageDataset:
 
     def __init__(self, images, params):
         self.train_length = params.train_length
         self.pred_length = params.pred_length
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
-        self.feature_specs = params.feature_specs
+        self.input_map_specs = params.input_map_specs
 
         self.dtype = np.dtype(params.dtype)
         self._images = images.astype(self.dtype)
@@ -83,7 +111,7 @@ class NumpyImageDataset:
             logger.warning("images dtype is converted to {self.dtype}")
 
         features = []
-        for spec in self.feature_specs:
+        for spec in self.input_map_specs:
             if spec["type"] == "pixels":
                 _features = pixel_features(images, spec["size"])
             elif spec["type"] == "dct":
@@ -104,10 +132,10 @@ class NumpyImageDataset:
         return inputs, labels, pred_labels
 
     def to_images(self, features):
-        types = np.array([spec["type"] for spec in self.feature_specs])
+        types = np.array([spec["type"] for spec in self.input_map_specs])
         if "pixels" in types:
             idx = np.where(types == "pixels")[0][0]
-            size = self.feature_specs[idx]["size"]
+            size = self.input_map_specs[idx]["size"]
             nr_pixel_features = size[0] * size[1]
             images = features[:, :nr_pixel_features]
             images = images.reshape([-1, size[0], size[1]])
