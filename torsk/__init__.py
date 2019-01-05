@@ -199,7 +199,7 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=True):
         outdir = pathlib.Path(outdir)
 
     tlen = model.params.transient_length
-    hidden_size = model.params.hidden_size
+    hidden_size = model.esn_cell.hidden_size
     backend = model.params.backend
     dtype = model.esn_cell.dtype
 
