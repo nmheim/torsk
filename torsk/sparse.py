@@ -31,9 +31,9 @@ class SparseMatrix:
         self._check_nonzeros()
 
     def _check_nonzeros(self):
-        for ii in range(self.dense_shape[1]):
+        for ii in range(self.dense_shape[0]):
             idx = self.row_idx == ii
-            nzv = np.sum(self.values[idx] > 0)
+            nzv = np.sum(self.values[idx] != 0)
             assert nzv == self.nonzeros_per_row
 
     @classmethod
@@ -54,7 +54,3 @@ class SparseMatrix:
         name = self.__class__.__name__
         string = f"<{name} nonzeros_per_row:{nz} values:{self.values} shape:{ds}>"
         return string
-
-
-def random_sparse_matrix(dense_shape, low=-1, high=1):
-    pass
