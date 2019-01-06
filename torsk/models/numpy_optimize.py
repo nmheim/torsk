@@ -50,11 +50,15 @@ def pseudo_inverse(inputs, states, labels):
 
 
 def tikhonov(inputs, states, labels, beta):
-    X = _extended_states(inputs, states)
+    train_length = inputs.shape[0]
+    flat_inputs = inputs.reshape([train_length, -1])
+    flat_labels = labels.reshape([train_length, -1])
+
+    X = _extended_states(flat_inputs, states)
 
     Id = np.eye(X.shape[0])
     A = np.dot(X, X.T) + beta + Id
-    B = np.dot(X, labels)
+    B = np.dot(X, flat_labels)
 
     # Solve linear system instead of calculating inverse
     wout = np.linalg.solve(A, B)
