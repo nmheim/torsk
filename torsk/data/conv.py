@@ -52,7 +52,7 @@ def conv2d_output_shape(in_size, size, padding=0, dilation=1, stride=1):
 
 def conv2d(image, kernel_type, size):
     kernel = get_kernel(size, kernel_type)
-    conv = convolve2d(img, kernel, mode="valid")
+    conv = convolve2d(image, kernel, mode="valid")
     return conv
 
 

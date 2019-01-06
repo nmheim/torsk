@@ -100,6 +100,7 @@ class NumpyMapESNCell(object):
         self.spectral_radius = spectral_radius
         self.density = density
         self.dtype = np.dtype(dtype)
+        self.input_map_specs = input_map_specs
 
         self.hidden_size = self.get_hidden_size(input_shape)
         logger.info(f"ESN hidden size: {self.hidden_size}")
@@ -108,14 +109,14 @@ class NumpyMapESNCell(object):
             density=self.density, symmetric=False)
         self.weight_hh = self.weight_hh.astype(self.dtype)
 
-        self.input_map_specs = _init_input_map_specs(input_map_specs)
+        self.input_map_specs = _init_input_map_specs(input_map_specs, input_shape)
 
     def check_dtypes(self, *args):
         for arg in args:
             assert arg.dtype == self.dtype
 
     def get_hidden_size(self, input_shape):
-        return _get_hidden_size(input_shape, input_map_specs)
+        return _get_hidden_size(input_shape, self.input_map_specs)
 
     def input_map(self, image):
         return _input_map(image, self.input_map_specs)

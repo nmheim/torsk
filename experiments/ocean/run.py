@@ -18,16 +18,31 @@ def update_params(params,args):
         params.dict[key] = eval(value)
 
 
-Nx, Ny = 30, 30
-params = torsk.default_params()
-params.feature_specs = [{"type": "pixels", "size": [Nx, Ny]}]
-params.in_weight_init = 1.0
-params.in_bias_init = 1.0
-params.spectra_radius = 2.0
-params.hidden_size = 2000
-params.input_size = Nx * Ny
-params.train_length = 800
-
+params = torsk.Params()
+params.input_map_specs = [
+    # {"type": "pixels", "size": [20, 20], "input_scale": 9.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    # {"type": "conv", "size": [5, 5], "kernel_type":"gauss", "input_scale": 9.},
+    # {"type": "conv", "size": [5, 5], "kernel_type":"mean", "input_scale": 9.},
+    # {"type": "dct", "size": [20, 20], "input_scale": 1.},
+    {"type": "random_weights", "size": 2500, "weight_scale": 1.0}
+]
+params.spectral_radius = 1.5
+params.density = 0.01
+params.input_shape = [25, 25]
+params.train_length = 1000
+params.pred_length = 300
+params.transient_length = 200
+params.dtype = "float64"
+params.reservoir_representation = "sparse"
+params.backend = "numpy"
 params.train_method = "tikhonov"
 params.tikhonov_beta = 3e1
 
@@ -35,9 +50,10 @@ update_params(params,sys.argv[1:]);
 
 if params.backend == "numpy":
     logger.info("Running with Numpy backend")
-    from torsk.data.numpy_dataset import NumpyImageDataset as ImageDataset
+    from torsk.data.numpy_dataset import NumpyRawImageDataset as ImageDataset
     from torsk.models.numpy_esn import NumpyESN as ESN
 elif params.backend == "torch":
+    raise NotImplementedError
     logger.info("Running with PyTorch backend")
     from torsk.data.torch_dataset import TorchImageDataset as ImageDataset
     from torsk.models.torch_esn import TorchESN as ESN
@@ -46,10 +62,10 @@ elif params.backend == "torch":
 
 logger.info(params)
 
-logger.info("Loading + resampling of kuro window ...")
+logger.info("Loading ...")
 ncpath = '../../data/ocean/kuro_SSH_3daymean_scaled.nc'
 with nc.Dataset(ncpath, 'r') as src:
-    images = src["SSH"][:, 90:190, 90:190]
+    images = src["SSH"][:, 90:190:4, 90:190:4]
     images, mask = images.data, images.mask
     images[mask] = 0.
 dataset = ImageDataset(images, params)
@@ -67,8 +83,8 @@ logger.info("Visualizing results ...")
 # plt.plot(bins[1:], hist)
 # plt.show()
 
-real_pixels      = dataset.to_images(pred_labels)
-predicted_pixels = dataset.to_images(outputs)
+real_pixels = pred_labels
+predicted_pixels = outputs
 
 y, x = 5, 5
 plt.plot(real_pixels[:, y, x])
