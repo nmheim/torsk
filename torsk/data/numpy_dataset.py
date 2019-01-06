@@ -59,7 +59,6 @@ class NumpyRawImageDataset:
         self.train_length = params.train_length
         self.pred_length = params.pred_length
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
-        self.input_map_specs = params.input_map_specs
 
         self.dtype = np.dtype(params.dtype)
         self._images = images.astype(self.dtype)

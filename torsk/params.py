@@ -6,25 +6,26 @@ from marshmallow import Schema, fields, validate, EXCLUDE
 _MODULE_DIR = pathlib.Path(__file__).parent.absolute()
 
 
-class FeatureSpec(Schema):
+class InputMap(Schema):
     type = fields.String(
-        validate=validate.OneOf(["pixels", "dct", "conv"]), required=True)
+        validate=validate.OneOf(
+            ["pixels", "dct", "conv", "random_weights"]),
+        required=True)
 
     # xsize if pixels
     # ksize if dct
     # kernel_shape if conv
+    # hidden_size if random_weights
     size = fields.List(fields.Int(), required=True)
+
     kernel_type = fields.String(
         validate=validate.OneOf(["mean", "gauss", "random"]))
 
 
 class ParamsSchema(Schema):
-    input_size = fields.Int(required=True)
-    in_weight_init = fields.Float(required=True)
-    in_bias_init = fields.Float(required=True)
-    feature_specs = fields.List(fields.Nested(FeatureSpec()), required=True)
+    input_shape = fields.List(fields.Int(), required=True)
+    input_maps = fields.List(fields.Nested(InputMap()), required=True)
 
-    hidden_size = fields.Int(required=True)
     reservoir_representation = fields.String(
         validate=validate.OneOf(["sparse", "dense"]), required=True)
     spectral_radius = fields.Float(required=True)
