@@ -2,6 +2,8 @@ import numpy as np
 from scipy import sparse
 from scipy.stats import uniform
 
+from torsk.sparse import SparseMatrix
+
 
 def connection_mask(dim, density, symmetric):
     """Creates a square mask with a given density of ones"""
@@ -77,4 +79,41 @@ def sparse_esn_reservoir(dim, spectral_radius, density, symmetric):
     rho = np.abs(eig).max()
     matrix = matrix.multiply(1. / rho)
     matrix = matrix.multiply(spectral_radius)
+    return matrix
+
+
+def sparse_nzpr_esn_reservoir(dim, spectral_radius, nonzeros_per_row, dtype):
+    dense_shape = (dim, dim)
+    nr_values = dim * nonzeros_per_row
+
+    # get row_idx like: [0,0,0,1,1,1,....]
+    row_idx = np.tile(np.arange(dim)[:, None], nonzeros_per_row).reshape(-1)
+
+    # get col idx that are unique within each row
+    col_idx = []
+    for ii in range(dim):
+        cols = {np.random.randint(low=0, high=dim)}
+        while len(cols) < nonzeros_per_row:
+            cols.add(np.random.randint(low=0, high=dim))
+        col_idx += cols
+    col_idx = np.asarray(col_idx)
+    vals = np.random.uniform(low=-1, high=1, size=[nr_values])
+
+    # scipy sparse matrix
+    matrix = sparse.coo_matrix(
+        (vals, (row_idx, col_idx)), dtype=dtype)
+
+    # set spectral radius
+    eig, _ = sparse.linalg.eigs(matrix, k=2, tol=1e-4)
+    rho = np.abs(eig).max()
+    matrix = matrix.multiply(1. / rho)
+    matrix = matrix.multiply(spectral_radius)
+    matrix = matrix.tocoo()
+
+    matrix = SparseMatrix(
+        values=matrix.data,
+        row_idx=matrix.row,
+        col_idx=matrix.col,
+        nonzeros_per_row=nonzeros_per_row,
+        dense_shape=dense_shape)
     return matrix

@@ -2,7 +2,7 @@ import logging
 import numpy as np
 
 from torsk.models.initialize import dense_esn_reservoir
-from torsk.models.numpy_map_esn import NumpyMapESNCell
+from torsk.models.numpy_map_esn import NumpyMapESNCell, NumpyMapSparseESNCell
 import torsk.models.numpy_optimize as opt
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class NumpyESN(object):
         if params.reservoir_representation == "dense":
             ESNCell = NumpyMapESNCell
         elif params.reservoir_representation == "sparse":
-            raise NotImplementedError
+            ESNCell = NumpyMapSparseESNCell
 
         self.esn_cell = ESNCell(
             input_shape=params.input_shape,
