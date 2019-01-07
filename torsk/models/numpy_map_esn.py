@@ -39,7 +39,7 @@ def _get_hidden_size(input_shape, input_map_specs):
             _shape = conv2d_output_shape(input_shape, spec["size"])
             hidden_size += _shape[0] * _shape[1]
         elif spec["type"] == "random_weights":
-            hidden_size = spec["size"]
+            hidden_size += spec["size"]
         else:
             shape = spec["size"]
             hidden_size += shape[0] * shape[1]
