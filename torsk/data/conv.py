@@ -23,7 +23,7 @@ def _gauss_kernel(kernel_shape):
     return np.exp(-(xx**2 + yy**2) / (2 * sigma**2))
 
 
-def get_kernel(kernel_shape, kernel_type):
+def get_kernel(kernel_shape, kernel_type, dtype):
     if kernel_type == "mean":
         kernel = _mean_kernel(kernel_shape)
     elif kernel_type == "random":
@@ -32,7 +32,7 @@ def get_kernel(kernel_shape, kernel_type):
         kernel = _gauss_kernel(kernel_shape)
     else:
         raise NotImplementedError(f"Unkown kernel type `{kernel_type}`")
-    return kernel
+    return kernel.astype(dtype)
 
 
 def _conv_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1):

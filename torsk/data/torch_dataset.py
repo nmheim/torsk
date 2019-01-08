@@ -1,9 +1,40 @@
-import logging
 import torch
 from torch.utils.data import Dataset
-from torsk.data.numpy_dataset import NumpyImageDataset
+from torsk.data.numpy_dataset import NumpyImageDataset, split_train_label_pred
 
-logger = logging.getLogger(__name__)
+
+class TorchRawImageDataset:
+    """Dataset that contains the raw images and does nothing but providing
+    convenient access to inputs/labels/pred_labels
+    """
+    def __init__(self, images, params):
+        self.train_length = params.train_length
+        self.pred_length = params.pred_length
+        self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
+
+        self.dtype = getattr(torch, params.dtype)
+        self._images = images.astype(params.dtype)
+        self.image_shape = images.shape[1:]
+
+    def __getitem__(self, index):
+        if (index < 0) or (index >= self.nr_sequences):
+            raise IndexError('ImageDataset index out of range.')
+
+        images = self._images[
+            index:index + self.train_length + self.pred_length + 1]
+
+        inputs, labels, pred_labels = split_train_label_pred(
+            images, self.train_length, self.pred_length)
+
+        inputs = torch.tensor(inputs[:, None, :], dtype=self.dtype)
+        labels = torch.tensor(labels[:, None, :], dtype=self.dtype)
+        pred_labels = torch.tensor(pred_labels[:, None, :], dtype=self.dtype)
+        images = torch.tensor(images[:, None, :], dtype=self.dtype)
+
+        return inputs, labels, pred_labels, images
+
+    def __len__(self):
+        return self.nr_sequences
 
 
 class TorchImageDataset(Dataset):

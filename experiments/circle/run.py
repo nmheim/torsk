@@ -39,26 +39,28 @@ params.input_shape = [30, 30]
 params.train_length = 2000
 params.pred_length = 300
 params.transient_length = 200
-params.dtype = "float64"
+params.dtype = "float32"
 params.reservoir_representation = "sparse"
-params.backend = "numpy"
+params.backend = "torch"
 params.train_method = "pinv"
 params.tikhonov_beta = 0.01
 
 update_params(params,sys.argv[1:]);
 
 if params.backend == "numpy":
-    logger.info("Running with Numpy backend")
+    logger.info("Running with NUMPY backend")
     from torsk.data.numpy_dataset import NumpyRawImageDataset as ImageDataset
     from torsk.models.numpy_esn import NumpyESN as ESN
 else:
-    raise NotImplementedError
+    logger.info("Running with TORCH backend")
+    from torsk.data.torch_dataset import TorchRawImageDataset as ImageDataset
+    from torsk.models.torch_esn import TorchESN as ESN
 
 logger.info(params)
 
 logger.info("Creating circle dataset ...")
 t = np.arange(0, 200*np.pi, 0.1)
-x, y = np.sin(t), np.cos(0.25 * t)
+x, y = np.sin(0.25 * t), np.cos(t)
 # y = mackey_sequence(N=t.shape[0]) * 2 - 1
 center = np.array([y, x]).T
 images = gauss2d_sequence(center, sigma=0.5, size=params.input_shape)
@@ -74,7 +76,7 @@ model = ESN(params)
 # plt.show()
 
 logger.info("Training + predicting ...")
-model, outputs, pred_labels = torsk.train_predict_esn(model, dataset, outdir=".")
+model, outputs, pred_labels = torsk.train_predict_esn(model, dataset)
 
 logger.info("Visualizing results ...")
 
@@ -85,8 +87,8 @@ logger.info("Visualizing results ...")
 
 # real_pixels      = dataset.to_images(pred_labels)
 # predicted_pixels = dataset.to_images(outputs)
-real_pixels = pred_labels
-predicted_pixels = outputs
+real_pixels = pred_labels.squeeze().numpy()
+predicted_pixels = outputs.squeeze().numpy()
 
 y, x = 5, 5
 plt.plot(real_pixels[:, y, x])

@@ -3,7 +3,7 @@ import numpy as np
 
 from torsk.data.utils import resample2d_sequence, normalize
 from torsk.data.conv import conv2d_sequence, conv2d_output_shape
-from torsk.data.transform import dct2_sequence
+from torsk.data.dct import dct2_sequence
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,9 @@ def split_train_label_pred(sequence, train_length, pred_length):
 
 
 class NumpyRawImageDataset:
-
+    """Dataset that contains the raw images and does nothing but providing
+    convenient access to inputs/labels/pred_labels
+    """
     def __init__(self, images, params):
         self.train_length = params.train_length
         self.pred_length = params.pred_length

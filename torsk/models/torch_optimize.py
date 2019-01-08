@@ -8,7 +8,10 @@ def _extended_states(inputs, states):
 
 
 def pseudo_inverse(inputs, states, labels):
-    wout = _pseudo_inverse_svd(inputs.numpy(), states.numpy(), labels.numpy())
+    wout = _pseudo_inverse_svd(
+        inputs.squeeze(dim=1).numpy(),
+        states.squeeze(dim=1).numpy(),
+        labels.squeeze(dim=1).numpy())
     return torch.tensor(wout, dtype=inputs.dtype)
 
 

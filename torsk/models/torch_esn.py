@@ -7,6 +7,7 @@ from torch.nn.modules.rnn import RNNCellBase
 from torsk.models.initialize import (
     dense_esn_reservoir, scale_weight, sparse_esn_reservoir)
 import torsk.models.torch_optimize as opt
+from torsk.models.torch_map_esn import TorchMapESNCell, TorchMapSparseESNCell
 
 logger = logging.getLogger(__name__)
 
@@ -62,10 +63,8 @@ class TorchESNCell(RNNCellBase):
         self.weight_hh = Parameter(
             torch.tensor(weight_hh, dtype=self.dtype), requires_grad=False)
 
-        in_bias = torch.rand([hidden_size], dtype=self.dtype)
-        in_bias = scale_weight(in_bias, in_bias_init)
-        self.in_bias = Parameter(in_bias, requires_grad=False)
-        self.res_bias = self.register_parameter('res_bias', None)
+        self.bias_ih = self.register_parameter('bias_ih', None)
+        self.bias_hh = self.register_parameter('bias_ih', None)
 
     def check_dtypes(self, *args):
         for arg in args:
@@ -200,30 +199,25 @@ class TorchESN(nn.Module):
     def __init__(self, params):
         super(TorchESN, self).__init__()
         self.params = params
-        if params.input_size != params.input_size:
-            raise ValueError(
-                "Currently input and output dimensions must be the same.")
 
         if params.reservoir_representation == "dense":
-            ESNCell = TorchESNCell
+            ESNCell = TorchMapESNCell
         elif params.reservoir_representation == "sparse":
-            ESNCell = TorchSparseESNCell
+            ESNCell = TorchMapSparseESNCell
 
         self.esn_cell = ESNCell(
-            input_size=params.input_size,
-            hidden_size=params.hidden_size,
+            input_shape=params.input_shape,
+            input_map_specs=params.input_map_specs,
             spectral_radius=params.spectral_radius,
-            in_weight_init=params.in_weight_init,
-            in_bias_init=params.in_bias_init,
             density=params.density,
             dtype=params.dtype)
 
         torch.set_default_dtype(self.esn_cell.dtype)
 
+        input_size = params.input_shape[0] * params.input_shape[1]
         self.out = nn.Linear(
-            params.hidden_size + params.input_size + 1,
-            params.input_size,
-            bias=False)
+            self.esn_cell.hidden_size + input_size + 1,
+            input_size, bias=False)
 
         self.ones = torch.ones([1, 1])
 
@@ -253,14 +247,15 @@ class TorchESN(nn.Module):
         return torch.stack(outputs, dim=0), torch.stack(states, dim=0)
 
     def predict(self, initial_inputs, initial_state, nr_predictions):
+        inp_shape = initial_inputs.size()
         inp = initial_inputs
         state = initial_state
         outputs, states = [], []
 
         for ii in range(nr_predictions):
             state = self.esn_cell(inp, state)
-            ext_state = torch.cat([self.ones, inp, state], dim=1)
-            output = self.out(ext_state)
+            ext_state = torch.cat([self.ones, inp.reshape([1, -1]), state], dim=1)
+            output = self.out(ext_state).reshape(inp_shape)
             inp = output
 
             outputs.append(output)
