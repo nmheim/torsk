@@ -6,6 +6,59 @@ from matplotlib import cm
 from torsk.data.utils import normalize
 import av
 
+
+def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_state):
+    def vec_to_rect(vec):
+        size = int(np.ceil(vec.shape[0]**.5))
+        shape = (size, size)
+        pad = np.zeros(size * size - vec.shape[0])
+        rect = np.concatenate([vec, pad], axis=0).reshape(shape)
+        return rect
+
+    nr_plots = len(input_stack) + 5
+    size = int(np.ceil(nr_plots**.5))
+    nr_plots_to_dims = {
+        6: (2, 3),
+        7: (2, 4),
+        8: (2, 4),
+        9: (3, 3),
+    }
+    height, width = nr_plots_to_dims[nr_plots]
+    fig, ax = plt.subplots(height, width, figsize=(10, 10))
+    ax = ax.flatten() if isinstance(ax, np.ndarray) else [ax]
+
+    im = ax[0].imshow(inp)
+    ax[0].set_title("image")
+    plt.colorbar(im, ax=ax[0])
+
+    im = ax[1].imshow(vec_to_rect(state))
+    ax[1].set_title("state")
+    plt.colorbar(im, ax=ax[1])
+
+    for i in range(nr_plots - 5):
+        x = input_stack[i]
+        spec = model.esn_cell.input_map_specs[i]
+        axi = ax[i+2]
+        im = axi.imshow(vec_to_rect(x))
+        axi.set_title(f"Win(image)_{spec['type']} spec: {i}")
+        plt.colorbar(im, ax=axi)
+
+    im = ax[-3].imshow(vec_to_rect(x_state))
+    ax[-3].set_title("W(state)")
+    plt.colorbar(im, ax=ax[-3])
+
+    im = ax[-2].imshow(vec_to_rect(x_state + x_input))
+    ax[-2].set_title("W(state) + Win(image)")
+    plt.colorbar(im, ax=ax[-2])
+
+    im = ax[-1].imshow(vec_to_rect(new_state))
+    ax[-1].set_title("tanh(W(state) + Win(image))")
+    plt.colorbar(im, ax=ax[-1])
+
+    fig.suptitle(f"Iteration {idx}")
+    plt.show()
+
+
 # Assumes data is already in range [0,1]
 def to_byte(data,mask):
     return (data*255*(mask==0)).astype(np.uint8);
