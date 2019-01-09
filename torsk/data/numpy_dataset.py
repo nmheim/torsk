@@ -63,7 +63,8 @@ class NumpyRawImageDataset:
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
 
         self.dtype = np.dtype(params.dtype)
-        self._images = images.astype(self.dtype)
+        _images = normalize(images) * 2. - 1.
+        self._images = _images.astype(self.dtype)
         self.image_shape = images.shape[1:]
 
     def __getitem__(self, index):

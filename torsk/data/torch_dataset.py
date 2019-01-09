@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, normalize
 from torsk.data.numpy_dataset import NumpyImageDataset, split_train_label_pred
 
 
@@ -13,7 +13,8 @@ class TorchRawImageDataset:
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
 
         self.dtype = getattr(torch, params.dtype)
-        self._images = images.astype(params.dtype)
+        _images = normalize(images) * 2. - 1.
+        self._images = _images.astype(params.dtype)
         self.image_shape = images.shape[1:]
 
     def __getitem__(self, index):
