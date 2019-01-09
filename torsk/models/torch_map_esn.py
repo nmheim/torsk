@@ -7,6 +7,7 @@ import torchvision.transforms.functional as ttf
 
 from torsk.data.conv import get_kernel as get_np_kernel, conv2d_output_shape
 from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservoir
+from torsk.models.numpy_map_esn import get_hidden_size
 
 logger = logging.getLogger(__name__)
 
@@ -43,20 +44,6 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
             spec["weight_ih"] = torch.rand(
                 spec["size"], input_shape[0] * input_shape[1], dtype=getattr(torch, dtype))
     return input_map_specs
-
-
-def get_hidden_size(input_shape, input_map_specs):
-    hidden_size = 0
-    for spec in input_map_specs:
-        if spec["type"] == "conv":
-            _shape = conv2d_output_shape(input_shape, spec["size"])
-            hidden_size += _shape[0] * _shape[1]
-        elif spec["type"] == "random_weights":
-            hidden_size = spec["size"]
-        else:
-            shape = spec["size"]
-            hidden_size += shape[0] * shape[1]
-    return hidden_size
 
 
 class TorchMapESNCell(RNNCellBase):
