@@ -124,6 +124,9 @@ class NumpyESN(object):
         self.ones = np.ones([1], dtype=self.esn_cell.dtype)
 
     def forward(self, inputs, state, states_only=True):
+        if self.params.debug:
+            logger.debug("Calling forward function in debug mode")
+            return self._forward_debug(inputs, state)
         if states_only:
             return self._forward_states_only(inputs, state)
         else:
@@ -140,11 +143,35 @@ class NumpyESN(object):
         outputs, states = [], []
         for inp in inputs:
             state = self.esn_cell.forward(inp, state)
-            ext_state = np.concatenate([self.ones, inp.rehsape(-1), state], axis=0)
+            ext_state = np.concatenate([self.ones, inp.reshape(-1), state], axis=0)
             output = np.dot(self.wout, ext_state)
 
             outputs.append(output)
             states.append(state)
+        return np.asarray(outputs).reshape(inputs.shape), np.asarray(states)
+
+    def _forward_debug(self, inputs, state):
+        from torsk.visualize import plot_iteration
+        outputs, states = [], []
+        idx = 0
+        for inp in inputs:
+            new_state = self.esn_cell.forward(inp, state)
+            ext_state = np.concatenate([self.ones, inp.reshape(-1), new_state], axis=0)
+            output = np.dot(self.wout, ext_state)
+
+            outputs.append(output)
+            states.append(new_state)
+
+            if (idx % 200) == 0:
+                new_state = self.esn_cell.forward(inp, state)
+                input_stack = self.esn_cell.input_map(inp)
+                x_input = self.esn_cell.cat_input_map(input_stack)
+                x_state = self.esn_cell.state_map(state)
+
+                plot_iteration(self, idx, inp, state, new_state, input_stack, x_input, x_state)
+
+            state = new_state
+            idx += 1
         return np.asarray(outputs).reshape(inputs.shape), np.asarray(states)
 
     def predict(self, initial_inputs, initial_state, nr_predictions):

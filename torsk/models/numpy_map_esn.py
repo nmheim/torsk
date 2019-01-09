@@ -29,13 +29,13 @@ def input_map(image, input_map_specs):
         else:
             raise ValueError(spec)
         features.append(_features)
-    return np.concatenate(features, axis=0)
+    return features
 
 
-def init_input_map_specs(input_map_specs, input_shape):
+def init_input_map_specs(input_map_specs, input_shape, dtype):
     for spec in input_map_specs:
         if spec["type"] == "conv":
-            spec["kernel"] = get_kernel(spec["size"], spec["kernel_type"])
+            spec["kernel"] = get_kernel(spec["size"], spec["kernel_type"], dtype)
         elif spec["type"] == "random_weights":
             spec["weight_ih"] = np.random.uniform(
                 low=-spec["weight_scale"],
@@ -102,7 +102,7 @@ class NumpyMapESNCell(object):
             density=self.density, symmetric=False)
         self.weight_hh = self.weight_hh.astype(self.dtype)
 
-        self.input_map_specs = init_input_map_specs(input_map_specs, input_shape)
+        self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)
 
     def check_dtypes(self, *args):
         for arg in args:
@@ -114,11 +114,18 @@ class NumpyMapESNCell(object):
     def input_map(self, image):
         return input_map(image, self.input_map_specs)
 
+    def cat_input_map(self, input_stack):
+        return np.concatenate(input_stack, axis=0)
+
+    def state_map(self, state):
+        return np.dot(self.weight_hh, state)
+
     def forward(self, image, state):
         self.check_dtypes(image, state)
 
-        x_input = self.input_map(image)
-        x_state = np.dot(self.weight_hh, state)
+        input_stack = self.input_map(image)
+        x_input = self.cat_input_map(input_stack)
+        x_state = self.state_map(state)
         new_state = np.tanh(x_input + x_state)
 
         return new_state
@@ -160,11 +167,18 @@ class NumpyMapSparseESNCell(object):
     def input_map(self, image):
         return input_map(image, self.input_map_specs)
 
+    def cat_input_map(self, input_stack):
+        return np.concatenate(input_stack, axis=0)
+
+    def state_map(self, state):
+        return self.weight_hh.sparse_dense_mv(state)
+
     def forward(self, image, state):
         self.check_dtypes(image, state)
 
-        x_input = self.input_map(image)
-        x_state = self.weight_hh.sparse_dense_mv(state)
+        input_stack = self.input_map(image)
+        x_input = self.cat_input_map(input_stack)
+        x_state = self.state_map(state)
         new_state = np.tanh(x_input + x_state)
 
         return new_state
