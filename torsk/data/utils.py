@@ -3,7 +3,8 @@ import skimage.transform as skt
 
 
 def resample2d(image, size):
-    return skt.resize(image, size, mode="reflect", anti_aliasing=True)
+    res = skt.resize(image, size, mode="reflect", anti_aliasing=True)
+    return res.astype(image.dtype)
 
 
 def resample2d_sequence(sequence, size):
