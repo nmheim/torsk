@@ -6,13 +6,11 @@ from torsk.models.numpy_esn import NumpyESN
 def test_numpy_save_load(tmpdir):
 
     params_string = """{
-      "input_size": 1,
-      "hidden_size": 100,
+      "input_shape": [10, 10],
+      "input_map_specs": [{"type":"pixels", "size":[10, 10], "input_scale":3}],
 
       "reservoir_representation": "dense",
       "spectral_radius" : 2.0,
-      "in_weight_init" : 1.00,
-      "in_bias_init" : 1.00,
       "density": 1e-1,
 
       "train_length": 800,
@@ -22,7 +20,7 @@ def test_numpy_save_load(tmpdir):
 
       "dtype": "float64",
       "backend": "numpy",
-      "feature_specs": [{"type":"pixels", "size":[1, 1]}]
+      "debug": false
     }
     """
     params_json = tmpdir.join("params.json")
@@ -31,7 +29,7 @@ def test_numpy_save_load(tmpdir):
 
     params = torsk.Params(params_json)
     model = NumpyESN(params)
-    inputs = np.random.uniform(size=[1, 1])
+    inputs = np.random.uniform(size=[10, 10])
     state = np.random.uniform(size=[100])
 
     _, out1 = model.forward(inputs, state)
@@ -49,13 +47,11 @@ def test_torch_save_load(tmpdir):
     from torsk.models.torch_esn import TorchESN
 
     params_string = """{
-      "input_size": 1,
-      "hidden_size": 100,
+      "input_shape": [10, 10],
+      "input_map_specs": [{"type":"pixels", "size":[10, 10], "input_scale":3}],
 
       "reservoir_representation": "dense",
       "spectral_radius" : 2.0,
-      "in_weight_init" : 1.00,
-      "in_bias_init" : 1.00,
       "density": 1e-1,
 
       "train_length": 800,
@@ -65,7 +61,7 @@ def test_torch_save_load(tmpdir):
 
       "dtype": "float32",
       "backend": "torch",
-      "feature_specs": [{"type":"pixels", "size":[1, 1]}]
+      "debug": false
     }
     """
     params_json = tmpdir.join("params.json")
@@ -74,7 +70,7 @@ def test_torch_save_load(tmpdir):
 
     params = torsk.Params(params_json)
     model = TorchESN(params)
-    inputs = torch.rand(1, 1, 1)
+    inputs = torch.rand(1, 10, 10)
     state = torch.rand(1, 100)
 
     _, out1 = model(inputs, state)

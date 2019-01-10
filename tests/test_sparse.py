@@ -31,4 +31,14 @@ def test_square_sparse():
 
 
 def test_rect_sparse():
-    assert False
+
+    array = np.array([
+        [0, 0, 1, 0],
+        [1, 0, 0, 0],
+        [0, 1, 0, 0]])
+
+    mat = SparseMatrix.from_dense(array, nonzeros_per_row=1)
+
+    vec = np.array([1, 2, 3, 4])
+
+    assert np.all(mat.sparse_dense_mv(vec) == np.array([3, 1, 2]))
