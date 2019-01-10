@@ -11,11 +11,27 @@ class TorchRawImageDataset:
         self.train_length = params.train_length
         self.pred_length = params.pred_length
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
+        self.max = None
+        self.min = None
 
         self.dtype = getattr(torch, params.dtype)
-        _images = normalize(images) * 2. - 1.
+        _images = self.scale(images)
         self._images = _images.astype(params.dtype)
         self.image_shape = images.shape[1:]
+
+    def scale(self, images):
+        self.min = torch.min(images)
+        self.max = torch.max(images)
+        normalized = (images - self.min) / (self.max - self.min)
+        scaled = normalized * 2 - 1
+        return scaled
+
+    def unscale(self, images):
+        if self.max is None or self.min is None:
+            raise ValueError("Min/max not set. Call 'scale' first.")
+        normalized = (images + 1) * 0.5
+        orig = normalized * (self.max - self.min) + self.min
+        return orig
 
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
@@ -27,10 +43,10 @@ class TorchRawImageDataset:
         inputs, labels, pred_labels = split_train_label_pred(
             images, self.train_length, self.pred_length)
 
-        inputs = torch.tensor(inputs[:, None, :], dtype=self.dtype)
-        labels = torch.tensor(labels[:, None, :], dtype=self.dtype)
-        pred_labels = torch.tensor(pred_labels[:, None, :], dtype=self.dtype)
-        images = torch.tensor(images[:, None, :], dtype=self.dtype)
+        inputs = torch.tensor(inputs[:, None, :, :], dtype=self.dtype)
+        labels = torch.tensor(labels[:, None, :, :], dtype=self.dtype)
+        pred_labels = torch.tensor(pred_labels[:, None, :, :], dtype=self.dtype)
+        images = torch.tensor(images[:, None, :, :], dtype=self.dtype)
 
         return inputs, labels, pred_labels, images
 

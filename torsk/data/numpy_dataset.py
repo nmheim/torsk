@@ -61,11 +61,27 @@ class NumpyRawImageDataset:
         self.train_length = params.train_length
         self.pred_length = params.pred_length
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
+        self.max = None
+        self.min = None
 
         self.dtype = np.dtype(params.dtype)
-        _images = normalize(images) * 2. - 1.
+        _images = self.scale(images)
         self._images = _images.astype(self.dtype)
         self.image_shape = images.shape[1:]
+
+    def scale(self, images):
+        self.min = images.min()
+        self.max = image.max()
+        normalized = (images - self.min) / (self.max - self.min)
+        scaled = normalized * 2 - 1
+        return scaled
+
+    def unscale(self, images):
+        if self.max is None or self.min is None:
+            raise ValueError("Min/max not set. Call 'scale' first.")
+        normalized = (images + 1) * 0.5
+        orig = normalized * (self.max - self.min) + self.min
+        return orig
 
     def __getitem__(self, index):
         if (index < 0) or (index >= self.nr_sequences):
