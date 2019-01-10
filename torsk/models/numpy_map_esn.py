@@ -37,10 +37,12 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
         if spec["type"] == "conv":
             spec["kernel"] = get_kernel(spec["size"], spec["kernel_type"], dtype)
         elif spec["type"] == "random_weights":
-            spec["weight_ih"] = np.random.uniform(
+            assert len(spec["size"]) == 1
+            weight_ih = np.random.uniform(
                 low=-spec["weight_scale"],
                 high=spec["weight_scale"],
-                size=[spec["size"], input_shape[0] * input_shape[1]])
+                size=[spec["size"][0], input_shape[0] * input_shape[1]])
+            spec["weight_ih"] = weight_ih.astype(dtype)
     return input_map_specs
 
 
@@ -51,7 +53,7 @@ def get_hidden_size(input_shape, input_map_specs):
             _shape = conv2d_output_shape(input_shape, spec["size"])
             hidden_size += _shape[0] * _shape[1]
         elif spec["type"] == "random_weights":
-            hidden_size += spec["size"]
+            hidden_size += spec["size"][0]
         else:
             shape = spec["size"]
             hidden_size += shape[0] * shape[1]
@@ -148,14 +150,7 @@ class NumpyMapSparseESNCell(object):
             nonzeros_per_row=nonzeros_per_row,
             dtype=self.dtype)
 
-        for spec in self.input_map_specs:
-            if spec["type"] == "conv":
-                spec["kernel"] = get_kernel(spec["size"], spec["kernel_type"])
-            elif spec["type"] == "random_weights":
-                spec["weight_ih"] = np.random.uniform(
-                    low=-spec["weight_scale"],
-                    high=spec["weight_scale"],
-                    size=[spec["size"], input_shape[0] * input_shape[1]])
+        self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)
 
     def check_dtypes(self, *args):
         for arg in args:

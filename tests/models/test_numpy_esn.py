@@ -1,19 +1,17 @@
 import numpy as np
 import torsk
-from torsk.models.numpy_esn import NumpyESN, NumpyESNCell
+from torsk.models.numpy_esn import NumpyESN, NumpyMapESNCell, NumpyMapSparseESNCell
 
 
 def model_forward(dtype_str, reservoir):
     params = torsk.default_params()
     params.dtype = dtype_str
     params.reservoir_representation = reservoir
-    params.hidden_size = 100
-    params.input_size = 10
     params.backend = "numpy"
     model = NumpyESN(params)
 
-    inputs = np.ones([3, params.input_size], dtype=dtype_str)
-    state = np.zeros([params.hidden_size], dtype=dtype_str)
+    inputs = np.ones([3] + params.input_shape, dtype=dtype_str)
+    state = np.zeros([model.esn_cell.hidden_size], dtype=dtype_str)
 
     outputs, states = model.forward(inputs, state, states_only=False)
     return outputs, states
@@ -21,7 +19,7 @@ def model_forward(dtype_str, reservoir):
 
 def test_dtypes():
     for dtype_str in ["float32", "float64"]:
-        for reservoir in ["dense"]:  # TODO: add sparse repr test
+        for reservoir in ["dense", "sparse"]:  # TODO: add sparse repr test
             outputs, states = model_forward(dtype_str, reservoir)
             dtype = np.dtype(dtype_str)
             assert outputs.dtype == dtype
@@ -29,68 +27,65 @@ def test_dtypes():
 
 
 def test_esn_cell():
-    input_size = 1
-    hidden_size = 10
-    spectral_radius = 0.5
-    weight_init = 0.1
-    bias_init = 0.1
-    density = 1.0
+    input_shape = [10, 12]
+    specs = [
+        {"type": "pixels", "size": [5, 6], "input_scale": 2},
+        {"type": "dct", "size": [5, 5], "input_scale": 2},
+        {"type": "conv", "size": [5, 5], "kernel_type": "gauss", "input_scale": 2},
+        {"type": "random_weights", "size": [100], "weight_scale": 2}]
 
-    dense_cell = NumpyESNCell(
-        input_size=input_size,
-        hidden_size=hidden_size,
+    hidden_size = 5 * 6
+    hidden_size += 5 * 5
+    hidden_size += 6 * 8
+    hidden_size += 100
+    spectral_radius = 0.5
+    density = 1.0
+    dtype = "float32"
+
+    dense_cell = NumpyMapESNCell(
+        input_shape=input_shape,
+        input_map_specs=specs,
         spectral_radius=spectral_radius,
-        in_weight_init=weight_init,
-        in_bias_init=bias_init,
         density=density,
-        dtype="float64")
+        dtype=dtype)
 
     assert dense_cell.weight_hh.shape == (hidden_size, hidden_size)
-    assert dense_cell.weight_ih.shape == (hidden_size, input_size)
 
-    inputs = np.random.uniform(size=[input_size])
-    state = np.random.uniform(size=[hidden_size])
+    inputs = np.random.uniform(size=input_shape).astype(dtype)
+    state = np.random.uniform(size=[hidden_size]).astype(dtype)
 
     new_state = dense_cell.forward(inputs, state)
     assert state.shape == new_state.shape
     assert np.any(state != new_state)
 
-    # TODO:  test sparse esn_cell once it exists
-    # sparse_cell = NumpySparseESNCell(
-    #     input_size=input_size,
-    #     hidden_size=hidden_size,
-    #     spectral_radius=spectral_radius,
-    #     in_weight_init=weight_init,
-    #     in_bias_init=bias_init,
-    #     density=density,
-    #     dtype="float64")
+    sparse_cell = NumpyMapSparseESNCell(
+        input_shape=input_shape,
+        input_map_specs=specs,
+        spectral_radius=spectral_radius,
+        density=density,
+        dtype=dtype)
 
-    # inputs = torch.rand([1, input_size])
-    # state = torch.rand(1, hidden_size)
-
-    # new_state = sparse_cell(inputs, state)
-    # assert state.shape == new_state.shape
-    # assert np.any(state != new_state)
+    new_state = sparse_cell.forward(inputs, state)
+    assert state.shape == new_state.shape
+    assert np.any(state != new_state)
 
 
 def test_esn():
 
     # check default parameters
     params = torsk.default_params()
-    params.input_size = 10
-    params.hidden_size = 100
 
     # check model
     lag_len = 3
     model = NumpyESN(params)
-    inputs = np.random.uniform(size=[lag_len, params.input_size])
-    labels = np.random.uniform(size=[lag_len, params.input_size])
-    state = np.random.uniform(size=[params.hidden_size])
+    inputs = np.random.uniform(size=[lag_len] + params.input_shape)
+    labels = np.random.uniform(size=[lag_len] + params.input_shape)
+    state = np.random.uniform(size=[model.esn_cell.hidden_size])
 
     # test _forward_states_only
     outputs, states = model.forward(inputs, state, states_only=False)
-    assert outputs.shape == (lag_len, params.input_size)
-    assert states.shape == (lag_len, params.hidden_size)
+    assert outputs.shape == (lag_len,) + tuple(params.input_shape)
+    assert states.shape == (lag_len, model.esn_cell.hidden_size)
 
     # test train
     wout = model.wout.copy()
@@ -99,5 +94,5 @@ def test_esn():
 
     # test _forward
     outputs, states = model.predict(inputs[-1], state, nr_predictions=2)
-    assert states.shape == (2, params.hidden_size)
-    assert outputs.shape == (2, params.input_size)
+    assert states.shape == (2, model.esn_cell.hidden_size)
+    assert outputs.shape == (2,) + tuple(params.input_shape)
