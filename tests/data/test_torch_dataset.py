@@ -1,6 +1,8 @@
+import torch
 import numpy as np
+
 import torsk
-from torsk.data.numpy_dataset import NumpyImageDataset
+from torsk.data.torch_dataset import TorchImageDataset
 
 
 def test_image_dataset():
@@ -26,7 +28,7 @@ def test_image_dataset():
     # test dtypes
     for dtype_str in ["float32", "float64"]:
         params.dtype = dtype_str
-        dtype = np.dtype(params.dtype)
+        dtype = getattr(torch, params.dtype)
         height = params.input_shape[0]
         width = params.input_shape[1]
 
@@ -36,18 +38,18 @@ def test_image_dataset():
         images[:, 1:3, 1:3] = 2.
         images[:, 0, 0] = -0.3
 
-        dataset = NumpyImageDataset(images, params)
+        dataset = TorchImageDataset(images, params)
         assert len(dataset) == 2
 
         inputs, labels, pred_labels = dataset[1]
 
-        assert inputs.shape == (params.train_length,) + images.shape[1:]
-        assert labels.shape == (params.train_length,) + images.shape[1:]
-        assert pred_labels.shape == (params.pred_length,) + images.shape[1:]
+        assert inputs.shape == torch.Size((params.train_length,) + images.shape[1:])
+        assert labels.shape == torch.Size((params.train_length,) + images.shape[1:])
+        assert pred_labels.shape == torch.Size((params.pred_length,) + images.shape[1:])
 
         for arr in dataset[0]:
-            assert np.all(arr <= 1.)
-            assert np.all(arr >= -1.)
+            assert np.all(arr.numpy() <= 1.)
+            assert np.all(arr.numpy() >= -1.)
             assert arr.dtype == dtype
 
         unscaled = dataset.unscale(inputs)
