@@ -214,7 +214,7 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=True):
     dtype = model.esn_cell.dtype
 
     ii = np.random.randint(low=0, high=len(dataset)) if shuffle else 0
-    inputs, labels, pred_labels, orig_data = dataset[ii]
+    inputs, labels, pred_labels = dataset[ii]
 
     logger.info(f"Creating {inputs.shape[0]} training states")
     zero_state = initial_state(hidden_size, dtype, backend)
