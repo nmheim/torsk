@@ -21,10 +21,12 @@ class InputMap(Schema):
     kernel_type = fields.String(
         validate=validate.OneOf(["mean", "gauss", "random"]))
 
+    input_scale = fields.Float(required=True)
+
 
 class ParamsSchema(Schema):
     input_shape = fields.List(fields.Int(), required=True)
-    input_maps = fields.List(fields.Nested(InputMap()), required=True)
+    input_map_specs = fields.List(fields.Nested(InputMap()), required=True)
 
     reservoir_representation = fields.String(
         validate=validate.OneOf(["sparse", "dense"]), required=True)
@@ -43,6 +45,8 @@ class ParamsSchema(Schema):
         validate=validate.OneOf(["numpy", "torch"]), required=True)
     dtype = fields.String(
         valdiate=validate.OneOf(["float32", "float64"]), required=True)
+
+    debug = fields.Boolean(required=True)
 
     class Meta:
         unkown = EXCLUDE
