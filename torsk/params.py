@@ -21,7 +21,8 @@ class InputMap(Schema):
     kernel_type = fields.String(
         validate=validate.OneOf(["mean", "gauss", "random"]))
 
-    input_scale = fields.Float(required=True)
+    input_scale = fields.Float()
+    weight_scale = fields.Float()
 
 
 class ParamsSchema(Schema):
