@@ -39,7 +39,7 @@ class SparseMatrix:
     @classmethod
     def from_dense(cls, dense_matrix, nonzeros_per_row):
         row_idx, col_idx = np.nonzero(dense_matrix)
-        values = dense_matrix[col_idx, row_idx]
+        values = dense_matrix[row_idx, col_idx]
         return cls(values, row_idx, col_idx, nonzeros_per_row, dense_matrix.shape)
 
     def sparse_dense_mm(self, X):
