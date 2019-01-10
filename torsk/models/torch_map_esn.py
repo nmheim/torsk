@@ -1,4 +1,7 @@
 import logging
+import numpy as np
+from PIL import Image
+
 import torch
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
@@ -12,37 +15,42 @@ from torsk.models.numpy_map_esn import get_hidden_size
 logger = logging.getLogger(__name__)
 
 
-def get_kernel(kernel_shape, kernel_type, dtype):
-    kernel = get_np_kernel(kernel_shape, kernel_shape)
-    return torch.tensor(kernel, dtype=dtype)
+def get_kernel(kernel_shape, kernel_type, dtype_str):
+    dtype = getattr(torch, dtype_str)
+    kernel = get_np_kernel(kernel_shape, kernel_type, dtype_str)
+    return torch.tensor(kernel[None, None, :, :], dtype=dtype)
 
 
 def input_map(image, input_map_specs):
     features = []
     for spec in input_map_specs:
         if spec["type"] == "pixels":
-            _features = ttf.resize(image, spec["size"]).reshape(-1)
+            _features = ttf.resize(
+                Image.fromarray(image.numpy(), mode="F"), spec["size"])
+            _features = torch.tensor(
+                np.array(_features).reshape(-1), dtype=image.dtype)
             _features = _features * spec["input_scale"]
         elif spec["type"] == "dct":
             raise NotImplementedError
         elif spec["type"] == "conv":
-            _features = F.conv2d(image, spec["kernel"]).reshape(-1)
+            _features = F.conv2d(image[None, None, :, :], spec["kernel"]).reshape(-1)
             _features = _features * spec["input_scale"]
         elif spec["type"] == "random_weights":
             _features = torch.mv(spec["weight_ih"], image.reshape(-1))
         else:
             raise ValueError(spec)
         features.append(_features)
-    return torch.cat(features, dim=0)
+    return features
 
 
-def init_input_map_specs(input_map_specs, input_shape, dtype):
+def init_input_map_specs(input_map_specs, input_shape, dtype_str):
     for spec in input_map_specs:
         if spec["type"] == "conv":
-            spec["kernel"] = get_kernel(spec["size"], spec["kernel_type"], dtype)
+            spec["kernel"] = get_kernel(spec["size"], spec["kernel_type"], dtype_str)
         elif spec["type"] == "random_weights":
+            dtype = getattr(torch, dtype_str)
             spec["weight_ih"] = torch.rand(
-                spec["size"], input_shape[0] * input_shape[1], dtype=getattr(torch, dtype))
+                (spec["size"][0], input_shape[0] * input_shape[1]), dtype=dtype)
     return input_map_specs
 
 
@@ -84,7 +92,7 @@ class TorchMapESNCell(RNNCellBase):
     """
 
     def __init__(self, input_shape, input_map_specs, spectral_radius, density, dtype):
-        self.input_shape = input_shape
+        self.input_shape = torch.Size(input_shape)
         self.spectral_radius = spectral_radius
         self.density = density
         self.dtype = getattr(torch, dtype)
@@ -105,7 +113,7 @@ class TorchMapESNCell(RNNCellBase):
         self.weight_hh = Parameter(
             torch.tensor(weight_hh, dtype=self.dtype), requires_grad=False)
 
-        self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, self.dtype)
+        self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)
 
     def check_dtypes(self, *args):
         for arg in args:
@@ -115,15 +123,17 @@ class TorchMapESNCell(RNNCellBase):
         return get_hidden_size(input_shape, self.input_map_specs)
 
     def input_map(self, image):
-        if not image.size() == torch.Size([1,] + self.input_shape):
-            raise ValueError(
-                f"Input image shape {image.size()} differs from expected"
-                f"{self.input_shape}")
-        features = input_map(image, self.input_map_specs)
-        return features[None, :]
+        return input_map(image, self.input_map_specs)
+
+    def cat_input_map(self, input_stack):
+        return torch.cat(input_stack, dim=0)
+
+    def state_map(self, state):
+        return torch.mm(self.weight_hh, state)
 
     def forward(self, image, state):
         inputs = self.input_map(image)
+        inputs = self.cat_input_map(inputs)[None, :]
         self.check_forward_hidden(inputs, state)
         self.check_dtypes(inputs, state)
         return torch._C._VariableFunctions.rnn_tanh_cell(
@@ -170,23 +180,23 @@ class TorchMapSparseESNCell(RNNCellBase):
         return get_hidden_size(input_shape, self.input_map_specs)
 
     def input_map(self, image):
-        if not image.size() == torch.Size([1,] + self.input_shape):
-            raise ValueError(
-                f"Input image shape {image.size()} differs from expected"
-                f"{self.input_shape}")
-        features = input_map(image, self.input_map_specs)
-        return features[None, :]
+        return input_map(image, self.input_map_specs)
+
+    def cat_input_map(self, input_stack):
+        return torch.cat(input_stack, dim=0)
+
+    def state_map(self, state):
+        return torch.mm(self.weight_hh, state)
 
     def forward(self, image, state):
-        x_inputs = self.input_map(image)
+        self.check_dtypes(image, state)
 
-        self.check_dtypes(x_inputs, state)
-        self.check_forward_hidden(x_inputs, state)
+        input_stack = self.input_map(image)
+        x_input = self.cat_input_map(input_stack)
+        x_input = x_input.reshape([-1, 1])
 
-        x_inputs = x_inputs.reshape([-1, 1])
         state = state.reshape([-1, 1])
-
-        x_state = torch.mm(self.weight_hh, state)
-        new_state = torch.tanh(x_inputs + x_state)
+        x_state = self.state_map(state)
+        new_state = np.tanh(x_input + x_state)
 
         return new_state.reshape([1, -1])

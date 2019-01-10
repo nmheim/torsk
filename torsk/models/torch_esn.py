@@ -12,7 +12,141 @@ from torsk.models.torch_map_esn import TorchMapESNCell, TorchMapSparseESNCell
 logger = logging.getLogger(__name__)
 
 
-class TorchESNCell(RNNCellBase):
+class TorchESN(nn.Module):
+    """Complete ESN with output layer. Only supports batch=1 for now!!!
+
+    Parameters
+    ----------
+    params : torsk.utils.Params
+        The network hyper-parameters
+
+    Inputs
+    ------
+    inputs : Tensor
+        Inputs of shape (seq, batch, input_size)
+    state : Tensor
+        Initial state of the ESN with shape (batch, hidden_size)
+    nr_predictions : int
+        Number of steps to predict into the future
+
+    Outputs
+    -------
+    outputs : Tensor
+        Predicitons nr_predictions into the future
+        shape (seq, batch, input_size)
+    states' : Tensor
+        Accumulated states of the ESN with shape (seq, batch, hidden_size)
+    """
+    def __init__(self, params):
+        super(TorchESN, self).__init__()
+        self.params = params
+
+        if params.reservoir_representation == "dense":
+            ESNCell = TorchMapESNCell
+        elif params.reservoir_representation == "sparse":
+            ESNCell = TorchMapSparseESNCell
+
+        self.esn_cell = ESNCell(
+            input_shape=params.input_shape,
+            input_map_specs=params.input_map_specs,
+            spectral_radius=params.spectral_radius,
+            density=params.density,
+            dtype=params.dtype)
+
+        torch.set_default_dtype(self.esn_cell.dtype)
+
+        input_size = params.input_shape[0] * params.input_shape[1]
+        self.out = nn.Linear(
+            self.esn_cell.hidden_size + input_size + 1,
+            input_size, bias=False)
+
+        self.ones = torch.ones([1, 1])
+
+    def forward(self, inputs, state, states_only=True):
+        if states_only:
+            return self._forward_states_only(inputs, state)
+        else:
+            return self._forward(inputs, state)
+
+    def _forward_states_only(self, inputs, state):
+        states = []
+        for inp in inputs:
+            state = self.esn_cell(inp, state)
+            states.append(state)
+        return None, torch.stack(states, dim=0).squeeze(dim=1)
+
+    def _forward(self, inputs, state):
+        outputs, states = [], []
+        for inp in inputs:
+            state = self.esn_cell(inp, state)
+            ext_state = torch.cat([self.ones, inp.reshape([1, -1]), state], dim=1)
+            output = self.out(ext_state)
+            outputs.append(output)
+            states.append(state)
+        outputs = torch.stack(outputs, dim=0).reshape(inputs.shape)
+        states = torch.stack(states, dim=0).squeeze(dim=1)
+        return outputs, states
+
+    def predict(self, initial_inputs, initial_state, nr_predictions):
+        inp_shape = initial_inputs.size()
+        inp = initial_inputs
+        state = initial_state
+        outputs, states = [], []
+
+        for ii in range(nr_predictions):
+            state = self.esn_cell(inp, state)
+            ext_state = torch.cat([self.ones, inp.reshape([1, -1]), state], dim=1)
+            output = self.out(ext_state).reshape(inp_shape)
+            inp = output
+
+            outputs.append(output)
+            states.append(state)
+        outputs = torch.stack(outputs, dim=0)
+        states = torch.stack(states, dim=0).squeeze(dim=1)
+        return outputs, states
+
+    def optimize(self, inputs, states, labels):
+        """Train the output layer.
+
+        Parameters
+        ----------
+        inputs : Tensor
+            A batch of inputs with shape (batch, input_size)
+        states : Tensor
+            A batch of hidden states with shape (batch, hidden_size)
+        labels : Tensor
+            A batch of labels with shape (batch, input_size)
+        """
+        # if len(inputs.size()) == 3:
+        #     inputs = inputs.reshape([])
+        #     states = states.reshape([-1, states.size(2)])
+        #     labels = labels.reshape([-1, labels.size(2)])
+
+        method = self.params.train_method
+        beta = self.params.tikhonov_beta
+
+        if method == 'tikhonov':
+            if beta is None:
+                raise ValueError(
+                    'For Tikhonov training the beta parameter cannot be None.')
+            wout = opt.tikhonov(inputs, states, labels, beta)
+
+        elif method == 'pinv':
+            if beta is not None:
+                logger.debug('With pseudo inverse training the '
+                             'beta parameter has no effect.')
+            wout = opt.pseudo_inverse(inputs, states, labels)
+
+        else:
+            raise ValueError(f'Unkown training method: {method}')
+
+        if(wout.shape != self.out.weight.shape):
+            raise ValueError("Optimized and original Wout shape do not match."
+                             f"{wout.shape} / {self.out.weight.shape}")
+        self.out.weight = Parameter(wout, requires_grad=False)
+
+
+class TorchStandardESNCell(RNNCellBase):
     """An Echo State Network (ESN) cell.
 
     Parameters
@@ -79,7 +213,7 @@ class TorchESNCell(RNNCellBase):
             self.in_bias, self.res_bias)
 
 
-class TorchSparseESNCell(RNNCellBase):
+class TorchStandardSparseESNCell(RNNCellBase):
     """An Echo State Network (ESN) cell with a sparsely represented reservoir
     matrix. Can currently only handle batch==1.
 
@@ -171,133 +305,3 @@ class TorchSparseESNCell(RNNCellBase):
         return new_state.reshape([1, -1])
 
 
-class TorchESN(nn.Module):
-    """Complete ESN with output layer. Only supports batch=1 for now!!!
-
-    Parameters
-    ----------
-    params : torsk.utils.Params
-        The network hyper-parameters
-
-    Inputs
-    ------
-    inputs : Tensor
-        Inputs of shape (seq, batch, input_size)
-    state : Tensor
-        Initial state of the ESN with shape (batch, hidden_size)
-    nr_predictions : int
-        Number of steps to predict into the future
-
-    Outputs
-    -------
-    outputs : Tensor
-        Predicitons nr_predictions into the future
-        shape (seq, batch, input_size)
-    states' : Tensor
-        Accumulated states of the ESN with shape (seq, batch, hidden_size)
-    """
-    def __init__(self, params):
-        super(TorchESN, self).__init__()
-        self.params = params
-
-        if params.reservoir_representation == "dense":
-            ESNCell = TorchMapESNCell
-        elif params.reservoir_representation == "sparse":
-            ESNCell = TorchMapSparseESNCell
-
-        self.esn_cell = ESNCell(
-            input_shape=params.input_shape,
-            input_map_specs=params.input_map_specs,
-            spectral_radius=params.spectral_radius,
-            density=params.density,
-            dtype=params.dtype)
-
-        torch.set_default_dtype(self.esn_cell.dtype)
-
-        input_size = params.input_shape[0] * params.input_shape[1]
-        self.out = nn.Linear(
-            self.esn_cell.hidden_size + input_size + 1,
-            input_size, bias=False)
-
-        self.ones = torch.ones([1, 1])
-
-    def forward(self, inputs, state, states_only=True):
-        if inputs.size(1) != 1:
-            raise ValueError("Supports only batch size of one -.-")
-        if states_only:
-            return self._forward_states_only(inputs, state)
-        else:
-            return self._forward(inputs, state)
-
-    def _forward_states_only(self, inputs, state):
-        states = []
-        for inp in inputs:
-            state = self.esn_cell(inp, state)
-            states.append(state)
-        return None, torch.stack(states, dim=0)
-
-    def _forward(self, inputs, state):
-        outputs, states = [], []
-        for inp in inputs:
-            state = self.esn_cell(inp, state)
-            ext_state = torch.cat([self.ones, inp, state], dim=1)
-            output = self.out(ext_state)
-            outputs.append(output)
-            states.append(state)
-        return torch.stack(outputs, dim=0), torch.stack(states, dim=0)
-
-    def predict(self, initial_inputs, initial_state, nr_predictions):
-        inp_shape = initial_inputs.size()
-        inp = initial_inputs
-        state = initial_state
-        outputs, states = [], []
-
-        for ii in range(nr_predictions):
-            state = self.esn_cell(inp, state)
-            ext_state = torch.cat([self.ones, inp.reshape([1, -1]), state], dim=1)
-            output = self.out(ext_state).reshape(inp_shape)
-            inp = output
-
-            outputs.append(output)
-            states.append(state)
-        return torch.stack(outputs, dim=0), torch.stack(states, dim=0)
-
-    def optimize(self, inputs, states, labels):
-        """Train the output layer.
-
-        Parameters
-        ----------
-        inputs : Tensor
-            A batch of inputs with shape (batch, input_size)
-        states : Tensor
-            A batch of hidden states with shape (batch, hidden_size)
-        labels : Tensor
-            A batch of labels with shape (batch, input_size)
-        """
-        if len(inputs.size()) == 3:
-            inputs = inputs.reshape([-1, inputs.size(2)])
-            states = states.reshape([-1, states.size(2)])
-            labels = labels.reshape([-1, labels.size(2)])
-
-        method = self.params.train_method
-        beta = self.params.tikhonov_beta
-
-        if method == 'tikhonov':
-            if beta is None:
-                raise ValueError(
-                    'For Tikhonov training the beta parameter cannot be None.')
-            wout = opt.tikhonov(inputs, states, labels, beta)
-
-        elif method == 'pinv':
-            if beta is not None:
-                logger.debug('With pseudo inverse training the '
-                             'beta parameter has no effect.')
-            wout = opt.pseudo_inverse(inputs, states, labels)
-
-        else:
-            raise ValueError(f'Unkown training method: {method}')
-
-        if(wout.shape != self.out.weight.shape):
-            raise ValueError("Optimized and original Wout shape do not match."
-                             f"{wout.shape} / {self.out.weight.shape}")
-        self.out.weight = Parameter(wout, requires_grad=False)
