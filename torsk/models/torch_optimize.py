@@ -16,11 +16,15 @@ def pseudo_inverse(inputs, states, labels):
 
 
 def tikhonov(inputs, states, labels, beta):
-    X = _extended_states(inputs, states)
+    train_length = inputs.shape[0]
+    flat_inputs = inputs.reshape([train_length, -1])
+    flat_labels = labels.reshape([train_length, -1])
+
+    X = _extended_states(flat_inputs, states)
 
     Id = torch.eye(X.size(0))
     A = torch.mm(X, X.t()) + beta * Id
-    B = torch.mm(X, labels)
+    B = torch.mm(X, flat_labels)
 
     # Solve linear system instead of calculating inverse
     wout, _ = torch.gesv(B, A)
