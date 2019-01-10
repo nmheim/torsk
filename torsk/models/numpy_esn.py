@@ -225,5 +225,3 @@ class NumpyStandardESNCell(object):
         new_state = np.tanh(x_inputs + x_state + self.bias_ih)
 
         return new_state
-
-

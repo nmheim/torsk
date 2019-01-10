@@ -180,7 +180,7 @@ class TorchStandardESNCell(RNNCellBase):
     def __init__(
             self, input_size, hidden_size,
             spectral_radius, in_weight_init, in_bias_init, density, dtype):
-        super(TorchESNCell, self).__init__(
+        super(TorchStandardESNCell, self).__init__(
             input_size, hidden_size, bias=True, num_chunks=1)
 
         self.input_size = input_size
@@ -248,7 +248,7 @@ class TorchStandardSparseESNCell(RNNCellBase):
 
     def __init__(self, input_size, hidden_size, spectral_radius,
                  in_weight_init, in_bias_init, density, dtype):
-        super(TorchSparseESNCell, self).__init__(
+        super(TorchStandardSparseESNCell, self).__init__(
             input_size, hidden_size, bias=True, num_chunks=1)
 
         self.input_size = input_size
@@ -303,5 +303,3 @@ class TorchStandardSparseESNCell(RNNCellBase):
         new_state = torch.tanh(x_inputs + x_state + self.bias_ih)
 
         return new_state.reshape([1, -1])
-
-

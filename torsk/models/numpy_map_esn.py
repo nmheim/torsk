@@ -6,7 +6,6 @@ from torsk.data.conv import get_kernel, conv2d_output_shape
 from torsk.data.utils import resample2d
 from torsk.data.dct import dct2
 from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservoir
-from torsk.sparse import SparseMatrix
 
 logger = logging.getLogger(__name__)
 

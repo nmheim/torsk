@@ -8,7 +8,7 @@ from torch.nn.parameter import Parameter
 from torch.nn.modules.rnn import RNNCellBase
 import torchvision.transforms.functional as ttf
 
-from torsk.data.conv import get_kernel as get_np_kernel, conv2d_output_shape
+from torsk.data.conv import get_kernel as get_np_kernel
 from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservoir
 from torsk.models.numpy_map_esn import get_hidden_size
 
