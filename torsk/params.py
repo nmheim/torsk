@@ -85,10 +85,10 @@ class Params:
         """Updates parameters based on a dictionary or a list."""
         if isinstance(params, list):
             for i in range(0, len(params), 2):
-                key, value = params[i], params[i+1]
+                key, value = params[i], params[i + 1]
                 try:
                     value = eval(value)
-                except:
+                except Exception:
                     pass
                 self.__dict__[key] = value
         else:

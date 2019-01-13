@@ -26,6 +26,7 @@ class NumpyImageDataset:
 
         self.dtype = np.dtype(params.dtype)
         if scale_images:
+            logger.debug("Scaling input images to (-1, 1)")
             images = self.scale(images)
         self._images = images.astype(self.dtype)
         self.image_shape = images.shape[1:]
