@@ -15,8 +15,6 @@ def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_st
         rect = np.concatenate([vec, pad], axis=0).reshape(shape)
         return rect
 
-    nr_plots = len(input_stack) + 5
-    size = int(np.ceil(nr_plots**.5))
     nr_plots_to_dims = {
         6: (2, 3),
         7: (2, 4),
@@ -30,8 +28,12 @@ def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_st
         15: (3, 5),
         16: (4, 4),
         17: (3, 6),
-        18: (3, 6),
-    }
+        18: (3, 6)}
+    nr_plots = len(input_stack) + 5
+    size = int(np.ceil(nr_plots**.5))
+    if nr_plots not in nr_plots_to_dims:
+        raise ValueError("Too many input_map_specs to plot")
+
     height, width = nr_plots_to_dims[nr_plots]
     fig, ax = plt.subplots(height, width, figsize=(10, 10))
     ax = ax.flatten() if isinstance(ax, np.ndarray) else [ax]
@@ -132,7 +134,8 @@ def animate_double_imshow(frames1, frames2,
     im2 = ax[1].imshow(
         frames2[0], animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
-    plt.colorbar(im2)
+    plt.colorbar(im1, ax=ax[0])
+    plt.colorbar(im2, ax=ax[1])
     text = ax[0].text(.5, 1.05, '', transform=ax[0].transAxes, va='center')
     if time is None:
         time = np.arange(len(frames1))
