@@ -19,7 +19,18 @@ Nx, Ny = 30, 30
 params = torsk.Params("params.json")
 params.input_shape = [Ny, Nx]
 params.kernels = [
-    {"kernel_type": "random", "kernel_size": 3},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
+    {"kernel_type": "random", "kernel_size": 10},
     {"kernel_type": "mean", "kernel_size": 10}
 ]
 params.train_length = 1200
@@ -35,9 +46,10 @@ loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
 
 logger.info("Building model ...")
 model = ConvESN(params)
+print(model)
 
 logger.info("Training + predicting ...")
-model, outputs, pred_labels, _ = torsk.train_predict_esn(model, loader, params)
+model, outputs, pred_labels, _ = torsk.train_predict_esn(model, loader, params, outdir=".")
 
 # weight = model.esn_cell.res_weight._values().numpy()
 # 
