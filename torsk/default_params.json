@@ -1,0 +1,20 @@
+{
+  "input_shape": [10, 10],
+  "input_map_specs": [
+    {"type":"pixels", "size":[10, 10], "input_scale":3},
+    {"type":"random_weights", "size":[100], "weight_scale":1}
+  ],
+
+  "reservoir_representation": "dense",
+  "spectral_radius" : 2.0,
+  "density": 1e-1,
+
+  "train_length": 800,
+  "pred_length": 300,
+  "transient_length": 100,
+  "train_method": "pinv",
+
+  "dtype": "float64",
+  "backend": "numpy",
+  "debug": false
+}

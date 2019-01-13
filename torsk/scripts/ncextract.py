@@ -21,7 +21,7 @@ def get_metadata(src, variable):
 
 def create_dims(dst, dims):
     for name, dim in dims:
-        if not name in dst.dimensions:
+        if name not in dst.dimensions:
             if name == "time":
                 dim = None
             dst.createDimension(name, dim)

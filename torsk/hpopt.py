@@ -5,8 +5,8 @@ import netCDF4 as nc
 import pandas as pd
 from skopt.utils import use_named_args
 
+import torsk
 from torsk.models import ESN
-from torsk import utils
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,31 @@ def valid_second_level_params(params):
         if not is_second_level_param(name):
             return False
     return True
+
+
+def create_path(root, param_dict, prefix=None, postfix=None):
+    if not isinstance(root, pathlib.Path):
+        root = pathlib.Path(root)
+    folder = torsk._fix_prefix(prefix)
+    for key, val in param_dict.items():
+        folder += f"{key}:{val}-"
+    folder = folder[:-1]
+    if postfix is not None:
+        folder += f"-{postfix}"
+    return root / folder
+
+
+def parse_path(path):
+    param_dict = {}
+    for string in path.name.split("-"):
+        if ":" in string:
+            key, val = string.split(":")
+            try:
+                val = eval(val)
+            except Exception:
+                pass
+            param_dict[key] = val
+    return param_dict
 
 
 def get_hpopt_dirs(rootdir):
@@ -61,30 +86,30 @@ def optimize_wout(outdir, model, inputs, states, train_labels, pred_labels):
 
     pred_data_nc = outdir / "pred_data.nc"
     logger.debug(f"Dumping prediction data at {pred_data_nc}")
-    utils.dump_prediction(
+    torsk.dump_prediction(
         fname=pred_data_nc,
         outputs=outputs.reshape([-1, model.params.output_size]),
         labels=pred_labels.reshape([-1, model.params.output_size]),
         states=out_states.squeeze())
 
     logger.debug(f"Dumping model at {outdir}")
-    utils.save_model(outdir, model, prefix="trained")
+    torsk.save_model(outdir, model, prefix="trained")
 
 
 def _evaluate_hyperparams(outdir, model, loader, level2_params_list):
     logger.debug(f"Dumping model at {outdir}")
-    utils.save_model(outdir, model, prefix="untrained")
+    torsk.save_model(outdir, model, prefix="untrained")
 
     logger.debug("Loading dataset")
     inputs, labels, pred_labels, orig_data = next(loader)
 
     logger.debug(f"Creating {inputs.size(0)} training states")
-    states = utils.create_training_states(model, inputs)
+    states = torsk.create_training_states(model, inputs)
 
     # TODO: save orig_data?
     train_data_nc = outdir / "train_data.nc"
     logger.debug(f"Dumping training data at {train_data_nc}")
-    utils.dump_training(
+    torsk.dump_training(
         fname=train_data_nc,
         inputs=inputs.reshape([-1, model.params.input_size]),
         labels=labels.reshape([-1, model.params.output_size]),
@@ -94,7 +119,7 @@ def _evaluate_hyperparams(outdir, model, loader, level2_params_list):
     for level2 in level2_params_list:
         if valid_second_level_params(level2):
             model.params.update(level2)
-            level2_outdir = utils.create_path(outdir, level2, prefix="trained")
+            level2_outdir = create_path(outdir, level2, prefix="trained")
             optimize_wout(
                 outdir=level2_outdir, model=model, inputs=inputs,
                 states=states, train_labels=labels, pred_labels=pred_labels)
@@ -151,7 +176,7 @@ def esn_tikhonov_fitnessfunc(outdir, loader, params, dimensions,
         params.update(sampled_params)
         logger.info(f"Sampled params: {params}")
 
-        subdir = utils.create_path(outdir, sampled_params)
+        subdir = create_path(outdir, sampled_params)
 
         evaluate_hyperparams(
             outdir=subdir, params=params, level2_params_list=level2_params_list,

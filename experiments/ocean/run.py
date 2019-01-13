@@ -1,57 +1,87 @@
+import sys
 import logging
-import pathlib
 import numpy as np
+import netCDF4 as nc
 import matplotlib.pyplot as plt
-import torch
-from torchvision import transforms
 
 import torsk
-from torsk.models import ESN
-from torsk.data import NetcdfDataset, SeqDataLoader
-from torsk.visualize import animate_double_imshow, write_video
+from torsk.visualize import animate_double_imshow
 
+
+params = torsk.Params()
+params.input_map_specs = [
+    {"type": "pixels", "size": [30, 30], "input_scale": 6.},
+    # {"type": "pixels", "size": [25, 25], "input_scale": 6.},
+    # {"type": "pixels", "size": [20, 20], "input_scale": 6.},
+    # {"type": "pixels", "size": [15, 15], "input_scale": 6.},
+    # {"type": "pixels", "size": [10, 10], "input_scale": 6.},
+    # {"type": "pixels", "size": [5, 5], "input_scale": 6.},
+    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 3.},
+    {"type": "conv", "size": [30, 30], "kernel_type":"gauss", "input_scale": 0.05},
+    {"type": "conv", "size": [30, 30], "kernel_type":"random", "input_scale": 0.25},
+    # {"type": "conv", "size": [30, 30], "kernel_type":"random", "input_scale": 0.25},
+    # {"type": "dct", "size": [50, 50], "input_scale": 1.0},
+    # {"type": "dct", "size": [10, 10], "input_scale": 1.},
+    # {"type": "random_weights", "size": [2000], "weight_scale": 0.125}
+]
+params.spectral_radius = 1.5
+params.density = 0.001
+params.input_shape = [100, 100]
+params.train_length = 1000
+params.pred_length = 300
+params.transient_length = 200
+params.dtype = "float64"
+params.reservoir_representation = "sparse"
+params.backend = "numpy"
+params.train_method = "pinv"
+params.tikhonov_beta = 3e1
+params.debug = True
+params.update(sys.argv[1:])
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(level=logging.DEBUG)
+level = "DEBUG" if params.debug else "INFO"
+logging.basicConfig(level=level)
+logging.getLogger("matplotlib").setLevel("INFO")
 
-Nx, Ny = 30, 30
+if params.backend == "numpy":
+    logger.info("Running with NUMPY backend")
+    from torsk.data.numpy_dataset import NumpyImageDataset as ImageDataset
+    from torsk.models.numpy_esn import NumpyESN as ESN
+else:
+    logger.info("Running with TORCH backend")
+    from torsk.data.torch_dataset import TorchImageDataset as ImageDataset
+    from torsk.models.torch_esn import TorchESN as ESN
 
-params = torsk.Params("params.json")
-params.input_size  = Nx*Ny
-params.output_size = Nx*Ny
-params.train_length = 1500
-params.train_method = "tikhonov"
-params.tikhonov_beta = 3e1
 logger.info(params)
 
-logger.info("Loading + resampling of kuro window ...")
-ncpath = pathlib.Path('../../data/ocean/kuro_SSH_3daymean_scaled.nc')
-dataset = NetcdfDataset(ncpath, params.train_length, params.pred_length,
-    xslice=slice(90, 190), yslice=slice(90, 190), size=[Nx, Ny])
-loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
+logger.info("Loading ...")
+ncpath = '../../data/ocean/kuro_SSH_3daymean_scaled.nc'
+with nc.Dataset(ncpath, 'r') as src:
+    images = src["SSH"][:, 90:190, 90:190]
+    images, mask = images.data, images.mask
+    images[mask] = 0.
+dataset = ImageDataset(images, params)
 
 logger.info("Building model ...")
 model = ESN(params)
 
 logger.info("Training + predicting ...")
-model, outputs, pred_labels, _ = torsk.train_predict_esn(model, loader, params)
+model, outputs, pred_labels = torsk.train_predict_esn(model, dataset)
 
-# weight = model.esn_cell.res_weight._values().numpy()
-# 
-# hist, bins = np.histogram(weight, bins=100)
-# plt.plot(bins[1:], hist)
-# plt.show()
+logger.info("Visualizing results ...")
 
-labels = pred_labels.numpy().reshape([-1, Nx, Ny])
-outputs = outputs.numpy().reshape([-1, Nx, Ny])
+if params.backend == "torch":
+    real_pixels = pred_labels.squeeze().numpy()
+    predicted_pixels = outputs.squeeze().numpy()
+else:
+    real_pixels = pred_labels
+    predicted_pixels = outputs
 
-y, x = 10, 10
-plt.plot(labels[:, y, x])
-plt.plot(outputs[:, y, x])
+y, x = 5, 5
+plt.plot(real_pixels[:, y, x])
+plt.plot(predicted_pixels[:, y, x])
 plt.show()
 
-anim = animate_double_imshow(
-    labels,# labels[params.train_length - 50: params.train_length + 50],
-    outputs)#outputs[params.train_length - 50: params.train_length + 50])
+anim = animate_double_imshow(real_pixels,predicted_pixels)
 plt.show()
 

@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.linalg import lstsq
 import scipy.linalg as la
 from torsk.data.utils import upscale, downscale
 

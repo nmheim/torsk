@@ -1,74 +1,18 @@
 import numpy as np
-import torch
-from torch.utils.data import DataLoader
-from scipy.fftpack import dct, idct, dctn, idctn
-from scipy.linalg import lstsq
-import scipy as sp
+import skimage.transform as skt
 
 
-# Least-squares approximation to restricted DCT-III / Inverse DCT-II
-def sct_basis(nx,nk):
-    xs = np.arange(nx);
-    ks = np.arange(nk);
-    basis = 2*np.cos(np.pi*(xs[:,None]+0.5)*ks[None,:]/nx);        
-    return basis;
-
-def sct(fx,basis):  
-    fk,_,_,_ = lstsq(basis,fx);
-    return fk;
-
-def isct(fk,basis):
-    fx = np.dot(basis,fk);
-    return fx;
-
-def sct2(Fxx,basis1, basis2):
-    Fkx = sct(Fxx.T,basis2);
-    Fkk = sct(Fkx.T,basis1);
-    return Fkk
-
-def isct2(Fkk,basis1, basis2):
-    Fkx = isct(Fkk.T,basis2);
-    Fxx = isct(Fkx.T,basis1);
-    return Fxx
-
-def dct2(Fxx,nk1,nk2):
-    Fkk = dctn(Fxx,norm='ortho')[:nk1,:nk2];
-    return Fkk
-
-def idct2(Fkk,nx1,nx2):
-    Fxx = idctn(Fkk,norm='ortho',shape=(nx1,nx2));
-    return Fxx
-
-def idct2_sequence(Ftkk,xsize):
-    """Inverse Discrete Cosine Transform of a sequence of 2D images.
-
-    Params
-    ------
-    Ftkk : ndarray with shape (time, nk1, nk2)
-    size : (ny,nx) determines the resolution of the image
-
-    Returns
-    -------
-    Ftxx: ndarray with shape (time, ny,nx)
-    """        
-    Ftxx = idctn(Ftkk,norm='ortho',shape=xsize,axes=[1,2]);
-    return Ftxx;
+def resample2d(image, size):
+    res = skt.resize(image, size, mode="reflect", anti_aliasing=True)
+    return res.astype(image.dtype)
 
 
-def dct2_sequence(Ftxx, ksize):
-    """Discrete Cosine Transform of a sequence of 2D images.
-
-    Params
-    ------
-    Ftxx : ndarray with shape (time, ydim, xdim)
-    size : (nk1,nk2) determines how many DCT coefficents are kept
-
-    Returns
-    -------
-    Ftkk: ndarray with shape (time, nk1, nk2)
-    """    
-    Ftkk = dctn(Ftxx,norm='ortho',axes=[1,2])[:,:ksize[0],:ksize[1]];
-    return Ftkk;
+def resample2d_sequence(sequence, size):
+    """Resample a squence of 2d-arrays to size using PIL.Image.resize"""
+    dtype = sequence.dtype
+    sequence = [skt.resize(img, size, mode="reflect", anti_aliasing=True)
+                for img in sequence]
+    return np.asarray(sequence, dtype=dtype)
 
 
 def normalize(data, vmin=None, vmax=None):
@@ -93,35 +37,51 @@ def min_max_scale(data, vmin=0., vmax=1.):
     return data
 
 
-def _custom_collate(batch):
-    """Transform batch such that inputs and labels have shape:
+def gauss2d_sequence(centers=None, sigma=0.5, size=[20, 20], borders=[[-2, 2], [-2, 2]]):
+    """Creates a moving gaussian blob on grid with `size`"""
+    if centers is None:
+        t = np.arange(0, 200 * np.pi, 0.1)
+        x = np.sin(t)
+        y = np.cos(0.25 * t)
+        centers = np.array([y, x]).T
 
-        (tot_seq_len, batch_size, nr_features)
-    """
-    def transpose(tensor):
-        return torch.transpose(torch.stack(tensor), 0, 1)
-    batch = [list(b) for b in zip(*batch)]
-    batch = [transpose(b) for b in batch]
-    return batch
+    yc, xc = centers[:, 0], centers[:, 1]
+    yy = np.linspace(borders[0][0], borders[0][1], size[0])
+    xx = np.linspace(borders[1][0], borders[1][1], size[1])
 
+    xx = xx[None, :, None] - xc[:, None, None]
+    yy = yy[None, None, :] - yc[:, None, None]
 
-class SeqDataLoader(DataLoader):
-    """Custom Dataloader that defines a fixed custom collate function, so that
-    the loader returns batches of shape (seq_len, batch, nr_features).
-    """
-    def __init__(self, dataset, **kwargs):
-        if 'collate_fn' in kwargs:
-            raise ValueError(
-                'SeqDataLoader does not accept a custom collate_fn '
-                'because it already implements one.')
-        kwargs['collate_fn'] = _custom_collate
-        super(SeqDataLoader, self).__init__(dataset, **kwargs)
+    gauss = (xx**2 + yy**2) / (2 * sigma**2)
+    return np.exp(-gauss)
 
 
-def split_train_label_pred(sequence, train_length, pred_length):
-    train_end = train_length + 1
-    train_seq = sequence[:train_end]
-    inputs = train_seq[:-1]
-    labels = train_seq[1:]
-    pred_labels = sequence[train_end:train_end + pred_length]
-    return inputs, labels, pred_labels
+def mackey_sequence(b=None, N=3000):
+    """Create the Mackey-Glass series"""
+    c = 0.2
+    tau = 17
+    n = 10
+
+    yinit = np.array([0.9697, 0.9699, 0.9794, 1.0003, 1.0319, 1.0703, 1.1076,
+        1.1352, 1.1485, 1.1482, 1.1383, 1.1234, 1.1072, 1.0928, 1.0820, 1.0756,
+        1.0739, 1.0759])
+
+    if b is None:
+        b = np.zeros(N) + 0.1
+
+    y = np.zeros(N)
+    y[:yinit.shape[0]] = yinit
+
+    for i in range(tau, N - 1):
+        yi = y[i] - b[i] * y[i] + c * y[i - tau] / (1 + y[i - tau]**n)
+        y[i + 1] = yi
+    return y
+
+
+def sine_sequence(periods=30, N=20):
+    """Simple sine sequence"""
+    dx = 2 * np.pi / (N + 1)
+    x = np.linspace(0, 2 * np.pi - dx, N)
+    y = np.sin(x)
+    y = np.tile(y, periods)
+    return y
