@@ -82,9 +82,18 @@ class Params:
             json.dump(dump, f, indent=4)
 
     def update(self, params):
-        """Updates parameters based on a dictionary."""
-        self.__dict__.update(params)
-        self.__dict__ = ParamsSchema().load(self.__dict__)
+        """Updates parameters based on a dictionary or a list."""
+        if isinstance(params, list):
+            for i in range(0, len(params), 2):
+                key, value = params[i], params[i+1]
+                try:
+                    value = eval(value)
+                except:
+                    pass
+                self.__dict__[key] = value
+        else:
+            self.__dict__.update(params)
+            self.__dict__ = ParamsSchema().load(self.__dict__)
 
     @property
     def dict(self):

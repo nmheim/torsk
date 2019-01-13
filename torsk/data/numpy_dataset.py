@@ -17,7 +17,7 @@ class NumpyImageDataset:
     """Dataset that contains the raw images and does nothing but providing
     convenient access to inputs/labels/pred_labels
     """
-    def __init__(self, images, params):
+    def __init__(self, images, params, scale_images=True):
         self.train_length = params.train_length
         self.pred_length = params.pred_length
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
@@ -25,8 +25,9 @@ class NumpyImageDataset:
         self.min = None
 
         self.dtype = np.dtype(params.dtype)
-        _images = self.scale(images)
-        self._images = _images.astype(self.dtype)
+        if scale_images:
+            images = self.scale(images)
+        self._images = images.astype(self.dtype)
         self.image_shape = images.shape[1:]
 
     def scale(self, images):
