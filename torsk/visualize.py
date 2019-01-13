@@ -22,6 +22,15 @@ def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_st
         7: (2, 4),
         8: (2, 4),
         9: (3, 3),
+        10: (2, 5),
+        11: (3, 4),
+        12: (3, 4),
+        13: (3, 5),
+        14: (3, 5),
+        15: (3, 5),
+        16: (4, 4),
+        17: (3, 6),
+        18: (3, 6),
     }
     height, width = nr_plots_to_dims[nr_plots]
     fig, ax = plt.subplots(height, width, figsize=(10, 10))
