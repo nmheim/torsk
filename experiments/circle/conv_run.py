@@ -50,7 +50,8 @@ params.input_map_specs = [
     # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
     # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
     # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-     {"type": "dct", "size": [20, 20], "input_scale": 1.},
+     {"type": "dct", "size": [15, 15], "input_scale": 1.},
+     {"type": "dct", "size": [15, 15], "input_scale": 1.},    
     # {"type": "dct", "size": [10, 10], "input_scale": 1.},
 #    {"type": "random_weights", "size": [2000], "weight_scale": 1, "input_scale":0.05}
 #    {"type": "random_weights", "size": [30*30], "weight_scale": 1, "input_scale":0.025}    
@@ -89,8 +90,8 @@ logger.info(params)
 
 logger.info("Creating circle dataset ...")
 t = np.arange(0, 200*np.pi, 0.1)
-x, y = np.sin(t), np.cos(0.3 * t)
-#x, y = np.sin(0.3 * t), np.cos(t)
+#x, y = np.sin(t), np.cos(0.3 * t)
+x, y = np.sin(0.3 * t), np.cos(t)
 x = normalize(mackey_sequence(N=t.shape[0])) * 2 - 1
 
 center = np.array([y, x]).T
