@@ -39,7 +39,7 @@ class ParamsSchema(Schema):
     transient_length = fields.Int(required=True)
 
     train_method = fields.String(
-        validate=validate.OneOf(["pinv", "tikhonov"]), required=True)
+        validate=validate.OneOf(["pinv_svd", "pinv_lstsq", "tikhonov"]), required=True)
     tikhonov_beta = fields.Float(missing=None)
 
     backend = fields.String(

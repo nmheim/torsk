@@ -144,11 +144,12 @@ class NumpyESN(object):
                     'For Tikhonov training the beta parameter cannot be None.')
             wout = opt.tikhonov(inputs, states, labels, beta)
 
-        elif method == 'pinv':
+        elif 'pinv' in method:
             if beta is not None:
                 logger.debug('With pseudo inverse training the '
                              'beta parameter has no effect.')
-            wout = opt.pseudo_inverse(inputs, states, labels)
+            wout = opt.pseudo_inverse(
+                inputs, states, labels, mode=method.replace("pinv_", ""))
 
         else:
             raise ValueError(f'Unkown training method: {method}')

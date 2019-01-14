@@ -11,14 +11,10 @@ def _extended_states(inputs, states):
 
 
 def _pseudo_inverse_svd(inputs, states, labels):
-    train_length = inputs.shape[0]
-    flat_inputs = inputs.reshape([train_length, -1])
-    flat_labels = labels.reshape([train_length, -1])
-
-    X = _extended_states(flat_inputs, states)
+    X = _extended_states(inputs, states)
 
     U, s, Vh = sp.linalg.svd(X)
-    L = flat_labels.T
+    L = labels.T
     # condition = s[0] / s[-1]  # TODO: never used?
 
     scale = s[0]
@@ -45,8 +41,17 @@ def _pseudo_inverse_lstsq(inputs, states, labels):
     return wout.T
 
 
-def pseudo_inverse(inputs, states, labels):
-    return _pseudo_inverse_svd(inputs, states, labels)
+def pseudo_inverse(inputs, states, labels, mode="svd"):
+    train_length = inputs.shape[0]
+    flat_inputs = inputs.reshape([train_length, -1])
+    flat_labels = labels.reshape([train_length, -1])
+
+    if mode == "svd":
+        return _pseudo_inverse_svd(flat_inputs, states, flat_labels)
+    elif mode == "lstsq":
+        return _pseudo_inverse_lstsq(flat_inputs, states, flat_labels)
+    else:
+        raise ValueError(f"Unknown mode: '{mode}'")
 
 
 def tikhonov(inputs, states, labels, beta):

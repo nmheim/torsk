@@ -1,5 +1,5 @@
 import torch
-from torsk.models.numpy_optimize import _pseudo_inverse_svd
+from torsk.models.numpy_optimize import pseudo_inverse as np_pinv
 
 
 def _extended_states(inputs, states):
@@ -7,11 +7,12 @@ def _extended_states(inputs, states):
     return torch.cat([ones, inputs, states], dim=1).t()
 
 
-def pseudo_inverse(inputs, states, labels):
-    wout = _pseudo_inverse_svd(
+def pseudo_inverse(inputs, states, labels, mode="svd"):
+    wout = np_pinv(
         inputs.squeeze(dim=1).numpy(),
         states.squeeze(dim=1).numpy(),
-        labels.squeeze(dim=1).numpy())
+        labels.squeeze(dim=1).numpy(),
+        mode=mode)
     return torch.tensor(wout, dtype=inputs.dtype)
 
 
