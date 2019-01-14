@@ -94,7 +94,7 @@ class NumpyESN(object):
             outputs.append(output)
             states.append(new_state)
 
-            if (idx % 200) == 0:
+            if (idx == 200):
                 new_state = self.esn_cell.forward(inp, state)
                 input_stack = self.esn_cell.input_map(inp)
                 x_input = self.esn_cell.cat_input_map(input_stack)

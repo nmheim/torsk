@@ -3,7 +3,7 @@ import numpy as np
 from scipy.signal import convolve2d
 
 from torsk.data.conv import get_kernel, conv2d_output_shape
-from torsk.data.utils import resample2d
+from torsk.data.utils import resample2d, normalize
 from torsk.data.dct import dct2
 from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservoir
 
@@ -15,18 +15,21 @@ def input_map(image, input_map_specs):
     for spec in input_map_specs:
         if spec["type"] == "pixels":
             _features = resample2d(image, spec["size"]).reshape(-1)
-            _features = spec["input_scale"] * _features
         elif spec["type"] == "dct":
             _features = dct2(image, *spec["size"]).reshape(-1)
-            _features = spec["input_scale"] * _features
+#            _features[0] = 0;
+#            _features = normalize(np.abs(_features));
+#            _features = spec["input_scale"] * _features
         elif spec["type"] == "conv":
             _features = convolve2d(
-                image, spec["kernel"], mode="valid").reshape(-1)
-            _features = spec["input_scale"] * _features
+                image, spec["kernel"], mode="same",boundary="symm").reshape(-1)
+            _features = normalize(_features)*2-1;
+#            _features = spec["input_scale"] * _features
         elif spec["type"] == "random_weights":
             _features = np.dot(spec["weight_ih"], image.reshape(-1))
         else:
             raise ValueError(spec)
+        _features = spec["input_scale"] * _features
         features.append(_features)
     return features
 
@@ -49,7 +52,8 @@ def get_hidden_size(input_shape, input_map_specs):
     hidden_size = 0
     for spec in input_map_specs:
         if spec["type"] == "conv":
-            _shape = conv2d_output_shape(input_shape, spec["size"])
+#            _shape = conv2d_output_shape(input_shape, spec["size"])
+            _shape = input_shape
             hidden_size += _shape[0] * _shape[1]
         elif spec["type"] == "random_weights":
             hidden_size += spec["size"][0]

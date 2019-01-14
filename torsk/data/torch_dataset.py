@@ -1,13 +1,16 @@
+import logging
 import torch
 from torch.utils.data import Dataset
 from torsk.data.numpy_dataset import split_train_label_pred
+
+logger = logging.getLogger(__name__)
 
 
 class TorchImageDataset(Dataset):
     """Dataset that contains the raw images and does nothing but providing
     convenient access to inputs/labels/pred_labels
     """
-    def __init__(self, images, params):
+    def __init__(self, images, params, scale_images=True):
         self.train_length = params.train_length
         self.pred_length = params.pred_length
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
@@ -16,7 +19,9 @@ class TorchImageDataset(Dataset):
 
         self.dtype = getattr(torch, params.dtype)
         _images = torch.tensor(images, dtype=self.dtype)
-        self._images = self.scale(_images)
+        if scale_images:
+            logger.debug("Scaling input images to (-1, 1)")
+            self._images = self.scale(_images)
         self.image_shape = images.shape[1:]
 
     def scale(self, images):
