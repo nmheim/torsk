@@ -7,8 +7,12 @@ def model_forward(dtype_str, reservoir):
     params = torsk.default_params()
     params.dtype = dtype_str
     params.reservoir_representation = reservoir
+    params.input_map_specs = [
+        {"type": "conv", "size": [5, 5], "kernel_type": "gauss", "input_scale": 2, "mode": "same"},
+    ]
     params.backend = "numpy"
     model = NumpyESN(params)
+    print(model.esn_cell.hidden_size)
 
     inputs = np.ones([3] + params.input_shape, dtype=dtype_str)
     state = np.zeros([model.esn_cell.hidden_size], dtype=dtype_str)
@@ -31,12 +35,12 @@ def test_esn_cell():
     specs = [
         {"type": "pixels", "size": [5, 6], "input_scale": 2},
         {"type": "dct", "size": [5, 5], "input_scale": 2},
-        {"type": "conv", "size": [5, 5], "kernel_type": "gauss", "input_scale": 2},
-        {"type": "random_weights", "size": [100], "weight_scale": 2}]
+        {"type": "conv", "size": [5, 5], "kernel_type": "gauss", "input_scale": 2, "mode": "same"},
+        {"type": "random_weights", "size": [100], "input_scale": 2}]
 
     hidden_size = 5 * 6
     hidden_size += 5 * 5
-    hidden_size += 6 * 8
+    hidden_size += 10 * 12
     hidden_size += 100
     spectral_radius = 0.5
     density = 1.0

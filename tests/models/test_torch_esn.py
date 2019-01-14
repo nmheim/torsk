@@ -9,6 +9,11 @@ def model_forward(dtype_str, reservoir):
     params.dtype = dtype_str
     params.backend = "torch"
     params.reservoir_representation = reservoir
+    params.input_map_specs = [
+        {"type": "pixels", "size": [5, 6], "input_scale": 2},
+        {"type": "conv", "size": [5, 5], "kernel_type": "gauss", "input_scale": 2, "mode": "valid"},
+        {"type": "random_weights", "size": [100], "input_scale": 2}]
+
     model = TorchESN(params)
 
     torch.set_default_dtype(model.esn_cell.dtype)
@@ -34,8 +39,8 @@ def test_esn_cell():
     specs = [
         {"type": "pixels", "size": [5, 6], "input_scale": 2},
         # {"type": "dct", "size": [5, 5], "input_scale": 2},  TODO: implement!
-        {"type": "conv", "size": [5, 5], "kernel_type": "gauss", "input_scale": 2},
-        {"type": "random_weights", "size": [100], "weight_scale": 2}]
+        {"type": "conv", "size": [5, 5], "kernel_type": "gauss", "input_scale": 2, "mode": "valid"},
+        {"type": "random_weights", "size": [100], "input_scale": 2}]
 
     hidden_size = 5 * 6
     # hidden_size += 5 * 5  # dct size
@@ -80,6 +85,11 @@ def test_esn():
 
     # check default parameters
     params = torsk.default_params()
+    params.input_map_specs = [
+        {"type": "pixels", "size": [5, 6], "input_scale": 2},
+        {"type": "conv", "size": [5, 5], "kernel_type": "gauss", "input_scale": 2, "mode": "valid"},
+        {"type": "random_weights", "size": [100], "input_scale": 2}]
+
     params.train_method = "tikhonov"
     params.tikhonov_beta = 10
 

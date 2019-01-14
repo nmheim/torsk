@@ -16,7 +16,7 @@ def test_numpy_save_load(tmpdir):
       "train_length": 800,
       "pred_length": 300,
       "transient_length": 100,
-      "train_method": "pinv",
+      "train_method": "pinv_svd",
 
       "dtype": "float64",
       "backend": "numpy",
@@ -57,7 +57,7 @@ def test_torch_save_load(tmpdir):
       "train_length": 800,
       "pred_length": 300,
       "transient_length": 100,
-      "train_method": "pinv",
+      "train_method": "pinv_svd",
 
       "dtype": "float32",
       "backend": "torch",

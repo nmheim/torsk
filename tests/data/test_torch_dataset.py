@@ -18,7 +18,7 @@ def test_image_dataset():
         "train_length": 10,
         "pred_length": 5,
         "transient_length": 5,
-        "train_method": "pinv",
+        "train_method": "pinv_svd",
 
         "dtype": "float64",
         "backend": "numpy",
