@@ -33,6 +33,8 @@ def input_map(image, input_map_specs):
         elif spec["type"] == "dct":
             raise NotImplementedError
         elif spec["type"] == "conv":
+            if spec["mode"] == "same":
+                raise ValueError("Torch backend does not implement 'same' mode.")
             _features = F.conv2d(image[None, None, :, :], spec["kernel"]).reshape(-1)
             _features = _features * spec["input_scale"]
         elif spec["type"] == "random_weights":

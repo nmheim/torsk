@@ -12,6 +12,8 @@ class InputMap(Schema):
             ["pixels", "dct", "conv", "random_weights"]),
         required=True)
 
+    input_scale = fields.Float(required=True)
+
     # xsize if pixels
     # ksize if dct
     # kernel_shape if conv
@@ -20,9 +22,9 @@ class InputMap(Schema):
 
     kernel_type = fields.String(
         validate=validate.OneOf(["mean", "gauss", "random"]))
-
-    input_scale = fields.Float()
-    weight_scale = fields.Float()
+    mode = fields.String(
+        default="same",
+        validate=validate.OneOf(["same", "same"]))
 
 
 class ParamsSchema(Schema):

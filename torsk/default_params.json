@@ -2,7 +2,8 @@
   "input_shape": [10, 10],
   "input_map_specs": [
     {"type":"pixels", "size":[10, 10], "input_scale":3},
-    {"type":"random_weights", "size":[100], "weight_scale":1}
+    {"type":"random_weights", "size":[100], "input_scale":1},
+    {"type":"conv", "size":[5, 5], "input_scale":1, "mode":"same", "kernel_type":"gauss"}
   ],
 
   "reservoir_representation": "dense",

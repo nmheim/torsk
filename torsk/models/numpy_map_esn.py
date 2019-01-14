@@ -17,14 +17,10 @@ def input_map(image, input_map_specs):
             _features = resample2d(image, spec["size"]).reshape(-1)
         elif spec["type"] == "dct":
             _features = dct2(image, *spec["size"]).reshape(-1)
-#            _features[0] = 0;
-#            _features = normalize(np.abs(_features));
-#            _features = spec["input_scale"] * _features
         elif spec["type"] == "conv":
             _features = convolve2d(
-                image, spec["kernel"], mode="same",boundary="symm").reshape(-1)
-            _features = normalize(_features)*2-1;
-#            _features = spec["input_scale"] * _features
+                image, spec["kernel"], mode=spec["mode"], boundary="symm").reshape(-1)
+            _features = normalize(_features) * 2 - 1
         elif spec["type"] == "random_weights":
             _features = np.dot(spec["weight_ih"], image.reshape(-1))
         else:
@@ -40,9 +36,7 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
             spec["kernel"] = get_kernel(spec["size"], spec["kernel_type"], dtype)
         elif spec["type"] == "random_weights":
             assert len(spec["size"]) == 1
-            weight_ih = np.random.uniform(
-                low=-spec["weight_scale"],
-                high=spec["weight_scale"],
+            weight_ih = np.random.uniform(low=-1., high=1.,
                 size=[spec["size"][0], input_shape[0] * input_shape[1]])
             spec["weight_ih"] = weight_ih.astype(dtype)
     return input_map_specs
@@ -52,9 +46,11 @@ def get_hidden_size(input_shape, input_map_specs):
     hidden_size = 0
     for spec in input_map_specs:
         if spec["type"] == "conv":
-#            _shape = conv2d_output_shape(input_shape, spec["size"])
-            _shape = input_shape
-            hidden_size += _shape[0] * _shape[1]
+            if spec["mode"] == "valid":
+                shape = conv2d_output_shape(input_shape, spec["size"])
+            elif spec["mode"] == "same":
+                shape = input_shape
+            hidden_size += shape[0] * shape[1]
         elif spec["type"] == "random_weights":
             hidden_size += spec["size"][0]
         else:
