@@ -1,9 +1,5 @@
-import logging
 import numpy as np
 from scipy.signal import convolve2d
-import matplotlib.pyplot as plt
-
-logger = logging.getLogger(__name__)
 
 
 def _mean_kernel(kernel_shape):
@@ -11,29 +7,21 @@ def _mean_kernel(kernel_shape):
 
 
 def _random_kernel(kernel_shape):
-    logging.warning("Random kernel created with hard coded uniform dist")
     return np.random.uniform(size=kernel_shape, low=-1, high=1)
 
 
 def _gauss_kernel(kernel_shape):
     ysize, xsize = kernel_shape
     yy = np.linspace(-ysize / 2., ysize / 2., ysize)
-    xx = np.linspace(-xsize / 2., xsize / 2., xsize) 
-#    sigma = min(kernel_shape) / 4.
+    xx = np.linspace(-xsize / 2., xsize / 2., xsize)
     sigma = min(kernel_shape) / 6.
 
-    gaussian = np.exp(-(xx[:,None]**2 + yy[None,:]**2)/ (2 * sigma**2))
-#    norm = np.sum(gaussian**2);     # L2-norm is 1
-    norm = np.sum(gaussian);        # L1-norm is 1
-#    norm = np.max(gaussian);        # height is 1
-    gaussian = (1/norm)*gaussian;
-    
-    # print(f"Gaussian({sigma}) ({kernel_shape}) has normalization constant {norm} -> peak height is {np.max(gaussian)}.")    
-    # plt.imshow(gaussian)
-    # plt.colorbar()
-    # plt.show()
-    return gaussian;
-    
+    gaussian = np.exp(-(xx[:, None]**2 + yy[None, :]**2) / (2 * sigma**2))
+    norm = np.sum(gaussian)  # L1-norm is 1
+    gaussian = (1. / norm) * gaussian
+
+    return gaussian
+
 
 def get_kernel(kernel_shape, kernel_type, dtype):
     if kernel_type == "mean":
