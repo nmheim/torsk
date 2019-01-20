@@ -6,6 +6,7 @@ import numpy as np
 import netCDF4 as nc
 
 from torsk.params import Params, default_params
+from torsk.imed import imed_metric
 
 __all__ = ["Params", "default_params", "load_model", "save_model"]
 
@@ -174,23 +175,19 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
     if not fname.parent.exists():
         fname.parent.mkdir(parents=True)
 
-    error = (outputs - labels)**2
-    rmse = np.mean(error)**.5
-
     with nc.Dataset(fname, "w") as dst:
 
         dst.createDimension("pred_length", outputs.shape[0])
         dst.createDimension("image_height", outputs.shape[1])
         dst.createDimension("image_width", outputs.shape[2])
         dst.createDimension("hidden_size", states.shape[1])
-        dst.createDimension("scalar", 1)
 
         dst.createVariable(
             "outputs", float, ["pred_length", "image_height", "image_width"])
         dst.createVariable(
             "labels", float, ["pred_length", "image_height", "image_width"])
         dst.createVariable("states", float, ["pred_length", "hidden_size"])
-        dst.createVariable("rmse", float, ["scalar"])
+        dst.createVariable("metric", float, ["pred_length"])
 
         if attrs is not None:
             dst.setncatts(attrs)
@@ -198,7 +195,7 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst["outputs"][:] = outputs
         dst["labels"][:] = labels
         dst["states"][:] = states
-        dst["rmse"][:] = rmse
+        dst["metric"][:] = imed_metric(outputs, labels)
 
 
 def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1, step_length=1):

@@ -95,7 +95,7 @@ class Params:
                 self.__dict__[key] = value
         else:
             self.__dict__.update(params)
-            self.__dict__ = ParamsSchema().load(self.__dict__)
+            # self.__dict__ = ParamsSchema().load(self.__dict__)
 
     @property
     def dict(self):

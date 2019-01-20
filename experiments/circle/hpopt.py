@@ -8,43 +8,49 @@ from skopt.utils import use_named_args
 from skopt.space import Real, Integer
 
 import torsk
-from torsk.data import CircleDataset, SeqDataLoader
+from torsk.data.numpy_dataset import NumpyImageDataset as ImageDataset
+from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize
 from torsk.hpopt import esn_tikhonov_fitnessfunc
 
 
-logging.basicConfig(level="INFO")
+logging.basicConfig(level="DEBUG")
 
 
 opt_steps = 50
 tik_steps = 20
 tik_start = -5
 tik_stop = 2
-tikhonov_betas = np.logspace(tik_start, tik_stop, tik_steps)
+tik_betas = np.logspace(tik_start, tik_stop, tik_steps)
+level2 = [{"tikhonov_beta":beta, "train_method":"tikhonov"} for beta in tik_betas]
+level2.append({"tikhonov_beta":None, "train_method":"pinv_lstsq"})
 
 output_dir = pathlib.Path("hpopt")
 
 dimensions = [
     Real(low=0.5, high=2.0, name="spectral_radius"),
-    Real(low=0.0, high=2.0, name="in_weight_init"),
-    Real(low=0.0, high=2.0, name="in_bias_init"),
 ]
 
 starting_params = [
     1.0,    # esn_spectral_radius
-    1.0,    # in_weight_init
-    1.0,    # in_bias_init
 ]
 
 params = torsk.Params("params.json")
-x = np.sin(np.arange(0, 200*np.pi, 0.1))
-y = np.cos(0.25 * np.arange(0, 200*np.pi, 0.1))
+params.density = 0.01
+params.input_map_specs = [
+    {"type": "random_weights", "size": [10000], "input_scale": 0.25}
+]
+t = np.arange(0, 200*np.pi, 0.1)
+#x, y = np.sin(t), np.cos(0.3 * t)
+x, y = np.sin(0.3 * t), np.cos(t)
+x = normalize(mackey_sequence(N=t.shape[0])) * 2 - 1
+
 center = np.array([y, x]).T
-sigma = params.sigma
+images = gauss2d_sequence(center, sigma=0.5, size=params.input_shape)
+dataset = ImageDataset(images, params, scale_images=True)
 
-dataset = CircleDataset(params, center=center, sigma=sigma)
-loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
+fitness = esn_tikhonov_fitnessfunc(
+    output_dir, dataset, params, dimensions, level2, nr_avg_runs=3)
 
-fitness = esn_tikhonov_fitnessfunc(loader, params, dimensions, tikhonov_betas)
 
 # TODO: add callback that saves checkpoints
 result = skopt.gp_minimize(
