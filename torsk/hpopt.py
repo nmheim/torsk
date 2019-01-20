@@ -59,7 +59,7 @@ def get_hpopt_dirs(rootdir):
         rootdir = pathlib.Path(rootdir)
 
     for trained_path in rootdir.glob("**"):
-        if trained_path.joinpath("trained-model.pth").exists():
+        if trained_path.joinpath("trained-model.pkl").exists():
             yield trained_path
 
 
