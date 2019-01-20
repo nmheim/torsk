@@ -201,7 +201,7 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst["rmse"][:] = rmse
 
 
-def train_predict_esn(model, dataset, outdir=None, shuffle=True):
+def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1, step_length=1):
     if outdir is not None and not isinstance(outdir, pathlib.Path):
         outdir = pathlib.Path(outdir)
 
@@ -213,35 +213,43 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=True):
     backend = model.params.backend
     dtype = model.esn_cell.dtype
 
-    ii = np.random.randint(low=0, high=len(dataset)) if shuffle else 0
-    inputs, labels, pred_labels = dataset[ii]
+    if shuffle:
+        logger.warning("If shuffle is True `step_length` has no effect!")
 
-    logger.info(f"Creating {inputs.shape[0]} training states")
-    zero_state = initial_state(hidden_size, dtype, backend)
-    _, states = model.forward(inputs, zero_state, states_only=True)
+    for ii in range(steps):
+        logger.info(f"--- Train/Predict Step Nr. {ii+1} ---")
+        if shuffle: 
+            idx = np.random.randint(low=0, high=len(dataset))
+        else:
+            idx = ii * step_length
+        inputs, labels, pred_labels = dataset[idx]
 
-    if outdir is not None:
-        outfile = outdir / "train_data.nc"
-        logger.info(f"Saving training to {outfile}")
-        dump_training(outfile, inputs=inputs, labels=labels, states=states,
-                      pred_labels=pred_labels)
+        logger.info(f"Creating {inputs.shape[0]} training states")
+        zero_state = initial_state(hidden_size, dtype, backend)
+        _, states = model.forward(inputs, zero_state, states_only=True)
 
-    logger.info("Optimizing output weights")
-    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
+        if outdir is not None:
+            outfile = outdir / f"train_data_idx{idx}.nc"
+            logger.info(f"Saving training to {outfile}")
+            dump_training(outfile, inputs=inputs, labels=labels, states=states,
+                          pred_labels=pred_labels)
 
-    if outdir is not None:
-        save_model(outdir, model)
+        logger.info("Optimizing output weights")
+        model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
 
-    logger.info(f"Predicting the next {model.params.pred_length} frames")
-    init_inputs = labels[-1]
-    outputs, out_states = model.predict(
-        init_inputs, states[-1], nr_predictions=model.params.pred_length)
+        if outdir is not None:
+            save_model(outdir, model)
 
-    if outdir is not None:
-        outfile = outdir / "pred_data.nc"
-        logger.info(f"Saving prediction to {outfile}")
-        dump_prediction(
-            outfile, outputs=outputs, labels=pred_labels, states=out_states)
+        logger.info(f"Predicting the next {model.params.pred_length} frames")
+        init_inputs = labels[-1]
+        outputs, out_states = model.predict(
+            init_inputs, states[-1], nr_predictions=model.params.pred_length)
+
+        if outdir is not None:
+            outfile = outdir / f"pred_data_idx{idx}.nc"
+            logger.info(f"Saving prediction to {outfile}")
+            dump_prediction(
+                outfile, outputs=outputs, labels=pred_labels, states=out_states)
 
     logger.info(f"Done")
     return model, outputs, pred_labels

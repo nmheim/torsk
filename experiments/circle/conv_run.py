@@ -26,15 +26,15 @@ params.input_map_specs = [
     # {"type": "pixels", "size": [10, 10], "input_scale": 6.},
     # {"type": "pixels", "size": [5, 5], "input_scale": 6.},
     # {"type": "conv", "size": [1, 1], "kernel_type":"gauss", "input_scale": 1.},
-    {"type": "conv", "size": [2, 2], "kernel_type":"gauss", "input_scale": 2.},
-    {"type": "conv", "size": [5, 5], "kernel_type":"gauss", "input_scale": 2.},
-    {"type": "conv", "size": [10,10], "kernel_type":"gauss", "input_scale": 1.5},
-    {"type": "conv", "size": [15, 15], "kernel_type":"gauss", "input_scale": 1.},
-    {"type": "conv", "size": [20, 20], "kernel_type":"gauss", "input_scale": 1.},
-    {"type": "conv", "size": [25, 25], "kernel_type":"gauss", "input_scale": 1.},        
-    {"type": "conv", "size": [ 5, 5], "kernel_type":"random", "input_scale": 1.},
-    {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},        
-    {"type": "conv", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},    
+    {"type": "conv", "mode": "same", "size": [2, 2], "kernel_type":"gauss", "input_scale": 2.},
+    {"type": "conv", "mode": "same", "size": [5, 5], "kernel_type":"gauss", "input_scale": 2.},
+    {"type": "conv", "mode": "same", "size": [10,10], "kernel_type":"gauss", "input_scale": 1.5},
+    {"type": "conv", "mode": "same", "size": [15, 15], "kernel_type":"gauss", "input_scale": 1.},
+    {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"gauss", "input_scale": 1.},
+    {"type": "conv", "mode": "same", "size": [25, 25], "kernel_type":"gauss", "input_scale": 1.},        
+    {"type": "conv", "mode": "same", "size": [ 5, 5], "kernel_type":"random", "input_scale": 1.},
+    {"type": "conv", "mode": "same", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},        
+    {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},    
     # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
     # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
     # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
@@ -68,7 +68,7 @@ params.reservoir_representation = "sparse"
 params.backend = "numpy"
 params.train_method = "tikhonov"
 params.tikhonov_beta = 0.01
-params.debug = True
+params.debug = False
 
 params.update(sys.argv[1:])
 
@@ -102,24 +102,4 @@ logger.info("Building model ...")
 model = ESN(params)
 
 logger.info("Training + predicting ...")
-model, outputs, pred_labels = torsk.train_predict_esn(model, dataset)
-
-logger.info("Visualizing results ...")
-
-# real_pixels      = dataset.to_images(pred_labels)
-# predicted_pixels = dataset.to_images(outputs)
-if params.backend == "torch":
-    real_pixels = pred_labels.squeeze().numpy()
-    predicted_pixels = outputs.squeeze().numpy()
-else:
-    real_pixels = pred_labels
-    predicted_pixels = outputs
-
-y, x = 5, 5
-plt.plot(real_pixels[:, y, x])
-plt.plot(predicted_pixels[:, y, x])
-plt.show()
-
-anim = animate_double_imshow(real_pixels,predicted_pixels)
-plt.show()
-
+model, outputs, pred_labels = torsk.train_predict_esn(model, dataset, "./output/", steps=5, step_length=100)
