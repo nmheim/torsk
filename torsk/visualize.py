@@ -50,6 +50,7 @@ def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_st
         x = input_stack[i]
         spec = model.esn_cell.input_map_specs[i]
         axi = ax[i+2]
+
         im = axi.imshow(vec_to_rect(x))
         axi.set_title(f"Win(image)_{spec['type']} spec: {i}")
         plt.colorbar(im, ax=axi)
@@ -75,9 +76,12 @@ def to_byte(data,mask):
     return (data*255*(mask==0)).astype(np.uint8);
 
 # This generates a video directly from a numpy array, much faster than matplotlib
-def write_video(filename,Ftxx,mask,fps=24,colormap=cm.viridis,codec='h264'):   
+def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis,codec='h264'):   
     (nt,ny,nx) = Ftxx.shape;
 
+    if(mask is None):
+        mask = np.ones(Ftxx.shape[1:],dtype=np.bool);
+    
     container = av.open(filename, mode='w')
 
     stream = container.add_stream(codec, rate=fps)
@@ -86,13 +90,19 @@ def write_video(filename,Ftxx,mask,fps=24,colormap=cm.viridis,codec='h264'):
     stream.pix_fmt = "yuv420p"
 
     data = normalize(Ftxx);
+
+    print("data.shape=",data.shape);
     
     for i in range(nt):                
         img_rgbaf = colormap(data[i]);
+        print("img_rgbaf.shape=",img_rgbaf.shape)
         frame=to_byte(img_rgbaf[:,:,:3],mask[:,:,None]);
-        
-        av_frame = av.VideoFrame.from_ndarray(np.flip(frame,axis=0).copy())
-    
+        print("frame.shape=",frame.shape)
+
+        frame_data = np.flip(frame,axis=0).copy();
+        print("frame_data.shape=",frame_data.shape)
+        av_frame = av.VideoFrame.from_ndarray(frame_data)
+        print("av_frame=",av_frame)
         for packet in stream.encode(av_frame):
             container.mux(packet)
 
@@ -103,6 +113,16 @@ def write_video(filename,Ftxx,mask,fps=24,colormap=cm.viridis,codec='h264'):
     # Close the file
     container.close()
 
+def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis,codec='h264'):   
+    assert(Ftxx1.shape == Ftxx2.shape);
+    (nt,ny,nx) = Ftxx1.shape;
+   
+    Ftxx = np.empty((nt,ny,2*nx),dtype=Ftxx1.dtype);
+    Ftxx[:,:,:nx] = Ftxx1;
+    Ftxx[:,:,nx:] = Ftxx2;
+    
+    write_video(filename,Ftxx,mask,fps,colormap,codec)
+    
 
 def animate_double_imshow(frames1, frames2,
                           time=None, vmin=None, vmax=None,
