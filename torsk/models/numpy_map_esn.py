@@ -17,9 +17,11 @@ def input_map(image, input_map_specs):
             _features = resample2d(image, spec["size"]).reshape(-1)
         elif spec["type"] == "dct":
             _features = dct2(image, *spec["size"]).reshape(-1)
+        elif spec["type"] == "gradient":
+            _features = normalize(np.concatenate(np.gradient(image)).reshape(-1))*2-1            
         elif spec["type"] == "conv":
             _features = convolve2d(
-                image, spec["kernel"], mode=spec["mode"], boundary="symm").reshape(-1)
+                image, spec["kernel"], mode='same', boundary="symm").reshape(-1)
             _features = normalize(_features) * 2 - 1
         elif spec["type"] == "random_weights":
             _features = np.dot(spec["weight_ih"], image.reshape(-1))
@@ -46,13 +48,15 @@ def get_hidden_size(input_shape, input_map_specs):
     hidden_size = 0
     for spec in input_map_specs:
         if spec["type"] == "conv":
-            if spec["mode"] == "valid":
-                shape = conv2d_output_shape(input_shape, spec["size"])
-            elif spec["mode"] == "same":
-                shape = input_shape
+           if spec["mode"] == "valid":
+               shape = conv2d_output_shape(input_shape, spec["size"])
+           elif spec["mode"] == "same":
+            shape = input_shape
             hidden_size += shape[0] * shape[1]
         elif spec["type"] == "random_weights":
             hidden_size += spec["size"][0]
+        elif spec["type"] == "gradient":
+            hidden_size += input_shape[0] * input_shape[1] * 2; # For 2d pictures
         else:
             shape = spec["size"]
             hidden_size += shape[0] * shape[1]
