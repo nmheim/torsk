@@ -1,9 +1,23 @@
 import numpy as np
 
+def metric_matrix(img_shape,sigma=1):
+    (M,N) = img_shape;
+    
+    X = np.arange(M); # M,N
+    Y = np.arange(N)
 
-def metric_matrix(img_shape):
+    P = (X[None,:,None,None]-X[None,None,None,:])**2 \
+      + (Y[:,None,None,None]-Y[None,None,:,None])**2
+
+    G = 1/(2*np.pi*sigma**2)*np.exp(-(0.5/(2*sigma**2))*P)    
+   
+    return G.reshape((M*N,M*N));
+
+
+def metric_matrix_slow(img_shape):
     size = img_shape[0] * img_shape[1]
     G = np.empty([size, size])
+
     coords = [[x, y] for x in range(img_shape[1]) for y in range(img_shape[0])]
     coords = np.asarray(coords)
 
@@ -12,6 +26,8 @@ def metric_matrix(img_shape):
             pipj = np.sum((coords[ii] - coords[jj])**2.)
             G[ii, jj] = np.exp(- pipj * 0.5) / (2 * np.pi)
     return G
+
+
 
 
 def imed_metric(a_imgs, b_imgs):
