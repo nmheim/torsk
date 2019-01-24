@@ -129,27 +129,46 @@ class NumpyESN(object):
         Parameters
         ----------
         inputs : Tensor
-            A batch of inputs with shape (batch, input_size)
+            A batch of inputs with shape (batch, ydim, xdim)
         states : Tensor
             A batch of hidden states with shape (batch, hidden_size)
         labels : Tensor
-            A batch of labels with shape (batch, input_size)
+            A batch of labels with shape (batch, ydim, xdim)
         """
         method = self.params.train_method
         beta = self.params.tikhonov_beta
+
+        train_length = inputs.shape[0]
+        flat_inputs = inputs.reshape([train_length, -1])
+        flat_labels = labels.reshape([train_length, -1])
+
+        if True:
+            from torsk.imed import metric_matrix
+            logger.debug("Calculating metric matrix")
+            G = metric_matrix(inputs.shape[1:])
+            w, V = np.linalg.eigh(G)
+            W = np.diag(w**.5)
+            G12 = V.dot(W.dot(V.T))
+
+            logger.debug("Reprojecting inputs/labels with metric matrix")
+            flat_inputs = np.matmul(G12, flat_inputs[:,:,None])[:,:,0]
+            flat_labels = np.matmul(G12, flat_labels[:,:,None])[:,:,0]
 
         if method == 'tikhonov':
             if beta is None:
                 raise ValueError(
                     'For Tikhonov training the beta parameter cannot be None.')
-            wout = opt.tikhonov(inputs, states, labels, beta)
+            logger.debug(f"Tikhonov optimizing with beta={beta}")
+            wout = opt.tikhonov(flat_inputs, states, flat_labels, beta)
 
         elif 'pinv' in method:
             if beta is not None:
-                logger.debug('With pseudo inverse training the '
-                             'beta parameter has no effect.')
+                logger.debug("With pseudo inverse training the "
+                             "beta parameter has no effect.")
+            logger.debug(f"Pinv optimizing with mode={method}")
             wout = opt.pseudo_inverse(
-                inputs, states, labels, mode=method.replace("pinv_", ""))
+                flat_inputs, states, flat_labels,
+                mode=method.replace("pinv_", ""))
 
         else:
             raise ValueError(f'Unkown training method: {method}')
