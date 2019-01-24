@@ -141,8 +141,10 @@ class NumpyESN(object):
         train_length = inputs.shape[0]
         flat_inputs = inputs.reshape([train_length, -1])
         flat_labels = labels.reshape([train_length, -1])
+        
+        imed = True
 
-        if True:
+        if imed:
             from torsk.imed import metric_matrix
             logger.debug("Calculating metric matrix")
             G = metric_matrix(inputs.shape[1:])
@@ -151,7 +153,6 @@ class NumpyESN(object):
             G12 = V.dot(W.dot(V.T))
 
             logger.debug("Reprojecting inputs/labels with metric matrix")
-            flat_inputs = np.matmul(G12, flat_inputs[:,:,None])[:,:,0]
             flat_labels = np.matmul(G12, flat_labels[:,:,None])[:,:,0]
 
         if method == 'tikhonov':
@@ -176,7 +177,10 @@ class NumpyESN(object):
         if(wout.shape != self.wout.shape):
             raise ValueError("Optimized and original Wout shape do not match."
                              f"{wout.shape} / {self.wout.shape}")
-        self.wout = wout
+        if imed:
+            self.wout = np.linalg.inv(G12).dot(wout)
+        else:
+            self.wout = wout
 
 
 class NumpyStandardESNCell(object):
