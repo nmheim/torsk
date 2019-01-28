@@ -108,3 +108,42 @@ def recombine_trends(Ftkk_detrended,bkk,Ckk,nT,Cycle_length):
                 Ftkk_detrended[:,k1,k2],bkk[k1,k2],Ckk[k1,k2],nT,Cycle_length
             )
     return Ftkk;
+
+# Predict from starting point and calculated trend+avg. cycle.
+# Assumes that prediction starts at avg. cycle start
+def kspace_predict_from_trend(f0kk, trend,  t0, pred_length):
+    (bkk,Ckk,nT,Cycle_length) = trend;
+
+    # Quadratic trend for prediction-times. Note: trend is in original time-scale
+    ts = np.arange(t0,t0+pred_length);    
+    quadratic_trend=bkk[0]+bkk[1]*ts+bkk[2]*ts*ts;
+
+    # Get new coefficients for trend, shifting time-scale to t0=0
+    (nk1,nk2) = f0kk.shape;
+    bkk_new=np.array([[polynomial_trend(quadratic_trend[i,j],2) for j in range(nk2)] for i in range(nk1)])
+
+    
+    one = np.ones(pred_length); # Set Ftkk_detrended to constant f0kk for all t.
+    Ftkk_detrended = f0kk[None,:,:]*one[:,None,None];
+    Ftkk_retrended = recombine_trends(Ftkk_detrended,bkk_new,Ckk,nT,Cycle_length)
+
+    return Ftkk_retrended;
+
+
+def predict_from_trend(training_Ftxx,nT,Cycle_length, pred_length):
+    (nk1,nk2)     = training_Ftxx.shape[1:]; # For now
+    training_Ftkk = dct2(Ftxx,nk1,nk2);
+
+    (Ftkk_detrended,bkk,Ckk) =  separate_trends(training_Ftkk,nT,Cycle_length);
+
+    t0                = Ftkk.shape[0];      # Where we start predicting from
+    training_ts       = np.arange(0,t0);    # ts corresponding to training    
+    new_nT            = int((nT/t0)*pred_length); # pred_xlength in time-scale where cycle has integer length
+    
+    trend_descriptors = (bkk,Ckk,new_nT,Cycle_length);
+    f0kk              = Ftkk_detrended[-1];  # We start where the training data ends
+
+    predicted_Ftkk = kspace_predict_from_trend(f0kk,trend_descriptors, t0, pred_length);
+
+
+    
