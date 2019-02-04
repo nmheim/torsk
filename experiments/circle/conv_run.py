@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import torsk
 from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize
+from torsk.imed import imed_metric
 from torsk.visualize import animate_double_imshow
 
 # # Good!
@@ -66,7 +67,7 @@ params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "sparse"
 params.backend = "numpy"
-params.train_method = "tikhonov"
+params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
 params.debug = False
 
@@ -102,4 +103,5 @@ logger.info("Building model ...")
 model = ESN(params)
 
 logger.info("Training + predicting ...")
-model, outputs, pred_labels = torsk.train_predict_esn(model, dataset, "./output/", steps=5, step_length=100)
+model, outputs, pred_labels = torsk.train_predict_esn(
+    model, dataset, "./output/", steps=1, step_length=100)

@@ -20,7 +20,8 @@ def test_image_dataset():
 
         "dtype": "float64",
         "backend": "numpy",
-        "debug": False
+        "debug": False,
+        "imed_loss": True
     })
 
     # test dtypes

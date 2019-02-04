@@ -14,6 +14,7 @@
   "pred_length": 300,
   "transient_length": 100,
   "train_method": "pinv_svd",
+  "imed_loss": true,
 
   "dtype": "float64",
   "backend": "numpy",

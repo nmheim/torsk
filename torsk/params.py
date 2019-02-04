@@ -1,6 +1,6 @@
 import json
 import pathlib
-from marshmallow import Schema, fields, validate, EXCLUDE
+from marshmallow import Schema, fields, validate
 
 
 _MODULE_DIR = pathlib.Path(__file__).parent.absolute()
@@ -41,8 +41,10 @@ class ParamsSchema(Schema):
     transient_length = fields.Int(required=True)
 
     train_method = fields.String(
-        validate=validate.OneOf(["pinv_svd", "pinv_lstsq", "tikhonov"]), required=True)
+        validate=validate.OneOf(["pinv_svd", "pinv_lstsq", "tikhonov"]),
+        required=True)
     tikhonov_beta = fields.Float(missing=None)
+    imed_loss = fields.Boolean(required=True)
 
     backend = fields.String(
         validate=validate.OneOf(["numpy", "torch"]), required=True)
@@ -50,9 +52,6 @@ class ParamsSchema(Schema):
         valdiate=validate.OneOf(["float32", "float64"]), required=True)
 
     debug = fields.Boolean(required=True)
-
-    class Meta:
-        unkown = EXCLUDE
 
 
 class Params:

@@ -6,7 +6,7 @@ import numpy as np
 import netCDF4 as nc
 
 from torsk.params import Params, default_params
-from torsk.imed import imed_metric
+from torsk.imed import imed_metric, eucd_metric
 
 __all__ = ["Params", "default_params", "load_model", "save_model"]
 
@@ -187,7 +187,8 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst.createVariable(
             "labels", float, ["pred_length", "image_height", "image_width"])
         dst.createVariable("states", float, ["pred_length", "hidden_size"])
-        dst.createVariable("metric", float, ["pred_length"])
+        dst.createVariable("imed", float, ["pred_length"])
+        dst.createVariable("eucd", float, ["pred_length"])
 
         if attrs is not None:
             dst.setncatts(attrs)
@@ -195,7 +196,8 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst["outputs"][:] = outputs
         dst["labels"][:] = labels
         dst["states"][:] = states
-        dst["metric"][:] = imed_metric(outputs, labels)
+        dst["imed"][:] = imed_metric(outputs, labels)
+        dst["eucd"][:] = eucd_metric(outputs, labels)
 
 
 def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1, step_length=1):
@@ -235,7 +237,7 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1, step_
         model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
 
         if outdir is not None:
-            save_model(outdir, model)
+            save_model(outdir, model, prefix=f"idx{idx}")
 
         logger.info(f"Predicting the next {model.params.pred_length} frames")
         init_inputs = labels[-1]

@@ -142,15 +142,13 @@ class NumpyESN(object):
         flat_inputs = inputs.reshape([train_length, -1])
         flat_labels = labels.reshape([train_length, -1])
         
-        imed = True
-
-        if imed:
+        if self.params.imed_loss:
             from torsk.imed import metric_matrix
             logger.debug("Calculating metric matrix")
             G = metric_matrix(inputs.shape[1:])
             w, V = np.linalg.eigh(G)
-            W = np.diag(w**.5)
-            G12 = V.dot(W.dot(V.T))
+            W = np.diag(w)
+            G12 = V.dot((W**.5).dot(V.T))
 
             logger.debug("Reprojecting inputs/labels with metric matrix")
             flat_labels = np.matmul(G12, flat_labels[:,:,None])[:,:,0]
@@ -174,13 +172,14 @@ class NumpyESN(object):
         else:
             raise ValueError(f'Unkown training method: {method}')
 
+        if self.params.imed_loss:
+            wout = np.linalg.inv(G12).dot(wout)
+
         if(wout.shape != self.wout.shape):
             raise ValueError("Optimized and original Wout shape do not match."
                              f"{wout.shape} / {self.wout.shape}")
-        if imed:
-            self.wout = np.linalg.inv(G12).dot(wout)
-        else:
-            self.wout = wout
+
+        self.wout = wout
 
 
 class NumpyStandardESNCell(object):
