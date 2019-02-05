@@ -29,15 +29,35 @@ def read_all_metrics(directory):
     return np.array(imeds), np.array(eucds)
 
 
-def imed_plot(imed, predictions, labels):
+def trivial_imed(labels):
     trivial_pred = np.tile(labels[0], [labels.shape[0], 1, 1])
     trivial_imed = imed_metric(labels, trivial_pred)
+    return trivial_imed
+
+
+def imed_plot(imed, predictions, labels):
+    mean_imed = imed.mean(axis=0)
+    std_imed = imed.std(axis=0)
+
+    trivial_imeds = np.array([trivial_imed(l) for l in labels])
+    mean_trivial_imed = trivial_imeds.mean(axis=0)
+    std_trivial_imed = trivial_imeds.std(axis=0)
 
     fig, ax = plt.subplots(1, 1)
+    x = np.arange(mean_imed.shape[0])
     ax.set_title("IMED")
-    ax.plot(imed, label="ESN")
-    ax.plot(trivial_imed, label="trivial pred")
-    ax.plot(trivial_imed, label="seasonal pred")
+
+    ax.plot(mean_trivial_imed, label="trivial pred")
+    ax.fill_between(
+        x, 
+        mean_trivial_imed+std_trivial_imed,
+        mean_trivial_imed-std_trivial_imed, alpha=0.5)
+
+    # ax.plot(mean_trivial_imed, label="seasonal pred")
+
+    ax.plot(x, mean_imed, label="ESN")
+    ax.fill_between(x, mean_imed+std_imed, mean_imed-std_imed, alpha=0.5)
+
     ax.set_yscale("log")
     ax.legend()
 
@@ -53,30 +73,39 @@ def imed_plot(imed, predictions, labels):
 def cli(ncfiles, save, show):
 
     sns.set_style("whitegrid")
+
+    predictions = []
+    labels = []
+    imed = []
     
-    for ncfile in ncfiles:
+    # read preds/labels and create videos
+    for ii, ncfile in enumerate(ncfiles):
 
         with nc.Dataset(ncfile, "r") as src:
 
-            imed = src["imed"][:]
-            click.echo(f"{ncfile.name}: IMED at step 100: {imed[100]}")
+            imed.append(src["imed"][:])
+            click.echo(f"{ncfile.name}: IMED at step 100: {imed[ii][100]}")
 
-            predictions = src["outputs"][:]
-            labels = src["labels"][:]
-
-            fig, ax = imed_plot(imed, predictions, labels)
+            predictions.append(src["outputs"][:])
+            labels.append(src["labels"][:])
 
             if save:
-                plt.savefig(ncfile.with_suffix(".pdf"))
-
-                frames = np.concatenate([labels, predictions], axis=1)
+                frames = np.concatenate([labels[ii], predictions[ii]], axis=1)
                 videofile = ncfile.with_suffix(".mp4").as_posix()
                 write_video(videofile, frames)
 
             if show:
-                plt.show() # show IMED plot
-
-                anim = animate_double_imshow(labels, predictions)
+                anim = animate_double_imshow(labels[ii], predictions[ii])
                 plt.show()
-            else:
-                plt.close()
+
+    predictions = np.array(predictions)
+    labels = np.array(labels)
+    imed = np.array(imed)
+
+    fig, ax = imed_plot(imed, predictions, labels)
+    if save:
+        plt.savefig(ncfile.with_suffix(".pdf"))
+    if show:
+        plt.show() # show IMED plot
+    else:
+        plt.close()
