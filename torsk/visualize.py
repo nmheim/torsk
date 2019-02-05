@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -5,6 +6,8 @@ from matplotlib import animation
 from matplotlib import cm
 from torsk.data.utils import normalize
 import av
+
+logger = logging.getLogger(__name__)
 
 
 def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_state):
@@ -91,18 +94,18 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis,codec='h264')
 
     data = normalize(Ftxx);
 
-    print("data.shape=",data.shape);
+    logger.debug("data.shape=",data.shape);
     
     for i in range(nt):                
         img_rgbaf = colormap(data[i]);
-        print("img_rgbaf.shape=",img_rgbaf.shape)
+        logger.debug("img_rgbaf.shape=",img_rgbaf.shape)
         frame=to_byte(img_rgbaf[:,:,:3],mask[:,:,None]);
-        print("frame.shape=",frame.shape)
+        logger.debug("frame.shape=",frame.shape)
 
         frame_data = np.flip(frame,axis=0).copy();
-        print("frame_data.shape=",frame_data.shape)
+        logger.debug("frame_data.shape=",frame_data.shape)
         av_frame = av.VideoFrame.from_ndarray(frame_data)
-        print("av_frame=",av_frame)
+        logger.debug("av_frame=",av_frame)
         for packet in stream.encode(av_frame):
             container.mux(packet)
 
@@ -147,15 +150,22 @@ def animate_double_imshow(frames1, frames2,
             # ax.figure.canvas.blit(ax.bbox)
             ax.figure.canvas.blit(ax.figure.bbox)
     matplotlib.animation.Animation._blit_draw = _blit_draw
-    fig, ax = plt.subplots(1, 2, figsize=figsize)
+    fig, ax = plt.subplots(1, 3, figsize=figsize)
+
     im1 = ax[0].imshow(
         frames1[0], animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
     im2 = ax[1].imshow(
         frames2[0], animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
+    # trivial prediciton
+    im3 = ax[2].imshow(
+        frames1[0], animated=True, vmin=vmin, vmax=vmax,
+        cmap=plt.get_cmap(cmap_name))
+
     plt.colorbar(im1, ax=ax[0])
     plt.colorbar(im2, ax=ax[1])
+    plt.colorbar(im3, ax=ax[2])
     text = ax[0].text(.5, 1.05, '', transform=ax[0].transAxes, va='center')
     if time is None:
         time = np.arange(len(frames1))
