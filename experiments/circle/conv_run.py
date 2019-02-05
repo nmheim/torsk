@@ -8,6 +8,8 @@ from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize
 from torsk.imed import imed_metric
 from torsk.visualize import animate_double_imshow
 
+np.random.seed(0)
+
 # # Good!
 #    {"type": "pixels", "size": [30, 30], "input_scale": 6.},
 #     {"type": "conv", "size": [2, 2], "kernel_type":"gauss", "input_scale": 0.1},
@@ -69,6 +71,7 @@ params.reservoir_representation = "sparse"
 params.backend = "numpy"
 params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
+params.imed_loss = True
 params.debug = False
 
 params.update(sys.argv[1:])
@@ -104,4 +107,4 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "./output/", steps=1, step_length=100)
+    model, dataset, "./output_imed/", steps=1, step_length=100)

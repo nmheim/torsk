@@ -8,6 +8,8 @@ from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize
 from torsk.visualize import animate_double_imshow
 
 
+np.random.seed(0)
+
 params = torsk.Params()
 params.input_map_specs = [
     {"type": "random_weights", "size": [10000], "input_scale": 0.25}
