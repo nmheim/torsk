@@ -117,8 +117,17 @@ def initial_state(hidden_size, dtype, backend):
         raise ValueError("Unkown backend: {backend}")
     return zero_state
 
+def dump_cycles(dst,attrs,dataset):
+    if "cycle_length" in dataset.params.dict:
+        dst.createDimension("cycle_length", dataset.params.cycle_length)                            
+        dst.createDimension("three", 3)                
+        dst.createVariable("quadratic_trend",float,["image_height","image_width","three"])
+        dst.createVariable("mean_cycle",     float,["image_height","image_width","cycle_length"])        
+    
 
-def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
+def dump_training(fname, dataset,idx, states, attrs=None):
+    inputs, labels, pred_labels = dataset[idx];
+    
     if not isinstance(inputs, np.ndarray):
         raise ValueError("Check that this acutally works...")
         msg = "Inputs are not numpy arrays. " \
@@ -139,18 +148,17 @@ def dump_training(fname, inputs, labels, states, pred_labels, attrs=None):
         dst.createDimension("train_length", inputs.shape[0])
         dst.createDimension("pred_length", pred_labels.shape[0])
         dst.createDimension("image_height", inputs.shape[1])
-        dst.createDimension("image_width", inputs.shape[2])
+        dst.createDimension("image_width", inputs.shape[2])        
         dst.createDimension("hidden_size", states.shape[1])
 
-        dst.createVariable(
-            "inputs", float, ["train_length", "image_height", "image_width"])
-        dst.createVariable(
-            "labels", float, ["train_length", "image_height", "image_width"])
-        dst.createVariable(
-            "states", float, ["train_length", "hidden_size"])
-        dst.createVariable(
-            "pred_labels", float, ["pred_length", "image_height", "image_width"])
 
+        dst.createVariable("inputs", float, ["train_length", "image_height", "image_width"])
+        dst.createVariable("labels", float, ["train_length", "image_height", "image_width"])
+        dst.createVariable("states", float, ["train_length", "hidden_size"])
+        dst.createVariable("pred_labels", float, ["pred_length", "image_height", "image_width"])
+
+        dump_cycles(dst,dataset)
+        
         if attrs is not None:
             dst.setncatts(attrs)
 
@@ -228,8 +236,7 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1, step_
         if outdir is not None:
             outfile = outdir / f"train_data_idx{idx}.nc"
             logger.info(f"Saving training to {outfile}")
-            dump_training(outfile, inputs=inputs, labels=labels, states=states,
-                          pred_labels=pred_labels)
+            dump_training(outfile, dataset, idx, states=states)
 
         logger.info("Optimizing output weights")
         model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
