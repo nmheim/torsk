@@ -21,3 +21,12 @@ def imed_metric(a_imgs, b_imgs):
     b_seq = b_imgs.reshape([b_imgs.shape[0], -1])
     G = metric_matrix(a_imgs.shape[1:])
     return np.array([(x - y).dot(G.dot(x - y)) for x, y in zip(a_seq, b_seq)])
+
+
+def eucd_metric(a_imgs, b_imgs):
+    assert a_imgs.shape == b_imgs.shape
+    a_seq = a_imgs.reshape([a_imgs.shape[0], -1])
+    b_seq = b_imgs.reshape([b_imgs.shape[0], -1])
+
+    metric = (a_seq - b_seq)**2
+    return metric.sum(axis=1)

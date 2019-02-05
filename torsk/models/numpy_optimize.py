@@ -42,28 +42,20 @@ def _pseudo_inverse_lstsq(inputs, states, labels):
 
 
 def pseudo_inverse(inputs, states, labels, mode="svd"):
-    train_length = inputs.shape[0]
-    flat_inputs = inputs.reshape([train_length, -1])
-    flat_labels = labels.reshape([train_length, -1])
-
     if mode == "svd":
-        return _pseudo_inverse_svd(flat_inputs, states, flat_labels)
+        return _pseudo_inverse_svd(inputs, states, labels)
     elif mode == "lstsq":
-        return _pseudo_inverse_lstsq(flat_inputs, states, flat_labels)
+        return _pseudo_inverse_lstsq(inputs, states, labels)
     else:
         raise ValueError(f"Unknown mode: '{mode}'")
 
 
 def tikhonov(inputs, states, labels, beta):
-    train_length = inputs.shape[0]
-    flat_inputs = inputs.reshape([train_length, -1])
-    flat_labels = labels.reshape([train_length, -1])
-
-    X = _extended_states(flat_inputs, states)
+    X = _extended_states(inputs, states)
 
     Id = np.eye(X.shape[0])
     A = np.dot(X, X.T) + beta + Id
-    B = np.dot(X, flat_labels)
+    B = np.dot(X, labels)
 
     # Solve linear system instead of calculating inverse
     wout = np.linalg.solve(A, B)

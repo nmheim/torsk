@@ -20,7 +20,8 @@ def test_numpy_save_load(tmpdir):
 
       "dtype": "float64",
       "backend": "numpy",
-      "debug": false
+      "debug": false,
+      "imed_loss": true
     }
     """
     params_json = tmpdir.join("params.json")
@@ -61,7 +62,8 @@ def test_torch_save_load(tmpdir):
 
       "dtype": "float32",
       "backend": "torch",
-      "debug": false
+      "debug": false,
+      "imed_loss": true
     }
     """
     params_json = tmpdir.join("params.json")
