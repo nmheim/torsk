@@ -150,15 +150,22 @@ def animate_double_imshow(frames1, frames2,
             # ax.figure.canvas.blit(ax.bbox)
             ax.figure.canvas.blit(ax.figure.bbox)
     matplotlib.animation.Animation._blit_draw = _blit_draw
-    fig, ax = plt.subplots(1, 2, figsize=figsize)
+    fig, ax = plt.subplots(1, 3, figsize=figsize)
+
     im1 = ax[0].imshow(
         frames1[0], animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
     im2 = ax[1].imshow(
         frames2[0], animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
+    # trivial prediciton
+    im3 = ax[2].imshow(
+        frames1[0], animated=True, vmin=vmin, vmax=vmax,
+        cmap=plt.get_cmap(cmap_name))
+
     plt.colorbar(im1, ax=ax[0])
     plt.colorbar(im2, ax=ax[1])
+    plt.colorbar(im3, ax=ax[2])
     text = ax[0].text(.5, 1.05, '', transform=ax[0].transAxes, va='center')
     if time is None:
         time = np.arange(len(frames1))
