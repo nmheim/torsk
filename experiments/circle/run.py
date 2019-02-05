@@ -24,7 +24,7 @@ params.reservoir_representation = "sparse"
 params.backend = "numpy"
 params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
-params.imed_loss = False
+params.imed_loss = True
 params.debug = False
 
 params.update(sys.argv[1:])
@@ -60,7 +60,7 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, outdir="random_weights_output", steps=100, step_length=20)
+    model, dataset, outdir="random_weights_imed_output", steps=50, step_length=11)
 
 logger.info("Visualizing results ...")
 from torsk.imed import imed_metric

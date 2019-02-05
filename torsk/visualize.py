@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -5,6 +6,8 @@ from matplotlib import animation
 from matplotlib import cm
 from torsk.data.utils import normalize
 import av
+
+logger = logging.getLogger(__name__)
 
 
 def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_state):
@@ -91,18 +94,18 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis,codec='h264')
 
     data = normalize(Ftxx);
 
-    print("data.shape=",data.shape);
+    logger.debug("data.shape=",data.shape);
     
     for i in range(nt):                
         img_rgbaf = colormap(data[i]);
-        print("img_rgbaf.shape=",img_rgbaf.shape)
+        logger.debug("img_rgbaf.shape=",img_rgbaf.shape)
         frame=to_byte(img_rgbaf[:,:,:3],mask[:,:,None]);
-        print("frame.shape=",frame.shape)
+        logger.debug("frame.shape=",frame.shape)
 
         frame_data = np.flip(frame,axis=0).copy();
-        print("frame_data.shape=",frame_data.shape)
+        logger.debug("frame_data.shape=",frame_data.shape)
         av_frame = av.VideoFrame.from_ndarray(frame_data)
-        print("av_frame=",av_frame)
+        logger.debug("av_frame=",av_frame)
         for packet in stream.encode(av_frame):
             container.mux(packet)
 
