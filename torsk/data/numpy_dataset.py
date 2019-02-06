@@ -1,5 +1,7 @@
 import logging
 import numpy as np
+from torsk.data import detrend
+from scipy.fftpack import dctn, idctn
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,7 @@ class NumpyImageDataset:
     convenient access to inputs/labels/pred_labels
     """
     def __init__(self, images, params, scale_images=True):
+        self.params = params;
         self.train_length = params.train_length
         self.pred_length = params.pred_length
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
@@ -25,12 +28,41 @@ class NumpyImageDataset:
         self.min = None
 
         self.dtype = np.dtype(params.dtype)
+        
+        if "cycle_length" in params.dict:
+            cycle_length    = params.cycle_length
+            cycle_timescale = params.dict.get('cycle_timescale',1);            
+
+            logger.info(f"Detrending and removing average length-{cycle_length} cycle")            
+            
+            Ftkk = dctn(images,norm='ortho',axes=[1,2]);
+
+            if cycle_timescale == 1:
+                (ftkk,bkk,Ckk) = detrend.separate_trends_unscaled(Ftkk,cycle_length);
+            else:
+                nT = int((cycle_timescale*Ftkk.shape[0]).round());
+                (ftkk,bkk,Ckk) = detrend.separate_trends_scaled(Ftkk,nT,cycle_length);
+                
+            ftxx = idctn(ftkk,norm='ortho',axes=[1,2]);
+
+            self.quadratic_trend = bkk;
+            self.mean_cycle      = Ckk;
+            self.cycle_timescale = cycle_timescale;
+            self.cycle_lengtth   = cycle_length;            
+            
+            self.detrend_training_data = params.dict.get('detrend_training_data',False);
+
+            if self.detrend_training_data:
+                images = ftxx;
+            
         if scale_images:
             logger.debug("Scaling input images to (-1, 1)")
             images = self.scale(images)
         self._images = images.astype(self.dtype)
         self.image_shape = images.shape[1:]
 
+        
+        
     def scale(self, images):
         self.min = images.min()
         self.max = images.max()
