@@ -1,6 +1,6 @@
 import numpy as np
 import skimage.transform as skt
-from scipy.fftpack import dct, idct, fft, ifft;
+from scipy.fftpack import dct, idct, fft, ifft, fftshift, ifftshift;
 
 def resample2d(image, size):
     res = skt.resize(image, size, mode="reflect", anti_aliasing=True)
@@ -22,11 +22,10 @@ def downscale(Ft,nx):
     ct=dct(Ft,norm='ortho')[:nx];
     return idct(ct,norm='ortho');
 
-#FIXME: fix me.
 def fft_derivative_1d(fx,order=1):
     N  = len(fx)
     ks = np.linspace(-N/2,N/2,N,endpoint=False)**order;    
-    Fk = fftpack.ifft(fx);
+    Fk = ifft(fx);
     fftpack.fftshift(Fk)
     DFk = fftpack.ifftshift((2j*pi/N)*ks*Fk)
     DFx = fftpack.fft((2j*np.pi/N)*ks*Fk)
