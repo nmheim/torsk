@@ -41,7 +41,7 @@ def normalize(data, vmin=None, vmax=None):
         vmin = data.min()
     if vmax is None:
         vmax = data.max()
-    return (data - vmin) / np.abs(vmin - vmax)
+    return (data - vmin) / (vmax-vmin+1)
 
 
 def min_max_scale(data, vmin=0., vmax=1.):
