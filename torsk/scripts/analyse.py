@@ -63,14 +63,10 @@ def imed_plot(esn_imed, cycle_imed, labels):
         mean_trivial_imed+std_trivial_imed,
         mean_trivial_imed-std_trivial_imed, alpha=0.5)
 
-
-    # ax.plot(mean_trivial_imed, label="seasonal pred")
-
     ax.plot(x, mean_imed, label="ESN")
     ax.fill_between(x, mean_imed+std_imed, mean_imed-std_imed, alpha=0.5)
-
-    ax.set_yscale("log")
     ax.legend()
+    ax.set_yscale("log")
 
     return fig, ax
 
@@ -111,7 +107,7 @@ def cli(pred_data_ncfiles, save, show, cycle_length):
                 # write_video(videofile, frames)
 
             if show:
-                anim = animate_double_imshow(labels[ii], prediction, title="ESN Pred Pred..")
+                anim = animate_double_imshow(labels[ii], prediction, title="ESN Pred.")
                 plt.show()
 
         train_data_nc = pred_data_nc.as_posix().replace("pred_data", "train_data")
@@ -136,7 +132,10 @@ def cli(pred_data_ncfiles, save, show, cycle_length):
 
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
     if save:
-        plt.savefig(pred_data_nc.with_suffix(".pdf"))
+        directory = pred_data_nc.parent
+        fname = directory.name
+        directory = directory.as_posix()
+        plt.savefig(f"{directory}/{fname}.pdf")
     if show:
         plt.show() # show IMED plot
     else:
