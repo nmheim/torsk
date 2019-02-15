@@ -34,30 +34,16 @@ params.input_map_specs = [
     {"type": "conv", "mode": "same", "size": [10,10], "kernel_type":"gauss", "input_scale": 1.5},
     {"type": "conv", "mode": "same", "size": [15, 15], "kernel_type":"gauss", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"gauss", "input_scale": 1.},
-    {"type": "conv", "mode": "same", "size": [25, 25], "kernel_type":"gauss", "input_scale": 1.},        
+    {"type": "conv", "mode": "same", "size": [25, 25], "kernel_type":"gauss", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [ 5, 5], "kernel_type":"random", "input_scale": 1.},
-    {"type": "conv", "mode": "same", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},        
-    {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},    
+    {"type": "conv", "mode": "same", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
+    {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},
     # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
-     {"type": "dct", "size": [15, 15], "input_scale": 1.},
-     {"type": "dct", "size": [15, 15], "input_scale": 1.},    
-    # {"type": "dct", "size": [10, 10], "input_scale": 1.},
-#    {"type": "random_weights", "size": [2000], "weight_scale": 1, "input_scale":0.05}
-#    {"type": "random_weights", "size": [30*30], "weight_scale": 1, "input_scale":0.025}    
+    {"type": "dct", "size": [15, 15], "input_scale": 1.},
+    {"type": "dct", "size": [15, 15], "input_scale": 1.},    
+    # {"type": "random_weights", "size": [2000], "weight_scale": 1, "input_scale":0.05}
+    # {"type": "random_weights", "size": [30*30], "weight_scale": 1, "input_scale":0.025}    
+    {"type": "gradient", "input_scale": 1.}
 ]
 
 params.spectral_radius = 2.
@@ -73,7 +59,6 @@ params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
 params.imed_loss = True
 params.debug = False
-params.cycle_length = 200
 
 params.update(sys.argv[1:])
 
@@ -108,4 +93,4 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "./mackey_conv_output/", steps=1, step_length=100)
+    model, dataset, "./mackey_conv_grad_output/", steps=1, step_length=100)
