@@ -100,7 +100,7 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):
     writer.close()
 
 
-def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis,codec='h264'):   
+def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis):   
     assert(Ftxx1.shape == Ftxx2.shape);
     (nt,ny,nx) = Ftxx1.shape;
    
@@ -108,7 +108,7 @@ def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis
     Ftxx[:,:,:nx] = Ftxx1;
     Ftxx[:,:,nx:] = Ftxx2;
     
-    write_video(filename,Ftxx,mask,fps,colormap,codec)
+    write_video(filename,Ftxx,mask,fps,colormap)
     
 
 def animate_double_imshow(frames1, frames2,
