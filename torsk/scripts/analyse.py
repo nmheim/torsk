@@ -66,7 +66,6 @@ def imed_plot(esn_imed, cycle_imed, labels):
     ax.plot(x, mean_imed, label="ESN")
     ax.fill_between(x, mean_imed+std_imed, mean_imed-std_imed, alpha=0.5)
     ax.legend()
-    ax.set_yscale("log")
 
     return fig, ax
 
@@ -80,7 +79,8 @@ def imed_plot(esn_imed, cycle_imed, labels):
 @click.option("--cycle-length", "-c", default=None, type=int,
     help="manually set cycle length for trend/cycle based prediction."
          "If not set, this defaults to the value found in train_data_{...}.nc")
-def cli(pred_data_ncfiles, save, show, cycle_length):
+@click.option("--ylogscale", default=False, is_flag=True)
+def cli(pred_data_ncfiles, save, show, cycle_length, ylogscale):
     
     sns.set_style("whitegrid")
 
@@ -101,10 +101,9 @@ def cli(pred_data_ncfiles, save, show, cycle_length):
             prediction = src["outputs"]
 
             if save:
-                click.echo("FIXME: write_video does not work")
-                # frames = np.concatenate([labels[ii], prediction], axis=1)
-                # videofile = pred_data_nc.with_suffix(".mp4").as_posix()
-                # write_video(videofile, frames)
+                frames = np.concatenate([labels[ii], prediction], axis=1)
+                videofile = pred_data_nc.with_suffix(".mp4").as_posix()
+                write_video(videofile, frames)
 
             if show:
                 anim = animate_double_imshow(labels[ii], prediction, title="ESN Pred.")
@@ -131,6 +130,8 @@ def cli(pred_data_ncfiles, save, show, cycle_length):
     cycle_imed = np.array(cycle_imed)
 
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
+    if ylogscale:
+        ax.set_yscale("log")
     if save:
         directory = pred_data_nc.parent
         fname = directory.name

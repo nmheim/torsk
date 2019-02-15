@@ -15,15 +15,19 @@ def input_map(image, input_map_specs):
     for spec in input_map_specs:
         if spec["type"] == "pixels":
             _features = resample2d(image, spec["size"]).reshape(-1)
+            spec["dbg_size"] = spec["size"]
         elif spec["type"] == "dct":
             _features = dct2(image, *spec["size"]).reshape(-1)
+            spec["dbg_size"] = spec["size"]
         elif spec["type"] == "gradient":
-            _features = normalize(
-                np.concatenate(np.gradient(image)).reshape(-1)) * 2 - 1
+            grad = np.concatenate(np.gradient(image))
+            _features = normalize(grad.reshape(-1)) * 2 - 1
+            spec["dbg_size"] = grad.shape
         elif spec["type"] == "conv":
             _features = convolve2d(
-                image, spec["kernel"], mode='same', boundary="symm").reshape(-1)
-            _features = normalize(_features) * 2 - 1
+                image, spec["kernel"], mode='same', boundary="symm")
+            spec["dbg_size"] = _features.shape
+            _features = normalize(_features.reshape(-1)) * 2 - 1
         elif spec["type"] == "random_weights":
             _features = np.dot(spec["weight_ih"], image.reshape(-1))
         else:

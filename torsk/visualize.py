@@ -12,7 +12,12 @@ import imageio
 logger = logging.getLogger(__name__)
 
 
-def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_state):
+def plot_iteration(model, idx, inp, state):
+    new_state = model.esn_cell.forward(inp, state)
+    input_stack = model.esn_cell.input_map(inp)
+    x_input = model.esn_cell.cat_input_map(input_stack)
+    x_state = model.esn_cell.state_map(state)
+
     def vec_to_rect(vec):
         size = int(np.ceil(vec.shape[0]**.5))
         shape = (size, size)
@@ -56,7 +61,11 @@ def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_st
         spec = model.esn_cell.input_map_specs[i]
         axi = ax[i+2]
 
-        im = axi.imshow(vec_to_rect(x))
+        if spec["type"] == "random_weights":
+            arr = vec_to_rect(x)
+        else:
+            arr = x.reshape(spec["dbg_size"])
+        im = axi.imshow(arr)
         axi.set_title(f"Win(image)_{spec['type']} spec: {i}")
         plt.colorbar(im, ax=axi)
 
