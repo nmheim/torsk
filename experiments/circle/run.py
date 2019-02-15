@@ -28,6 +28,7 @@ params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
 params.imed_loss = True
 params.debug = False
+params.cycle_length = 100
 
 params.update(sys.argv[1:])
 
@@ -48,7 +49,7 @@ else:
 logger.info(params)
 
 logger.info("Creating circle dataset ...")
-t = np.arange(0, 200*np.pi, 0.1)
+t = np.arange(0, 200*np.pi, 0.02*np.pi)
 # x, y = np.sin(0.3 * t), np.cos(t)
 x, y = np.sin(t), np.cos(0.3 * t)
 # y = normalize(mackey_sequence(N=t.shape[0])) * 2 - 1
@@ -62,7 +63,7 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, outdir="random_weights_imed_output", steps=50, step_length=11)
+    model, dataset, outdir="sin_cos03_output", steps=1, step_length=11)
 
 logger.info("Visualizing results ...")
 from torsk.imed import imed_metric

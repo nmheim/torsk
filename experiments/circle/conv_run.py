@@ -73,6 +73,7 @@ params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
 params.imed_loss = True
 params.debug = False
+params.cycle_length = 200
 
 params.update(sys.argv[1:])
 
@@ -107,4 +108,4 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "./output_imed/", steps=1, step_length=100)
+    model, dataset, "./mackey_conv_output/", steps=1, step_length=100)
