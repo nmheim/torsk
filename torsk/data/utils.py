@@ -41,17 +41,26 @@ def normalize(data, vmin=None, vmax=None):
         vmin = data.min()
     if vmax is None:
         vmax = data.max()
-    return (data - vmin) / np.abs(vmin - vmax)
+
+    if vmin==vmax:
+        return np.zeros_like(data)
+    else:
+        return (data - vmin) / (vmax-vmin)
 
 
 def min_max_scale(data, vmin=0., vmax=1.):
     vrange = vmax - vmin
-    dmin = data.min()
+    dmin   = data.min()
     drange = data.max() - dmin
-    scale = vrange / drange
-    shift = vmin - dmin * scale
-    data *= scale
-    data += shift
+
+    if drange == 0:
+        data += dmin
+    else:
+        scale = vrange / drange
+        shift = vmin - dmin * scale
+        data *= scale
+        data += shift
+
     return data
 
 
