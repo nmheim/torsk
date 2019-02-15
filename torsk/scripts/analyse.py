@@ -9,6 +9,7 @@ import seaborn as sns
 
 from torsk.visualize import animate_double_imshow, write_video
 from torsk.imed import imed_metric
+from torsk.data import detrend
 
 
 def read_run_metrics(fname):
@@ -35,9 +36,12 @@ def trivial_imed(labels):
     return trivial_imed
 
 
-def imed_plot(imed, predictions, labels):
-    mean_imed = imed.mean(axis=0)
-    std_imed = imed.std(axis=0)
+def imed_plot(esn_imed, cycle_imed, labels):
+    mean_imed = esn_imed.mean(axis=0)
+    std_imed = esn_imed.std(axis=0)
+
+    mean_cycle_imed = cycle_imed.mean(axis=0)
+    std_cycle_imed = cycle_imed.std(axis=0)
 
     trivial_imeds = np.array([trivial_imed(l) for l in labels])
     mean_trivial_imed = trivial_imeds.mean(axis=0)
@@ -47,64 +51,91 @@ def imed_plot(imed, predictions, labels):
     x = np.arange(mean_imed.shape[0])
     ax.set_title("IMED")
 
+    ax.plot(mean_cycle_imed, label="cycle pred")
+    ax.fill_between(
+        x, 
+        mean_cycle_imed+std_cycle_imed,
+        mean_cycle_imed-std_cycle_imed, alpha=0.5)
+
     ax.plot(mean_trivial_imed, label="trivial pred")
     ax.fill_between(
         x, 
         mean_trivial_imed+std_trivial_imed,
         mean_trivial_imed-std_trivial_imed, alpha=0.5)
 
-    # ax.plot(mean_trivial_imed, label="seasonal pred")
-
     ax.plot(x, mean_imed, label="ESN")
     ax.fill_between(x, mean_imed+std_imed, mean_imed-std_imed, alpha=0.5)
-
-    ax.set_yscale("log")
     ax.legend()
+    ax.set_yscale("log")
 
     return fig, ax
 
 
 @click.command("analyse", short_help="Plot IMED and create animation")
-@click.argument("ncfiles", nargs=-1, type=pathlib.Path)
+@click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
 @click.option("--save", is_flag=True, default=False,
-    help="saves created plots/video at ncfile.{pdf/mp4}")
+    help="saves created plots/video at pred_data_nc.{pdf/mp4}")
 @click.option("--show/--no-show", is_flag=True, default=True,
     help="show plots/video or not")
-def cli(ncfiles, save, show):
-
+@click.option("--cycle-length", "-c", default=None, type=int,
+    help="manually set cycle length for trend/cycle based prediction."
+         "If not set, this defaults to the value found in train_data_{...}.nc")
+def cli(pred_data_ncfiles, save, show, cycle_length):
+    
     sns.set_style("whitegrid")
 
-    predictions = []
     labels = []
-    imed = []
+    esn_imed = []
+    cycle_imed = []
     
     # read preds/labels and create videos
-    for ii, ncfile in enumerate(ncfiles):
+    for ii, pred_data_nc in enumerate(pred_data_ncfiles):
+        assert "pred_data" in pred_data_nc.as_posix()
 
-        with nc.Dataset(ncfile, "r") as src:
+        with nc.Dataset(pred_data_nc, "r") as src:
 
-            imed.append(src["imed"][:])
-            click.echo(f"{ncfile.name}: IMED at step 100: {imed[ii][100]}")
+            esn_imed.append(src["imed"][:])
+            click.echo(f"{pred_data_nc.name}: IMED at step 100: {esn_imed[ii][100]}")
 
-            predictions.append(src["outputs"][:])
             labels.append(src["labels"][:])
+            prediction = src["outputs"]
 
             if save:
-                frames = np.concatenate([labels[ii], predictions[ii]], axis=1)
-                videofile = ncfile.with_suffix(".mp4").as_posix()
-                write_video(videofile, frames)
+                click.echo("FIXME: write_video does not work")
+                # frames = np.concatenate([labels[ii], prediction], axis=1)
+                # videofile = pred_data_nc.with_suffix(".mp4").as_posix()
+                # write_video(videofile, frames)
 
             if show:
-                anim = animate_double_imshow(labels[ii], predictions[ii])
+                anim = animate_double_imshow(labels[ii], prediction, title="ESN Pred.")
                 plt.show()
 
-    predictions = np.array(predictions)
-    labels = np.array(labels)
-    imed = np.array(imed)
+        train_data_nc = pred_data_nc.as_posix().replace("pred_data", "train_data")
+        with nc.Dataset(train_data_nc, "r") as src:
+            training_Ftxx = src["labels"][:]
+            if cycle_length is None:
+                cycle_length = src.cycle_length
+            pred_length = labels[-1].shape[0]
 
-    fig, ax = imed_plot(imed, predictions, labels)
+            cpred, _ = detrend.predict_from_trend_unscaled(
+                training_Ftxx, cycle_length, pred_length)
+
+            cycle_imed.append(imed_metric(cpred, labels[-1]))
+
+            if show:
+                anim = animate_double_imshow(labels[ii], cpred, title="Cycle Pred.")
+                plt.show()
+
+    labels = np.array(labels)
+    esn_imed = np.array(esn_imed)
+    cycle_imed = np.array(cycle_imed)
+
+    fig, ax = imed_plot(esn_imed, cycle_imed, labels)
     if save:
-        plt.savefig(ncfile.with_suffix(".pdf"))
+        directory = pred_data_nc.parent
+        fname = directory.name
+        directory = directory.as_posix()
+        plt.savefig(f"{directory}/{fname}.pdf")
     if show:
         plt.show() # show IMED plot
     else:

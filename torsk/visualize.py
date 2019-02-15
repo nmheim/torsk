@@ -129,7 +129,7 @@ def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis
 
 def animate_double_imshow(frames1, frames2,
                           time=None, vmin=None, vmax=None,
-                          cmap_name="inferno", figsize=(12, 4)):
+                          cmap_name="inferno", figsize=(12, 4), title=None):
     def _blit_draw(self, artists, bg_cache):
         # Handles blitted drawing, which renders only the artists given instead
         # of the entire figure.
@@ -151,6 +151,8 @@ def animate_double_imshow(frames1, frames2,
             ax.figure.canvas.blit(ax.figure.bbox)
     matplotlib.animation.Animation._blit_draw = _blit_draw
     fig, ax = plt.subplots(1, 3, figsize=figsize)
+    if title is not None:
+        fig.suptitle(title)
 
     im1 = ax[0].imshow(
         frames1[0], animated=True, vmin=vmin, vmax=vmax,
