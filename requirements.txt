@@ -9,3 +9,5 @@ torchvision
 tqdm
 seaborn
 scikit-optimize
+imageio
+imageio-ffmpeg

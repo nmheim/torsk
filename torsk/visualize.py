@@ -1,3 +1,4 @@
+import os
 import logging
 import numpy as np
 import matplotlib
@@ -5,7 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib import cm
 from torsk.data.utils import normalize
-import av
+import contextlib
+import imageio
 
 logger = logging.getLogger(__name__)
 
@@ -76,45 +78,27 @@ def plot_iteration(model, idx, inp, state, new_state, input_stack, x_input, x_st
 
 # Assumes data is already in range [0,1]
 def to_byte(data,mask):
-    return (data*255*(mask==0)).astype(np.uint8);
+    return (data*255*(mask==False)).astype(np.uint8);
 
-# This generates a video directly from a numpy array, much faster than matplotlib
-def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis,codec='h264'):   
+
+def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):   
     (nt,ny,nx) = Ftxx.shape;
 
     if(mask is None):
-        mask = np.ones(Ftxx.shape[1:],dtype=np.bool);
-    
-    container = av.open(filename, mode='w')
+        mask = np.zeros(Ftxx.shape[1:],dtype=np.bool);
 
-    stream = container.add_stream(codec, rate=fps)
-    stream.width  = nx
-    stream.height = ny
-    stream.pix_fmt = "yuv420p"
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(filename)
+        
+    vmin, vmax = Ftxx.reshape(-1).min(), Ftxx.reshape(-1).max();
+    writer = imageio.get_writer(filename,fps=fps)        
 
-    data = normalize(Ftxx);
-
-    logger.debug("data.shape=",data.shape);
-    
-    for i in range(nt):                
-        img_rgbaf = colormap(data[i]);
-        logger.debug("img_rgbaf.shape=",img_rgbaf.shape)
+    for i in range(nt):
+        img_rgbaf = colormap(normalize(Ftxx[i],vmin,vmax));
         frame=to_byte(img_rgbaf[:,:,:3],mask[:,:,None]);
-        logger.debug("frame.shape=",frame.shape)
+        writer.append_data(frame)
+    writer.close()
 
-        frame_data = np.flip(frame,axis=0).copy();
-        logger.debug("frame_data.shape=",frame_data.shape)
-        av_frame = av.VideoFrame.from_ndarray(frame_data)
-        logger.debug("av_frame=",av_frame)
-        for packet in stream.encode(av_frame):
-            container.mux(packet)
-
-    # Flush stream
-    for packet in stream.encode():
-        container.mux(packet)
-
-    # Close the file
-    container.close()
 
 def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis,codec='h264'):   
     assert(Ftxx1.shape == Ftxx2.shape);
