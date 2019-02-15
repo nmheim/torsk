@@ -95,12 +95,7 @@ class NumpyESN(object):
             states.append(new_state)
 
             if (idx == 200):
-                new_state = self.esn_cell.forward(inp, state)
-                input_stack = self.esn_cell.input_map(inp)
-                x_input = self.esn_cell.cat_input_map(input_stack)
-                x_state = self.esn_cell.state_map(state)
-
-                plot_iteration(self, idx, inp, state, new_state, input_stack, x_input, x_state)
+                plot_iteration(self, idx, inp, state)
 
             state = new_state
             idx += 1
