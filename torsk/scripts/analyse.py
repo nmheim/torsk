@@ -101,10 +101,9 @@ def cli(pred_data_ncfiles, save, show, cycle_length, ylogscale):
             prediction = src["outputs"]
 
             if save:
-                click.echo("FIXME: write_video does not work")
-                # frames = np.concatenate([labels[ii], prediction], axis=1)
-                # videofile = pred_data_nc.with_suffix(".mp4").as_posix()
-                # write_video(videofile, frames)
+                frames = np.concatenate([labels[ii], prediction], axis=1)
+                videofile = pred_data_nc.with_suffix(".mp4").as_posix()
+                write_video(videofile, frames)
 
             if show:
                 anim = animate_double_imshow(labels[ii], prediction, title="ESN Pred.")
