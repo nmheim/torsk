@@ -9,7 +9,7 @@ _MODULE_DIR = pathlib.Path(__file__).parent.absolute()
 class InputMap(Schema):
     type = fields.String(
         validate=validate.OneOf(
-            ["pixels", "dct", "conv", "random_weights"]),
+            ["pixels", "dct", "conv", "random_weights", "gradient"]),
         required=True)
 
     input_scale = fields.Float(required=True)
@@ -18,7 +18,7 @@ class InputMap(Schema):
     # ksize if dct
     # kernel_shape if conv
     # hidden_size if random_weights
-    size = fields.List(fields.Int(), required=True)
+    size = fields.List(fields.Int())
 
     kernel_type = fields.String(
         validate=validate.OneOf(["mean", "gauss", "random"]))
@@ -52,6 +52,9 @@ class ParamsSchema(Schema):
         valdiate=validate.OneOf(["float32", "float64"]), required=True)
 
     debug = fields.Boolean(required=True)
+
+    anomaly_start = fields.Int()
+    anomaly_step = fields.Int()
 
 
 class Params:
