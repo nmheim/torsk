@@ -2,6 +2,7 @@ import sys
 import pathlib
 
 import click
+from tqdm import tqdm
 import numpy as np
 import netCDF4 as nc
 import matplotlib.pyplot as plt
@@ -70,6 +71,24 @@ def imed_plot(esn_imed, cycle_imed, labels):
     return fig, ax
 
 
+def sort_filenames(files):
+    """Sorts filenames by a component in the path with keyword `idx` like this:
+
+        pred_data_idx1.nc
+        pred_data_idx100.nc
+        pred_data_idx10.nc
+        
+    becomes:
+
+        pred_data_idx1.nc
+        pred_data_idx10.nc
+        pred_data_idx100.nc
+    """
+    indices = [[s for s in f.stem.split("_") if "idx" in s][0] for f in files]
+    indices = [int(idx.replace("idx", "")) for idx in indices]
+    sorted_files = [f for _, f in sorted(zip(indices, files))]
+    return sorted_files
+
 @click.command("analyse", short_help="Plot IMED and create animation")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
 @click.option("--save", is_flag=True, default=False,
@@ -84,29 +103,29 @@ def cli(pred_data_ncfiles, save, show, cycle_length, ylogscale):
     
     sns.set_style("whitegrid")
 
-    labels = []
-    esn_imed = []
-    cycle_imed = []
+    labels, predictions = [], []
+    esn_imed, cycle_imed = [], []
+    pred_data_ncfiles = sort_filenames(pred_data_ncfiles)
     
     # read preds/labels and create videos
-    for ii, pred_data_nc in enumerate(pred_data_ncfiles):
+    for ii, pred_data_nc in tqdm(enumerate(pred_data_ncfiles), total=len(pred_data_ncfiles)):
         assert "pred_data" in pred_data_nc.as_posix()
 
         with nc.Dataset(pred_data_nc, "r") as src:
 
             esn_imed.append(src["imed"][:])
-            click.echo(f"{pred_data_nc.name}: IMED at step 100: {esn_imed[ii][100]}")
+            tqdm.write(f"{pred_data_nc.name}: IMED at step 100: {esn_imed[ii][100]}")
 
             labels.append(src["labels"][:])
-            prediction = src["outputs"]
+            predictions.append(src["outputs"][:])
 
             if save:
-                frames = np.concatenate([labels[ii], prediction], axis=1)
+                frames = np.concatenate([labels[ii], predictions[ii]], axis=1)
                 videofile = pred_data_nc.with_suffix(".mp4").as_posix()
                 write_video(videofile, frames)
 
             if show:
-                anim = animate_double_imshow(labels[ii], prediction, title="ESN Pred.")
+                anim = animate_double_imshow(labels[ii], predictions[ii], title="ESN Pred.")
                 plt.show()
 
         train_data_nc = pred_data_nc.as_posix().replace("pred_data", "train_data")
@@ -125,9 +144,16 @@ def cli(pred_data_ncfiles, save, show, cycle_length, ylogscale):
                 anim = animate_double_imshow(labels[ii], cpred, title="Cycle Pred.")
                 plt.show()
 
-    labels = np.array(labels)
-    esn_imed = np.array(esn_imed)
-    cycle_imed = np.array(cycle_imed)
+    labels, predictions = np.array(labels), np.array(predictions)
+    esn_imed, cycle_imed = np.array(esn_imed), np.array(cycle_imed)
+
+    fig, ax = plt.subplots(1,2)
+    im = ax[0].imshow(cycle_imed, aspect="auto")
+    plt.colorbar(im, ax=ax[0])
+    im = ax[1].imshow(esn_imed, aspect="auto")
+    plt.colorbar(im, ax=ax[1])
+    plt.savefig("/home/niklas/erda_save/test.pdf")
+    plt.close()
 
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
     if ylogscale:
