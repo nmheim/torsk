@@ -146,6 +146,7 @@ class NumpyESN(object):
             G12 = V.dot((W**.5).dot(V.T))
 
             logger.debug("Reprojecting inputs/labels with metric matrix")
+            flat_inputs = np.matmul(G12, flat_inputs[:,:,None])[:,:,0]
             flat_labels = np.matmul(G12, flat_labels[:,:,None])[:,:,0]
 
         if method == 'tikhonov':
