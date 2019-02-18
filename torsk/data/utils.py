@@ -105,14 +105,14 @@ def mackey_sequence(b=None, N=3000):
     return y
 
 
-def mackey_anomaly_sequence(N=3000):
+def mackey_anomaly_sequence(N=3000, anomaly_start=2000, anomaly_step=200):
     b = np.zeros(N) + 0.1
     db = 0.05
     anomaly = np.zeros(N)
-    for i in range(401, N, 400):
+    for i in range(anomaly_start, N, anomaly_step):
         b[i:i+50] += db
         anomaly[i:i+50] = 1
-    return mackey_sequence(b, N=N)
+    return mackey_sequence(b, N=N), anomaly
 
 
 def sine_sequence(periods=30, N=20):

@@ -71,7 +71,7 @@ def imed_plot(esn_imed, cycle_imed, labels):
     return fig, ax
 
 
-def sort_filenames(files):
+def sort_filenames(files, return_indices=False):
     """Sorts filenames by a component in the path with keyword `idx` like this:
 
         pred_data_idx1.nc
@@ -87,7 +87,11 @@ def sort_filenames(files):
     indices = [[s for s in f.stem.split("_") if "idx" in s][0] for f in files]
     indices = [int(idx.replace("idx", "")) for idx in indices]
     sorted_files = [f for _, f in sorted(zip(indices, files))]
-    return sorted_files
+    if return_indices:
+        return sorted_files, sorted(indices)
+    else:
+        return sorted_files
+
 
 @click.command("analyse", short_help="Plot IMED and create animation")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
