@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torsk
-from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize
+from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize, mackey_anomaly_sequence
 from torsk.imed import imed_metric
 from torsk.visualize import animate_double_imshow
 
@@ -82,7 +82,8 @@ logger.info("Creating circle dataset ...")
 t = np.arange(0, 200*np.pi, 0.1)
 #x, y = np.sin(t), np.cos(0.3 * t)
 x, y = np.sin(0.3 * t), np.cos(t)
-x = normalize(mackey_sequence(N=t.shape[0])) * 2 - 1
+# x = normalize(mackey_sequence(N=t.shape[0])) * 2 - 1
+x = normalize(mackey_anomaly_sequence(N=t.shape[0])) * 2 - 1
 
 center = np.array([y, x]).T
 images = gauss2d_sequence(center, sigma=0.5, size=params.input_shape)
@@ -93,4 +94,4 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "./mackey_conv_grad_output/", steps=1, step_length=100)
+    model, dataset, "./mackey_conv_grad_anomaly_output/", steps=10, step_length=100)

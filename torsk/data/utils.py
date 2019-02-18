@@ -105,6 +105,16 @@ def mackey_sequence(b=None, N=3000):
     return y
 
 
+def mackey_anomaly_sequence(N=3000):
+    b = np.zeros(N) + 0.1
+    db = 0.05
+    anomaly = np.zeros(N)
+    for i in range(401, N, 400):
+        b[i:i+50] += db
+        anomaly[i:i+50] = 1
+    return mackey_sequence(b, N=N)
+
+
 def sine_sequence(periods=30, N=20):
     """Simple sine sequence"""
     dx = 2 * np.pi / (N + 1)
