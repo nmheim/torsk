@@ -218,7 +218,8 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst["eucd"][:] = eucd_metric(outputs, labels)
 
 
-def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1, step_length=1):
+def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
+                      step_length=1, step_start=0):
     if outdir is not None and not isinstance(outdir, pathlib.Path):
         outdir = pathlib.Path(outdir)
 
@@ -238,7 +239,7 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1, step_
         if shuffle:
             idx = np.random.randint(low=0, high=len(dataset))
         else:
-            idx = ii * step_length
+            idx = ii * step_length + step_start
         inputs, labels, pred_labels = dataset[idx]
 
         logger.info(f"Creating {inputs.shape[0]} training states")
