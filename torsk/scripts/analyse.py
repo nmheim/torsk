@@ -151,13 +151,13 @@ def cli(pred_data_ncfiles, save, show, cycle_length, ylogscale):
     labels, predictions = np.array(labels), np.array(predictions)
     esn_imed, cycle_imed = np.array(esn_imed), np.array(cycle_imed)
 
-    fig, ax = plt.subplots(1,2)
-    im = ax[0].imshow(cycle_imed, aspect="auto")
-    plt.colorbar(im, ax=ax[0])
-    im = ax[1].imshow(esn_imed, aspect="auto")
-    plt.colorbar(im, ax=ax[1])
-    plt.savefig("/home/niklas/erda_save/test.pdf")
-    plt.close()
+    # fig, ax = plt.subplots(1,2)
+    # im = ax[0].imshow(cycle_imed, aspect="auto")
+    # plt.colorbar(im, ax=ax[0])
+    # im = ax[1].imshow(esn_imed, aspect="auto")
+    # plt.colorbar(im, ax=ax[1])
+    # plt.savefig("/home/niklas/erda_save/test.pdf")
+    # plt.close()
 
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
     if ylogscale:
