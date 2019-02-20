@@ -1,7 +1,8 @@
 import numpy as np
+from scipy import special
 
 def cumulative_distribution(x):
-    return np.erf(x/2.**.5)
+    return special.erf(x/2.**.5)
 
 def qfunction(x):
     return 1 - cumulative_distribution(x)
