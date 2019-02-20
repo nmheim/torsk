@@ -95,16 +95,18 @@ def sort_filenames(files, return_indices=False):
 
 @click.command("analyse", short_help="Plot IMED and create animation")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
-@click.option("--save", is_flag=True, default=False,
-    help="saves created plots/video at pred_data_nc.{pdf/mp4}")
+@click.option("--save-video", is_flag=True, default=False,
+    help="saves created video at pred_data_nc.{pdf/mp4}")
+@click.option("--save-plots", is_flag=True, default=False,
+    help="saves created plots at pred_data_nc.{pdf/mp4}")
 @click.option("--show/--no-show", is_flag=True, default=True,
     help="show plots/video or not")
 @click.option("--cycle-length", "-c", default=None, type=int,
     help="manually set cycle length for trend/cycle based prediction."
          "If not set, this defaults to the value found in train_data_{...}.nc")
 @click.option("--ylogscale", default=False, is_flag=True)
-def cli(pred_data_ncfiles, save, show, cycle_length, ylogscale):
-    
+def cli(pred_data_ncfiles, save_video, save_plots, show, cycle_length, ylogscale):
+
     sns.set_style("whitegrid")
 
     labels, predictions = [], []
@@ -123,7 +125,7 @@ def cli(pred_data_ncfiles, save, show, cycle_length, ylogscale):
             labels.append(src["labels"][:])
             predictions.append(src["outputs"][:])
 
-            if save:
+            if save_video:
                 frames = np.concatenate([labels[ii], predictions[ii]], axis=1)
                 videofile = pred_data_nc.with_suffix(".mp4").as_posix()
                 write_video(videofile, frames)
@@ -162,7 +164,7 @@ def cli(pred_data_ncfiles, save, show, cycle_length, ylogscale):
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
     if ylogscale:
         ax.set_yscale("log")
-    if save:
+    if save_plots:
         directory = pred_data_nc.parent
         fname = directory.name
         directory = directory.as_posix()
