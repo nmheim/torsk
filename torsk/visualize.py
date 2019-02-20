@@ -100,7 +100,8 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):
         os.remove(filename)
         
     vmin, vmax = Ftxx.reshape(-1).min(), Ftxx.reshape(-1).max();
-    writer = imageio.get_writer(filename,fps=fps, quality=10)
+    writer = imageio.get_writer(
+        filename, fps=fps, quality=10, macro_block_size=None)
 
     for i in range(nt):
         img_rgbaf = colormap(normalize(Ftxx[i],vmin,vmax));
