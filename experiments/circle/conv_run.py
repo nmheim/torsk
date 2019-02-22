@@ -40,9 +40,10 @@ params.input_map_specs = [
     {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},
     # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
     {"type": "dct", "size": [15, 15], "input_scale": 1.},
+    {"type": "dct", "size": [15, 15], "input_scale": 1.},
     # {"type": "random_weights", "size": [2000], "weight_scale": 1, "input_scale":0.05}
     # {"type": "random_weights", "size": [30*30], "weight_scale": 1, "input_scale":0.025}    
-    {"type": "gradient", "input_scale": 1.}
+    {"type": "gradient", "input_scale": 1.},
 ]
 
 params.spectral_radius = 2.
@@ -56,7 +57,7 @@ params.reservoir_representation = "sparse"
 params.backend = "numpy"
 params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
-params.imed_loss = True
+params.imed_loss = False
 params.debug = False
 
 params.anomaly_start = 2300
@@ -100,5 +101,5 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "/home/niklas/erda_save/mackey_conv_grad_anomaly_output_step300/",
-    steps=200, step_length=5, step_start=0)
+    model, dataset, "mackey_conv_grad_output_noimed",
+    steps=1, step_length=5, step_start=0)

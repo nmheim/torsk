@@ -72,4 +72,4 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "./output_imed/", steps=10, step_length=30)
+    model, dataset, "./test_output/", steps=1, step_length=30)

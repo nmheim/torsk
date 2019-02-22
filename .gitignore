@@ -2,6 +2,7 @@
 *.nc
 *.pth
 *.pkl
+*output*
 
 # vim
 *.swp
