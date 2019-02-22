@@ -37,7 +37,7 @@ def trivial_imed(labels):
     return trivial_imed
 
 
-def imed_plot(esn_imed, cycle_imed, labels):
+def imed_plot(esn_imed, cycle_imed, labels, figsize=None):
     mean_imed = esn_imed.mean(axis=0)
     std_imed = esn_imed.std(axis=0)
 
@@ -48,7 +48,7 @@ def imed_plot(esn_imed, cycle_imed, labels):
     mean_trivial_imed = trivial_imeds.mean(axis=0)
     std_trivial_imed = trivial_imeds.std(axis=0)
 
-    fig, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
     x = np.arange(mean_imed.shape[0])
 
     ax.plot(mean_cycle_imed, label="Cycle-based")

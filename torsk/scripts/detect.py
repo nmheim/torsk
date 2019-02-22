@@ -41,13 +41,13 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
     fig, ax = plt.subplots(nr_plots, 1, sharex=True)
 
     ax[0].set_title(r"IMED$(\mathbf{y}, \mathbf{d})$")
-    ax[1].set_title("Mean IMED")
+    ax[1].set_title("Mean IMED/EUCD")
     ax[2].set_title(f"Normality Score. LW:{large_window} SW:{small_window}")
 
     cmap = plt.get_cmap("inferno")
     colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
 
-    xe, error = [], []
+    imed_error, eucd_error = [], []
     for pred_data_nc, idx, color in tqdm(
             zip(pred_data_ncfiles, indices, colors), total=len(indices)):
         tqdm.write(pred_data_nc.as_posix())
@@ -55,20 +55,28 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
         with nc.Dataset(pred_data_nc, "r") as src:
             
             pred_imed = src["imed"][:valid_pred_length]
+            pred_eucd = src["eucd"][:valid_pred_length]
             x = np.arange(idx, idx + valid_pred_length)
+
             ax[0].plot(x, pred_imed, color=color) 
 
-            # xe.append(idx + valid_pred_length)
-            error.append(np.mean(pred_imed))
+            imed_error.append(np.mean(pred_imed))
+            eucd_error.append(np.mean(pred_eucd))
 
-    error = np.array(error)
+    imed_error = np.array(imed_error)
+    eucd_error = np.array(eucd_error)
 
-    score = sliding_score(
-        error, small_window=small_window, large_window=large_window)
+    imed_score = sliding_score(
+        imed_error, small_window=small_window, large_window=large_window)
+    eucd_score = sliding_score(
+        eucd_error, small_window=small_window, large_window=large_window)
 
-    ax[1].plot(indices, error)
+    ax[1].plot(indices, imed_error, label=r"$\overline{IMED}$")
+    ax[1].plot(indices, eucd_error, label=r"$\overline{EUDC}$")
+    ax[1].legend()
 
-    ax[2].plot(indices[large_window:], score)
+    ax[2].plot(indices[large_window:], imed_score)
+    ax[2].plot(indices[large_window:], eucd_score)
     ax[2].set_yscale("log")
 
     if mackey:
@@ -76,8 +84,9 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
             anomaly_start=params.anomaly_start, anomaly_step=params.anomaly_step)
         mackey_seq = normalize(mackey_seq)
 
-        ax[3].plot(mackey_seq[params.train_length:])
-        ax[3].plot(anomaly[params.train_length:])
+        ax[3].plot(mackey_seq[params.train_length:], label="x-component")
+        ax[3].plot(anomaly[params.train_length:], label="anomaly label")
+        ax[3].legend()
 
     plt.tight_layout()
 
