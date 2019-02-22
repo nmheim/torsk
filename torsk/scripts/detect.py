@@ -1,4 +1,5 @@
 import pathlib
+from itertools import cycle
 
 import click
 from tqdm import tqdm
@@ -15,8 +16,7 @@ from torsk import Params
 
 @click.command("detect", short_help="Find anomalies in multiple predicition runs")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
-@click.option("--save", is_flag=True, default=False,
-    help="saves created plots/video at pred_data_nc.{pdf/mp4}")
+@click.option("--outfile", "-o",  type=pathlib.Path, default=None, help="saves created plot")
 @click.option("--show/--no-show", is_flag=True, default=True,
     help="show plots/video or not")
 @click.option("--valid-pred-length", "-p", type=int, default=50,
@@ -27,9 +27,11 @@ from torsk import Params
     help="Small normality score window")
 @click.option("--mackey", is_flag=True, default=False,
     help="Set this flag to plot an additional mackey-verification plot")
-def cli(pred_data_ncfiles, save, show, valid_pred_length, large_window, small_window, mackey):
+def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small_window, mackey):
 
     sns.set_style("whitegrid")
+    sns.set_context("notebook")
+
     pred_data_ncfiles, indices = sort_filenames(
         pred_data_ncfiles, return_indices=True)
     params = Params(
@@ -42,15 +44,19 @@ def cli(pred_data_ncfiles, save, show, valid_pred_length, large_window, small_wi
     ax[1].set_title("Mean IMED")
     ax[2].set_title(f"Normality Score. LW:{large_window} SW:{small_window}")
 
+    cmap = plt.get_cmap("inferno")
+    colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
+
     xe, error = [], []
-    for pred_data_nc, idx in tqdm(zip(pred_data_ncfiles, indices), total=len(indices)):
+    for pred_data_nc, idx, color in tqdm(
+            zip(pred_data_ncfiles, indices, colors), total=len(indices)):
         tqdm.write(pred_data_nc.as_posix())
 
         with nc.Dataset(pred_data_nc, "r") as src:
             
             pred_imed = src["imed"][:valid_pred_length]
             x = np.arange(idx, idx + valid_pred_length)
-            ax[0].plot(x, pred_imed) 
+            ax[0].plot(x, pred_imed, color=color) 
 
             # xe.append(idx + valid_pred_length)
             error.append(np.mean(pred_imed))
@@ -73,4 +79,11 @@ def cli(pred_data_ncfiles, save, show, valid_pred_length, large_window, small_wi
         ax[3].plot(mackey_seq[params.train_length:])
         ax[3].plot(anomaly[params.train_length:])
 
-    plt.show()
+    plt.tight_layout()
+
+    if outfile is not None:
+        plt.savefig(outfile, transparent=True)
+    if show:
+        plt.show()
+    else:
+        plt.close()
