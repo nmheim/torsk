@@ -13,26 +13,14 @@ np.random.seed(0)
 
 params = torsk.Params()
 params.input_map_specs = [
-    # {"type": "pixels", "size": [30, 30], "input_scale": 6.},
-    # {"type": "pixels", "size": [25, 25], "input_scale": 6.},
-    # {"type": "pixels", "size": [20, 20], "input_scale": 6.},
-    # {"type": "pixels", "size": [15, 15], "input_scale": 6.},
-    # {"type": "pixels", "size": [10, 10], "input_scale": 6.},
-    # {"type": "pixels", "size": [5, 5], "input_scale": 6.},
-    # {"type": "conv", "size": [10, 10], "kernel_type":"random", "input_scale": 3.},
-    # {"type": "conv", "size": [30, 30], "kernel_type":"gauss", "input_scale": 0.05},
-    # {"type": "conv", "size": [30, 30], "kernel_type":"random", "input_scale": 0.25},
-    # {"type": "conv", "size": [30, 30], "kernel_type":"random", "input_scale": 0.25},
-    # {"type": "dct", "size": [50, 50], "input_scale": 1.0},
-    # {"type": "dct", "size": [10, 10], "input_scale": 1.},
     {"type": "random_weights", "size": [10000], "input_scale": 0.25}
 ]
-params.spectral_radius = 1.5
+params.spectral_radius = 2.0
 params.density = 0.001
-params.input_shape = [100, 100]
-params.train_length = 1000
-params.pred_length = 300
-params.transient_length = 200
+params.input_shape = [30, 30]
+params.train_length = 1300
+params.pred_length = 200
+params.transient_length = 300
 params.dtype = "float64"
 params.reservoir_representation = "sparse"
 params.backend = "numpy"
@@ -72,4 +60,5 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "./output_imed/", steps=10, step_length=30)
+    model, dataset, "/home/niklas/erda_save/kuro_basicesn_withimed",
+    steps=1000, step_length=1)
