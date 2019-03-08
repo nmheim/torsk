@@ -57,7 +57,7 @@ params.reservoir_representation = "sparse"
 params.backend = "numpy"
 params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
-params.imed_loss = True
+params.imed_loss = False
 params.debug = False
 
 params.anomaly_start = 2300

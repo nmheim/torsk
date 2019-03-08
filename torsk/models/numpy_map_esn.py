@@ -30,6 +30,7 @@ def input_map(image, input_map_specs):
             _features = normalize(_features.reshape(-1)) * 2 - 1
         elif spec["type"] == "random_weights":
             _features = np.dot(spec["weight_ih"], image.reshape(-1))
+            spec["dbg_size"] = spec["size"]
         else:
             raise ValueError(spec)
         _features = spec["input_scale"] * _features

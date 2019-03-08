@@ -1,15 +1,14 @@
 import numpy as np
+from scipy import special
 
 def cumulative_distribution(x):
-    return np.erf(x/2.**.5)
+    return special.erf(x/2.**.5)
 
 def qfunction(x):
     return 1 - cumulative_distribution(x)
 
 def sliding_score(error, small_window, large_window):
-    assert len(error.shape) == 1
-
-    shape = [error.shape[0] - large_window,]
+    shape = (error.shape[0] - large_window,) + error.shape[1:]
     scores = np.zeros(shape)
 
     for i in range(shape[0]):

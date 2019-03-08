@@ -37,7 +37,7 @@ def trivial_imed(labels):
     return trivial_imed
 
 
-def imed_plot(esn_imed, cycle_imed, labels):
+def imed_plot(esn_imed, cycle_imed, labels, figsize=None):
     mean_imed = esn_imed.mean(axis=0)
     std_imed = esn_imed.std(axis=0)
 
@@ -48,17 +48,16 @@ def imed_plot(esn_imed, cycle_imed, labels):
     mean_trivial_imed = trivial_imeds.mean(axis=0)
     std_trivial_imed = trivial_imeds.std(axis=0)
 
-    fig, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
     x = np.arange(mean_imed.shape[0])
-    ax.set_title("IMED")
 
-    ax.plot(mean_cycle_imed, label="cycle pred")
+    ax.plot(mean_cycle_imed, label="Cycle-based")
     ax.fill_between(
         x, 
         mean_cycle_imed+std_cycle_imed,
         mean_cycle_imed-std_cycle_imed, alpha=0.5)
 
-    ax.plot(mean_trivial_imed, label="trivial pred")
+    ax.plot(mean_trivial_imed, label="Trivial")
     ax.fill_between(
         x, 
         mean_trivial_imed+std_trivial_imed,
@@ -66,6 +65,9 @@ def imed_plot(esn_imed, cycle_imed, labels):
 
     ax.plot(x, mean_imed, label="ESN")
     ax.fill_between(x, mean_imed+std_imed, mean_imed-std_imed, alpha=0.5)
+
+    ax.set_ylabel(r"IMED$(y_i, d_i)$")
+    ax.set_xlabel("Time")
     ax.legend()
 
     return fig, ax
@@ -105,7 +107,9 @@ def sort_filenames(files, return_indices=False):
     help="manually set cycle length for trend/cycle based prediction."
          "If not set, this defaults to the value found in train_data_{...}.nc")
 @click.option("--ylogscale", default=False, is_flag=True)
-def cli(pred_data_ncfiles, save_video, save_plots, show, cycle_length, ylogscale):
+@click.option("--metric-log-idx", "-i", default=50, type=int,
+    help="Prints metric (e.g. IMED) at given index.")
+def cli(pred_data_ncfiles, save_video, save_plots, show, cycle_length, ylogscale, metric_log_idx):
 
     sns.set_style("whitegrid")
 
@@ -120,7 +124,9 @@ def cli(pred_data_ncfiles, save_video, save_plots, show, cycle_length, ylogscale
         with nc.Dataset(pred_data_nc, "r") as src:
 
             esn_imed.append(src["imed"][:])
-            tqdm.write(f"{pred_data_nc.name}: IMED at step 100: {esn_imed[ii][100]}")
+            tqdm.write(
+                f"{pred_data_nc.name}: IMED at step {metric_log_idx}: "
+                f"{esn_imed[ii][metric_log_idx]}")
 
             labels.append(src["labels"][:])
             predictions.append(src["outputs"][:])
