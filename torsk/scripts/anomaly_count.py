@@ -8,7 +8,7 @@ import netCDF4 as nc
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from torsk.scripts.analyse import sort_filenames
+from torsk.scripts.prediction_performance import sort_filenames
 from torsk.anomaly import sliding_score
 from torsk import Params
 
@@ -52,6 +52,7 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
         pixel_error, small_window=small_window, large_window=large_window)
 
     plt.imshow(np.sum(pixel_score < normality_threshold, axis=0))
+    plt.colorbar()
 
     plt.tight_layout()
     if outfile is not None:

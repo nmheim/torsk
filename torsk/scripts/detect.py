@@ -8,7 +8,7 @@ import netCDF4 as nc
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from torsk.scripts.analyse import sort_filenames
+from torsk.scripts.prediction_performance import sort_filenames
 from torsk.data.utils import mackey_anomaly_sequence, normalize
 from torsk.anomaly import sliding_score
 from torsk import Params

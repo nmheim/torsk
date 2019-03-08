@@ -95,21 +95,21 @@ def sort_filenames(files, return_indices=False):
         return sorted_files
 
 
-@click.command("analyse", short_help="Plot IMED and create animation")
+@click.command("prediction-performance", short_help="Plot IMED and create animation")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
 @click.option("--save-video", is_flag=True, default=False,
-    help="saves created video at pred_data_nc.{pdf/mp4}")
-@click.option("--save-plots", is_flag=True, default=False,
-    help="saves created plots at pred_data_nc.{pdf/mp4}")
+    help="saves created video at pred_data_idx{idx}_nc.mp4")
+@click.option("--outfile", "-o", type=pathlib.Path, default=None,
+    help="save final plot in outfile path.")
 @click.option("--show/--no-show", is_flag=True, default=True,
-    help="show plots/video or not")
+    help="show plot/videos or not")
 @click.option("--cycle-length", "-c", default=None, type=int,
     help="manually set cycle length for trend/cycle based prediction."
          "If not set, this defaults to the value found in train_data_{...}.nc")
 @click.option("--ylogscale", default=False, is_flag=True)
 @click.option("--metric-log-idx", "-i", default=50, type=int,
     help="Prints metric (e.g. IMED) at given index.")
-def cli(pred_data_ncfiles, save_video, save_plots, show, cycle_length, ylogscale, metric_log_idx):
+def cli(pred_data_ncfiles, save_video, outfile, show, cycle_length, ylogscale, metric_log_idx):
 
     sns.set_style("whitegrid")
 
@@ -159,23 +159,12 @@ def cli(pred_data_ncfiles, save_video, save_plots, show, cycle_length, ylogscale
     labels, predictions = np.array(labels), np.array(predictions)
     esn_imed, cycle_imed = np.array(esn_imed), np.array(cycle_imed)
 
-    # fig, ax = plt.subplots(1,2)
-    # im = ax[0].imshow(cycle_imed, aspect="auto")
-    # plt.colorbar(im, ax=ax[0])
-    # im = ax[1].imshow(esn_imed, aspect="auto")
-    # plt.colorbar(im, ax=ax[1])
-    # plt.savefig("/home/niklas/erda_save/test.pdf")
-    # plt.close()
-
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
     if ylogscale:
         ax.set_yscale("log")
-    if save_plots:
-        directory = pred_data_nc.parent
-        fname = directory.name
-        directory = directory.as_posix()
-        plt.savefig(f"{directory}/{fname}.pdf")
+    if outfile is not None:
+        plt.savefig(outfile, transparent=True)
     if show:
-        plt.show() # show IMED plot
+        plt.show()
     else:
         plt.close()
