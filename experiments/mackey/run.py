@@ -1,41 +1,68 @@
+import sys
+import logging
+import pathlib
+
 import numpy as np
+import netCDF4 as nc
 import matplotlib.pyplot as plt
-import seaborn as sns
-import torch
-from tqdm import tqdm
 
 import torsk
-from torsk.models import ESN
-from torsk.data import MackeyDataset, SeqDataLoader
-from torsk.visualize import plot_mackey
+from torsk.data.utils import mackey_anomaly_sequence, normalize
+from torsk.visualize import animate_double_imshow
 
+np.random.seed(0)
 
-sns.set_style("whitegrid")
+params = torsk.Params()
+params.input_map_specs = [
+    {"type": "random_weights", "size": [1000], "input_scale": 1.}
+]
+params.spectral_radius = 1.5
+params.density = 0.05
+params.input_shape = [1, 1]
+params.train_length = 2200
+params.pred_length = 1000
+params.transient_length = 200
+params.dtype = "float64"
+params.reservoir_representation = "dense"
+params.backend = "numpy"
+params.train_method = "pinv_svd"
+params.tikhonov_beta = 2.0
+params.debug = False
+params.imed_loss = False
+params.anomaly_start = 2400
+params.anomaly_step = 300
+params.update(sys.argv[1:])
 
-params = torsk.Params("params.json")
-train_length = params.train_length
-pred_length = params.pred_length
-transient_length = params.transient_length
-beta = params.tikhonov_beta
-method = params.train_method
-print(params)
+logger = logging.getLogger(__file__)
+level = "DEBUG" if params.debug else "INFO"
+logging.basicConfig(level=level)
+logging.getLogger("matplotlib").setLevel("INFO")
 
-dataset = MackeyDataset(train_length, pred_length, simulation_steps=3000)
-loader = iter(SeqDataLoader(dataset, batch_size=1, shuffle=True))
+if params.backend == "numpy":
+    logger.info("Running with NUMPY backend")
+    from torsk.data.numpy_dataset import NumpyImageDataset as ImageDataset
+    from torsk.models.numpy_esn import NumpyESN as ESN
+else:
+    logger.info("Running with TORCH backend")
+    from torsk.data.torch_dataset import TorchImageDataset as ImageDataset
+    from torsk.models.torch_esn import TorchESN as ESN
 
+logger.info("Building model ...")
 model = ESN(params)
-model.eval()
 
-predictions, labels = [], []
-for i in tqdm(range(20)):
+mackey, _ = mackey_anomaly_sequence(
+    N=3700,
+    anomaly_start=params.anomaly_start,
+    anomaly_step=params.anomaly_step)
+mackey = normalize(mackey) * 2 - 1
+mackey = mackey[:, np.newaxis, np.newaxis]
+dataset = ImageDataset(mackey, params, scale_images=False)
 
-    model, outputs, pred_labels, _ = torsk.train_predict_esn(
-        model=model, loader=loader, params=params, outdir=".")
+logger.info("Training + predicting ...")
+model, outputs, pred_labels = torsk.train_predict_esn(
+    model, dataset, "mackey_anomaly_output",
+    steps=1, step_length=2)
 
-    predictions.append(outputs.squeeze().numpy())
-    labels.append(pred_labels.squeeze().numpy())
-
-predictions, labels = np.array(predictions), np.array(labels)
-
-plot_mackey(predictions, labels, weights=model.out.weight.numpy())
+plt.plot(pred_labels[:,0,0])
+plt.plot(outputs[:,0,0])
 plt.show()
