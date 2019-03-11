@@ -35,24 +35,34 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
     params = Params(
         json_path=pred_data_ncfiles[0].parent / f"idx{indices[0]}-params.json")
 
-    pixel_error = []
+    pixel_error, trivial_error = [], []
     for pred_data_nc in tqdm(pred_data_ncfiles, total=len(indices)):
         tqdm.write(pred_data_nc.as_posix())
         with nc.Dataset(pred_data_nc, "r") as src:
+            outputs = src["outputs"][:valid_pred_length]
+            labels = src["labels"][:valid_pred_length]
             
-            error_seq = np.abs(
-                src["outputs"][:valid_pred_length]
-                - src["labels"][:valid_pred_length])
+            error_seq = np.abs(outputs - labels)
             error = np.mean(error_seq, axis=0)
             pixel_error.append(error)
 
+            trivial_seq = np.abs(outputs - labels[0])
+            triv_err = np.mean(trivial_seq, axis=0)
+            trivial_error.append(triv_err)
+
     pixel_error = np.array(pixel_error)
+    trivial_error = np.array(trivial_error)
 
     pixel_score = sliding_score(
         pixel_error, small_window=small_window, large_window=large_window)
+    trivial_score = sliding_score(
+        trivial_error, small_window=small_window, large_window=large_window)
 
-    plt.imshow(np.sum(pixel_score < normality_threshold, axis=0))
-    plt.colorbar()
+    fig, ax = plt.subplots(1,2)
+    im = ax[0].imshow(np.sum(pixel_score < normality_threshold, axis=0))
+    plt.colorbar(im, ax=ax[0])
+    im = ax[1].imshow(np.sum(trivial_score < normality_threshold, axis=0))
+    plt.colorbar(im, ax=ax[1])
 
     plt.tight_layout()
     if outfile is not None:
