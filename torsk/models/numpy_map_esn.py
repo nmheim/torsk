@@ -30,6 +30,7 @@ def input_map(image, input_map_specs):
             _features = normalize(_features.reshape(-1)) * 2 - 1
         elif spec["type"] == "random_weights":
             _features = np.dot(spec["weight_ih"], image.reshape(-1))
+            _features += spec["bias_ih"]
             spec["dbg_size"] = spec["size"]
         else:
             raise ValueError(spec)
@@ -46,7 +47,10 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
             assert len(spec["size"]) == 1
             weight_ih = np.random.uniform(low=-1., high=1.,
                 size=[spec["size"][0], input_shape[0] * input_shape[1]])
+            bias_ih = np.random.uniform(low=-1., high=1.,
+                size=spec["size"])
             spec["weight_ih"] = weight_ih.astype(dtype)
+            spec["bias_ih"] = bias_ih.astype(dtype)
     return input_map_specs
 
 

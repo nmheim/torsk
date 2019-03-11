@@ -105,12 +105,11 @@ def mackey_sequence(b=None, N=3000):
     return y
 
 
-def mackey_anomaly_sequence(N=3000, anomaly_start=2000, anomaly_step=200):
+def mackey_anomaly_sequence(N=3000, anomaly_start=2000, anomaly_step=200, delta=0.05):
     b = np.zeros(N) + 0.1
-    db = 0.05
     anomaly = np.zeros(N)
     for i in range(anomaly_start, N, anomaly_step):
-        b[i:i+50] += db
+        b[i:i+50] += delta
         anomaly[i:i+50] = 1
     return mackey_sequence(b, N=N), anomaly
 
