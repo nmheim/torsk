@@ -80,7 +80,7 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
     ax[2].set_yscale("log")
 
     if mackey:
-        mackey_seq, anomaly = mackey_anomaly_sequence(
+        mackey_seq, anomaly = mackey_anomaly_sequence(N=indices[-1]+params.train_length,
             anomaly_start=params.anomaly_start, anomaly_step=params.anomaly_step)
         mackey_seq = normalize(mackey_seq)
 
