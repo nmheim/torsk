@@ -108,9 +108,9 @@ def cli(
     ax[2].plot(indices[large_window:], cycle_score, label="cycle")
     ax[2].plot(
         indices[large_window:], np.zeros_like(trivial_score)+prob_normality,
-        label=r"$\Sigma={prob_normality$", color="black")
+        label=rf"$\Sigma={prob_normality}$", color="black")
     ax[2].set_yscale("log")
-    ax[1].legend()
+    ax[2].legend()
 
     if mackey:
         mackey_seq, anomaly = mackey_anomaly_sequence(N=indices[-1]+params.train_length,
@@ -121,6 +121,7 @@ def cli(
         ax[3].plot(anomaly[params.train_length:], label="anomaly label")
         ax[3].legend()
 
+    for a in ax: a.set_xlim(0, len(indices))
     plt.tight_layout()
 
     if outfile is not None:

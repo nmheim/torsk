@@ -59,10 +59,12 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
         trivial_error, small_window=small_window, large_window=large_window)
 
     fig, ax = plt.subplots(1,2)
-    im = ax[0].imshow(np.sum(pixel_score < normality_threshold, axis=0))
-    plt.colorbar(im, ax=ax[0])
-    im = ax[1].imshow(np.sum(trivial_score < normality_threshold, axis=0))
-    plt.colorbar(im, ax=ax[1])
+    pixel_count = np.sum(pixel_score < normality_threshold, axis=0)
+    trivial_count = np.sum(trivial_score < normality_threshold, axis=0)
+    im = ax[0].imshow(pixel_count[::-1])
+    plt.colorbar(im, ax=ax[0], fraction=0.046, pad=0.04)
+    im = ax[1].imshow(trivial_count[::-1])
+    plt.colorbar(im, ax=ax[1], fraction=0.046, pad=0.04)
 
     plt.tight_layout()
     if outfile is not None:
