@@ -40,8 +40,6 @@ def cli(
     params = Params(
         json_path=pred_data_ncfiles[0].parent / f"idx{indices[0]}-params.json")
 
-    fig, ax = plt.subplots(4, 1, sharex=True)
-
     cmap = plt.get_cmap("inferno")
     colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
 
@@ -74,15 +72,22 @@ def cli(
     esn_error = np.array(esn_error)
     all_labels = np.array(all_labels)
     all_preds = np.array(all_preds)
-    # cycle_error = np.array(cycle_error)
 
     esn_score = sliding_score(
         esn_error, small_window=small_window, large_window=large_window)
+    esn_score = np.concatenate(
+        [np.ones((large_window,) + esn_error.shape[1:]), esn_score])
 
-    ax[0].imshow(all_labels.T, aspect="auto")
-    ax[1].imshow(all_preds.T, aspect="auto")
-    ax[2].imshow(esn_error.T, aspect="auto")
-    ax[3].imshow(esn_score.T, aspect="auto")
+    fig, ax = plt.subplots(4, 1, sharex=True)
+
+    im = ax[0].imshow(all_labels.T, aspect="auto")
+    plt.colorbar(im, ax=ax[0])
+    im = ax[1].imshow(all_preds.T, aspect="auto")
+    plt.colorbar(im, ax=ax[1])
+    im = ax[2].imshow(esn_error.T, aspect="auto")
+    plt.colorbar(im, ax=ax[2])
+    im = ax[3].imshow(np.log10(esn_score.T), aspect="auto")
+    plt.colorbar(im, ax=ax[3])
 
     plt.tight_layout()
 
