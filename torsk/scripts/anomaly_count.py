@@ -46,7 +46,7 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
             error = np.mean(error_seq, axis=0)
             pixel_error.append(error)
 
-            trivial_seq = np.abs(outputs - labels[0])
+            trivial_seq = np.abs(labels - labels[0])
             triv_err = np.mean(trivial_seq, axis=0)
             trivial_error.append(triv_err)
 

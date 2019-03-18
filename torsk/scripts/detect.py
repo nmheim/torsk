@@ -65,10 +65,10 @@ def cli(
         with nc.Dataset(pred_data_nc, "r") as src:
             
             pred_imed = src["imed"][:valid_pred_length]
-            labels = src["labels"][valid_pred_length]
-            labels = np.tile(labels, (valid_pred_length, 1, 1))
+            labels = src["labels"][:valid_pred_length]
+            label0 = np.tile(labels[0], (valid_pred_length, 1, 1))
             outputs = src["outputs"][:valid_pred_length]
-            pred_trivial = imed_metric(outputs, labels)
+            pred_trivial = imed_metric(labels, label0)
 
             imed_error.append(np.mean(pred_imed))
             trivial_error.append(np.mean(pred_trivial))
