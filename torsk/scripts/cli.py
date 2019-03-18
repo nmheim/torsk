@@ -6,6 +6,7 @@ from torsk.scripts import animate
 from torsk.scripts import ncextract
 from torsk.scripts import prediction_performance
 from torsk.scripts import detect
+from torsk.scripts import detect_row
 from torsk.scripts import anomaly_count
 
 
@@ -21,6 +22,7 @@ cli.add_command(animate.cli)
 cli.add_command(ncextract.cli)
 cli.add_command(prediction_performance.cli)
 cli.add_command(detect.cli)
+cli.add_command(detect_row.cli)
 cli.add_command(anomaly_count.cli)
 
 
