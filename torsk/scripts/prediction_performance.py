@@ -38,15 +38,16 @@ def trivial_imed(labels):
 
 
 def imed_plot(esn_imed, cycle_imed, labels, figsize=None):
+    N = esn_imed.shape[0]
     mean_imed = esn_imed.mean(axis=0)
-    std_imed = esn_imed.std(axis=0)
+    std_imed = esn_imed.std(axis=0)/N
 
     mean_cycle_imed = cycle_imed.mean(axis=0)
-    std_cycle_imed = cycle_imed.std(axis=0)
+    std_cycle_imed = cycle_imed.std(axis=0)/N
 
     trivial_imeds = np.array([trivial_imed(l) for l in labels])
     mean_trivial_imed = trivial_imeds.mean(axis=0)
-    std_trivial_imed = trivial_imeds.std(axis=0)
+    std_trivial_imed = trivial_imeds.std(axis=0)/N
 
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     x = np.arange(mean_imed.shape[0])
@@ -109,13 +110,19 @@ def sort_filenames(files, return_indices=False):
 @click.option("--ylogscale", default=False, is_flag=True)
 @click.option("--metric-log-idx", "-i", default=50, type=int,
     help="Prints metric (e.g. IMED) at given index.")
-def cli(pred_data_ncfiles, save_video, outfile, show, cycle_length, ylogscale, metric_log_idx):
+@click.option("--only-first-n", "-n", type=int, default=None,
+    help="Evaluate only first n files (for testing)")
+def cli(
+    pred_data_ncfiles, save_video, outfile, show, cycle_length, ylogscale,
+    metric_log_idx, only_first_n):
 
     sns.set_style("whitegrid")
 
     labels, predictions = [], []
     esn_imed, cycle_imed = [], []
     pred_data_ncfiles = sort_filenames(pred_data_ncfiles)
+    if only_first_n is not None:
+        pred_data_ncfiles = pred_data_ncfiles[:only_first_n]
     
     # read preds/labels and create videos
     for ii, pred_data_nc in tqdm(enumerate(pred_data_ncfiles), total=len(pred_data_ncfiles)):
