@@ -25,6 +25,7 @@ from torsk import Params
 @click.option("--small-window", "-s", type=int, default=3,
     help="Small normality score window")
 @click.option("--normality-threshold", "-n", type=float, default=1e-2)
+@click.option("--mask-file", type=pathlib.Path, default=None)
 def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small_window, normality_threshold):
 
     sns.set_style("whitegrid")
@@ -57,6 +58,10 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
         pixel_error, small_window=small_window, large_window=large_window)
     trivial_score = sliding_score(
         trivial_error, small_window=small_window, large_window=large_window)
+    if mask_file is not None:
+        mask = np.load(mask_file)
+        pixel_score = np.ma.masked_array(pixel_score, mask)
+        trivial_score = np.ma.masked_array(trivial_score, mask)
 
     fig, ax = plt.subplots(1,2)
     pixel_count = np.sum(pixel_score < normality_threshold, axis=0)
