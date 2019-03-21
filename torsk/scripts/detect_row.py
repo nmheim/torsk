@@ -33,7 +33,7 @@ def cli(
     large_window, small_window, row):
 
     sns.set_style("whitegrid")
-    sns.set_context("notebook")
+    sns.set_context("paper")
 
     pred_data_ncfiles, indices = sort_filenames(
         pred_data_ncfiles, return_indices=True)
@@ -43,19 +43,20 @@ def cli(
     cmap = plt.get_cmap("inferno")
     colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
 
-    esn_error, all_labels, all_preds = [], [], []
+    esn_error, trivial_error, all_labels, all_preds = [], [], [], []
     for pred_data_nc, idx in tqdm(zip(pred_data_ncfiles, indices), total=len(indices)):
         tqdm.write(pred_data_nc.as_posix())
 
         with nc.Dataset(pred_data_nc, "r") as src:
             
             labels = src["labels"][:valid_pred_length, row]
-            label0 = np.tile(labels[0], (valid_pred_length, 1, 1))
+            label0 = np.tile(labels[0], (valid_pred_length, 1))
             outputs = src["outputs"][:valid_pred_length, row]
             pred_trivial = np.abs(labels - label0)
             pred_esn = np.abs(outputs - labels)
 
             esn_error.append(pred_esn.mean(axis=0)) # TODO: or just last frame instead of mean???
+            trivial_error.append(pred_trivial.mean(axis=0))
             all_labels.append(labels[-1])
             all_preds.append(outputs[-1])
 
@@ -70,24 +71,31 @@ def cli(
 
 
     esn_error = np.array(esn_error)
+    trivial_error = np.array(trivial_error)
     all_labels = np.array(all_labels)
     all_preds = np.array(all_preds)
 
-    esn_score = sliding_score(
-        esn_error, small_window=small_window, large_window=large_window)
-    esn_score = np.concatenate(
-        [np.ones((large_window,) + esn_error.shape[1:]), esn_score])
+    # esn_score = sliding_score(
+    #     esn_error, small_window=small_window, large_window=large_window)
+    # esn_score = np.concatenate(
+    #     [np.ones((large_window,) + esn_error.shape[1:]), esn_score])
 
     fig, ax = plt.subplots(4, 1, sharex=True)
 
     im = ax[0].imshow(all_labels.T, aspect="auto")
     plt.colorbar(im, ax=ax[0])
+    ax[0].set_ylabel("Truth")
     im = ax[1].imshow(all_preds.T, aspect="auto")
     plt.colorbar(im, ax=ax[1])
+    ax[1].set_ylabel("Prediction")
     im = ax[2].imshow(esn_error.T, aspect="auto")
     plt.colorbar(im, ax=ax[2])
-    im = ax[3].imshow(np.log10(esn_score.T), aspect="auto")
+    ax[2].set_ylabel("ESN Error")
+    im = ax[3].imshow(trivial_error.T, aspect="auto")
     plt.colorbar(im, ax=ax[3])
+    ax[3].set_ylabel("Trivial Error")
+    # im = ax[4].imshow(np.log10(esn_score.T), aspect="auto")
+    # plt.colorbar(im, ax=ax[4])
 
     plt.tight_layout()
 
