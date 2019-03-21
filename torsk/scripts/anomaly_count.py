@@ -26,7 +26,9 @@ from torsk import Params
     help="Small normality score window")
 @click.option("--normality-threshold", "-n", type=float, default=1e-2)
 @click.option("--mask-file", type=pathlib.Path, default=None)
-def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small_window, normality_threshold):
+def cli(
+    pred_data_ncfiles, outfile, show, valid_pred_length, large_window,
+    small_window, normality_threshold, mask_file):
 
     sns.set_style("whitegrid")
     sns.set_context("notebook")
@@ -58,18 +60,22 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window, small
         pixel_error, small_window=small_window, large_window=large_window)
     trivial_score = sliding_score(
         trivial_error, small_window=small_window, large_window=large_window)
-    if mask_file is not None:
-        mask = np.load(mask_file)
-        pixel_score = np.ma.masked_array(pixel_score, mask)
-        trivial_score = np.ma.masked_array(trivial_score, mask)
 
-    fig, ax = plt.subplots(1,2)
+    fig, ax = plt.subplots(1, 2, figsize=(6, 3))
     pixel_count = np.sum(pixel_score < normality_threshold, axis=0)
     trivial_count = np.sum(trivial_score < normality_threshold, axis=0)
+
+    if mask_file is not None:
+        mask = np.load(mask_file)
+        pixel_count = np.ma.masked_array(pixel_count, mask=mask)
+        trivial_count = np.ma.masked_array(trivial_count, mask=mask)
+
     im = ax[0].imshow(pixel_count[::-1])
     plt.colorbar(im, ax=ax[0], fraction=0.046, pad=0.04)
+    im = ax[0].imshow(pixel_count[::-1].mask, alpha=0.1)
     im = ax[1].imshow(trivial_count[::-1])
     plt.colorbar(im, ax=ax[1], fraction=0.046, pad=0.04)
+    im = ax[1].imshow(trivial_count[::-1].mask, alpha=0.1)
 
     plt.tight_layout()
     if outfile is not None:
