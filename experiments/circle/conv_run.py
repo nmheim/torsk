@@ -57,7 +57,7 @@ params.reservoir_representation = "sparse"
 params.backend = "numpy"
 params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
-params.imed_loss = False
+params.imed_loss = True
 params.debug = False
 
 params.anomaly_start = 2300
@@ -102,4 +102,4 @@ model = ESN(params)
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
     model, dataset, "/home/niklas/erda_save/mackey_conv_2grad_2dct_anomaly/",
-    steps=200, step_length=5, step_start=790)
+    steps=1000, step_length=1, step_start=799)
