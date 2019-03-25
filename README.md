@@ -1,7 +1,11 @@
-# TOTO (WIP)!
+# TORSK (WIP)!
 
 An Echo State Network (ESN) for chaotic time series prediction and anomaly
 detection.
+
+This is a new implementation of the framework used in my [thesis](https://github.com/nmheim/thesis).
+If you are looking for the legacy `torsk` that was used there you 
+can find it [here](https://github.com/nmheim/torsk_archived)
 
 
 ## Backend
@@ -12,7 +16,7 @@ corresponding Numpy/Torch classes. The circle script shows an example usage
 which makes it possible to run the prediction with different backends like
 this:
 
-    python experiments/circle/run.py backend \"torch\" dtype \"float64\"
+    python experiments/circle/run.py backend torch dtype float64
 
 The same works for switching between `float32` and `float64`
 
