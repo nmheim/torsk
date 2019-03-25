@@ -37,7 +37,7 @@ def trivial_imed(labels):
     return trivial_imed
 
 
-def imed_plot(esn_imed, cycle_imed, labels, figsize=None):
+def imed_plot(esn_imed, cycle_imed, labels):
     N = esn_imed.shape[0]
     mean_imed = esn_imed.mean(axis=0)
     std_imed = esn_imed.std(axis=0)/N
@@ -49,7 +49,7 @@ def imed_plot(esn_imed, cycle_imed, labels, figsize=None):
     mean_trivial_imed = trivial_imeds.mean(axis=0)
     std_trivial_imed = trivial_imeds.std(axis=0)/N
 
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    fig, ax = plt.subplots(1, 1)
     x = np.arange(mean_imed.shape[0])
 
     ax.plot(mean_cycle_imed, label="Cycle-based")
@@ -117,6 +117,7 @@ def cli(
     metric_log_idx, only_first_n):
 
     sns.set_style("whitegrid")
+    sns.set_context("talk")
 
     labels, predictions = [], []
     esn_imed, cycle_imed = [], []
@@ -167,6 +168,7 @@ def cli(
     esn_imed, cycle_imed = np.array(esn_imed), np.array(cycle_imed)
 
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
+    plt.tight_layout()
     if ylogscale:
         ax.set_yscale("log")
     if outfile is not None:
