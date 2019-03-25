@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(__file__), 'requirements.txt')) as fp:
 
 setup(
     name='torsk',
-    description='ESN implementation in PyTorch',
+    description='Anomaly Detection in Chaotic Time Series based on an ESN',
     author='Niklas Heim',
     author_email='heim.niklas@gmail.com',
     packages=find_packages(),
