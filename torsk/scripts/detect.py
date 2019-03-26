@@ -48,12 +48,12 @@ def cli(
         json_path=pred_data_ncfiles[0].parent / f"idx{indices[0]}-params.json")
 
     nr_plots = 4 if mackey else 3
-    figsize = (8,6) if mackey else (6,6)
+    figsize = (8,6) if mackey else (5,6)
     fig, ax = plt.subplots(nr_plots, 1, sharex=True, figsize=figsize)
 
-    ax[0].set_title(r"IMED$(\mathbf{y}, \mathbf{d})$")
-    ax[1].set_title("Mean IMED/EUCD")
-    ax[2].set_title(f"Normality Score. LW:{large_window} SW:{small_window}")
+    # ax[0].set_title(r"IMED$(\mathbf{y}, \mathbf{d})$")
+    # ax[1].set_title("Mean IMED/EUCD")
+    # ax[2].set_title(f"Normality Score. LW:{large_window} SW:{small_window}")
 
     cmap = plt.get_cmap("inferno")
     colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
@@ -70,8 +70,8 @@ def cli(
             outputs = src["outputs"][:valid_pred_length]
             pred_trivial = imed_metric(labels, label0)
 
-            imed_error.append(np.mean(pred_imed))
-            trivial_error.append(np.mean(pred_trivial))
+            imed_error.append(pred_imed[-1])
+            trivial_error.append(pred_trivial[-1])
 
             if  idx % pred_plot_step == 0:
                 x = np.arange(idx, idx + valid_pred_length)
@@ -84,7 +84,7 @@ def cli(
                 training_Ftxx, cycle_length=cycle_length, pred_length=labels.shape[0])
             cycle_imed = imed_metric(cpred, labels)
 
-            cycle_error.append(np.mean(cycle_imed))
+            cycle_error.append(cycle_imed[-1])
 
 
     imed_error = np.array(imed_error)
@@ -98,28 +98,44 @@ def cli(
     cycle_score = sliding_score(
         cycle_error, small_window=small_window, large_window=large_window)
 
-    ax[1].plot(indices, imed_error, label="ESN")
-    ax[1].plot(indices, trivial_error, label="trivial")
-    ax[1].plot(indices, cycle_error, label="cycle")
+    shifted_indices = np.array(indices) + valid_pred_length
+
+    ax[1].plot(shifted_indices, imed_error, label="ESN")
+    ax[1].plot(shifted_indices, trivial_error, label="trivial")
+    ax[1].plot(shifted_indices, cycle_error, label="cycle")
     ax[1].legend()
 
-    ax[2].plot(indices[large_window:], imed_score, label="ESN")
-    ax[2].plot(indices[large_window:], trivial_score, label="trivial")
-    ax[2].plot(indices[large_window:], cycle_score, label="cycle")
+    ax[2].plot(shifted_indices[large_window:], imed_score, label="ESN")
+    ax[2].plot(shifted_indices[large_window:], trivial_score, label="trivial")
+    ax[2].plot(shifted_indices[large_window:], cycle_score, label="cycle")
     ax[2].plot(
-        indices[large_window:], np.zeros_like(trivial_score)+prob_normality,
+        shifted_indices[large_window:], np.zeros_like(trivial_score)+prob_normality,
         label=rf"$\Sigma={prob_normality}$", color="black")
     ax[2].set_yscale("log")
     ax[2].legend()
+
+    ax[0].annotate('A', xy=(0.05, 0.8), xycoords='axes fraction',
+        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+    ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction',
+        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+    ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction',
+        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+
 
     if mackey:
         mackey_seq, anomaly = mackey_anomaly_sequence(N=indices[-1]+params.train_length,
             anomaly_start=params.anomaly_start, anomaly_step=params.anomaly_step)
         mackey_seq = normalize(mackey_seq)
 
+        length = anomaly[params.train_length:].shape[0]
         ax[3].plot(mackey_seq[params.train_length:], label="x-component")
-        ax[3].plot(anomaly[params.train_length:], label="anomaly label")
+        ax[3].fill_between(
+            np.arange(length), np.zeros(length), anomaly[params.train_length:],
+            color="grey", alpha=0.5, label="Anomaly")
         ax[3].legend()
+        ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction',
+            bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+
 
     for a in ax: a.set_xlim(0, len(indices))
     plt.tight_layout()
