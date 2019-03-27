@@ -108,7 +108,7 @@ def sort_filenames(files, return_indices=False):
     help="manually set cycle length for trend/cycle based prediction."
          "If not set, this defaults to the value found in train_data_{...}.nc")
 @click.option("--ylogscale", default=False, is_flag=True)
-@click.option("--metric-log-idx", "-i", default=50, type=int,
+@click.option("--metric-log-idx", "-i", default=25, type=int,
     help="Prints metric (e.g. IMED) at given index.")
 @click.option("--only-first-n", "-n", type=int, default=None,
     help="Evaluate only first n files (for testing)")
@@ -150,7 +150,7 @@ def cli(
 
         train_data_nc = pred_data_nc.as_posix().replace("pred_data", "train_data")
         with nc.Dataset(train_data_nc, "r") as src:
-            training_Ftxx = src["labels"][:]
+            training_Ftxx = src["labels"][-3*cycle_length:]
             if cycle_length is None:
                 cycle_length = src.cycle_length
             pred_length = labels[-1].shape[0]
