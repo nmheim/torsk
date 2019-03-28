@@ -120,12 +120,16 @@ def cli(
 
     labels, predictions = [], []
     esn_imed, cycle_imed = [], []
-    pred_data_ncfiles = sort_filenames(pred_data_ncfiles)
+    pred_data_ncfiles, indices = sort_filenames(pred_data_ncfiles, return_indices=True)
+
     if only_first_n is not None:
         pred_data_ncfiles = pred_data_ncfiles[:only_first_n]
+        indices = indices[:only_first_n]
+
+    print(indices)
     
-    # read preds/labels and create videos
-    for ii, pred_data_nc in tqdm(enumerate(pred_data_ncfiles), total=len(pred_data_ncfiles)):
+    for ii, (idx, pred_data_nc) in tqdm(
+            enumerate(zip(indices, pred_data_ncfiles)), total=len(pred_data_ncfiles)):
         assert "pred_data" in pred_data_nc.as_posix()
 
         with nc.Dataset(pred_data_nc, "r") as src:
