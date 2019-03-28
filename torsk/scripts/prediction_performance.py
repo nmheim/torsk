@@ -69,7 +69,7 @@ def imed_plot(esn_imed, cycle_imed, labels):
 
     ax.set_ylabel(r"Error")
     ax.set_xlabel("Time")
-    ax.legend()
+    ax.legend(loc="upper right")
 
     return fig, ax
 
