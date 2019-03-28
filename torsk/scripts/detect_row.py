@@ -22,10 +22,9 @@ from torsk import Params
     help="show plots/video or not")
 @click.option("--valid-pred-length", "-p", type=int, default=50,
     help="Pick IMED at this index as value for error sequence")
-@click.option("--cycle-length", "-c", type=int, default=122)
 @click.option("--row", "-r", type=int, required=True,
     help="Specifies row to pick from each frame")
-def cli(pred_data_ncfiles, outfile, show, valid_pred_length, cycle_length, row):
+def cli(pred_data_ncfiles, outfile, show, valid_pred_length, row):
 
     sns.set_style("whitegrid")
     sns.set_context("paper")

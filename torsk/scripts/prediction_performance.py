@@ -104,9 +104,6 @@ def sort_filenames(files, return_indices=False):
     help="save final plot in outfile path.")
 @click.option("--show/--no-show", is_flag=True, default=True,
     help="show plot/videos or not")
-@click.option("--cycle-length", "-c", default=None, type=int,
-    help="manually set cycle length for trend/cycle based prediction."
-         "If not set, this defaults to the value found in train_data_{...}.nc")
 @click.option("--ylogscale", default=False, is_flag=True)
 @click.option("--metric-log-idx", "-i", default=25, type=int,
     help="Prints metric (e.g. IMED) at given index.")
@@ -115,7 +112,7 @@ def sort_filenames(files, return_indices=False):
 @click.option("--only-first-n", "-n", type=int, default=None,
     help="Evaluate only first n files (for testing)")
 def cli(
-    pred_data_ncfiles, save_video, outfile, show, cycle_length, ylogscale,
+    pred_data_ncfiles, save_video, outfile, show, ylogscale,
     metric_log_idx, xlim, plot_label, only_first_n):
 
     sns.set_style("whitegrid")
@@ -150,21 +147,12 @@ def cli(
                 anim = animate_double_imshow(labels[ii], predictions[ii], title="ESN Pred.")
                 plt.show()
 
-        train_data_nc = pred_data_nc.as_posix().replace("pred_data", "train_data")
-        with nc.Dataset(train_data_nc, "r") as src:
-            training_Ftxx = src["labels"][-3*cycle_length:]
-            if cycle_length is None:
-                cycle_length = src.cycle_length
-            pred_length = labels[-1].shape[0]
+        cpred = np.load(pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy")
+        cycle_imed.append(imed_metric(cpred, labels[-1]))
 
-            cpred, _ = detrend.predict_from_trend_unscaled(
-                training_Ftxx, cycle_length, pred_length)
-
-            cycle_imed.append(imed_metric(cpred, labels[-1]))
-
-            if show:
-                anim = animate_double_imshow(labels[ii], cpred, title="Cycle Pred.")
-                plt.show()
+        if show:
+            anim = animate_double_imshow(labels[ii], cpred, title="Cycle Pred.")
+            plt.show()
 
     labels, predictions = np.array(labels), np.array(predictions)
     esn_imed, cycle_imed = np.array(esn_imed), np.array(cycle_imed)

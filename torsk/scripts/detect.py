@@ -23,8 +23,6 @@ from torsk import Params
     help="show plots/video or not")
 @click.option("--valid-pred-length", "-p", type=int, default=50,
     help="Pick IMED at this index as value for error sequence")
-@click.option("--cycle-length", "-c", type=int, default=100,
-    help="Cycle length for cycle-based prediction")
 @click.option("--large-window", "-l", type=int, default=100,
     help="Large normality score window")
 @click.option("--small-window", "-s", type=int, default=10,
@@ -36,7 +34,7 @@ from torsk import Params
 @click.option("--mackey", is_flag=True, default=False,
     help="Set this flag to plot an additional mackey-verification plot")
 def cli(
-    pred_data_ncfiles, outfile, show, valid_pred_length, cycle_length,
+    pred_data_ncfiles, outfile, show, valid_pred_length,
     large_window, small_window, pred_plot_step, prob_normality, mackey):
 
     sns.set_style("whitegrid")

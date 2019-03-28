@@ -25,12 +25,11 @@ from torsk import Params
     help="Large normality score window")
 @click.option("--small-window", "-s", type=int, default=3,
     help="Small normality score window")
-@click.option("--cycle-length", "-c", type=int, default=73)
 @click.option("--normality-threshold", "-n", type=float, default=1e-2)
 @click.option("--mask-file", type=pathlib.Path, default=None)
 def cli(
     pred_data_ncfiles, outfile, show, valid_pred_length, large_window,
-    small_window, cycle_length, normality_threshold, mask_file):
+    small_window, normality_threshold, mask_file):
 
     sns.set_style("whitegrid")
     sns.set_context("notebook")
