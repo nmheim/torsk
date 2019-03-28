@@ -23,12 +23,7 @@ np.random.seed(11)
 params = torsk.Params()
 params.input_map_specs = [
     {"type": "pixels", "size": [30, 30], "input_scale": 3.},
-    # {"type": "pixels", "size": [25, 25], "input_scale": 6.},
-    #{"type": "pixels", "size": [20, 20], "input_scale": 2.},
-    # {"type": "pixels", "size": [15, 15], "input_scale": 6.},
-    # {"type": "pixels", "size": [10, 10], "input_scale": 6.},
-    # {"type": "pixels", "size": [5, 5], "input_scale": 6.},
-    # {"type": "conv", "size": [1, 1], "kernel_type":"gauss", "input_scale": 1.},
+    {"type": "conv", "mode": "same", "size": [2, 2], "kernel_type":"gauss", "input_scale": 2.},
     {"type": "conv", "mode": "same", "size": [5, 5], "kernel_type":"gauss", "input_scale": 2.},
     {"type": "conv", "mode": "same", "size": [10,10], "kernel_type":"gauss", "input_scale": 1.5},
     {"type": "conv", "mode": "same", "size": [15, 15], "kernel_type":"gauss", "input_scale": 1.},
@@ -37,25 +32,21 @@ params.input_map_specs = [
     {"type": "conv", "mode": "same", "size": [ 5, 5], "kernel_type":"random", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},
-    # {"type": "conv", "size": [5, 5], "kernel_type":"random", "input_scale": 1.},
     {"type": "dct", "size": [15, 15], "input_scale": 1.},
-    {"type": "dct", "size": [15, 15], "input_scale": 1.},
-    # {"type": "random_weights", "size": [2000], "weight_scale": 1, "input_scale":0.05}
-    # {"type": "random_weights", "size": [30*30], "weight_scale": 1, "input_scale":0.025}    
     {"type": "gradient", "input_scale": 1.},
     {"type": "gradient", "input_scale": 1.}
 ]
 
-params.spectral_radius = 2.
-params.density = 0.01
+params.spectral_radius = 2.0
+params.density = 0.1
 params.input_shape = [30, 30]
 params.train_length = 2000
-params.pred_length = 50
+params.pred_length = 200
 params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "sparse"
 params.backend = "numpy"
-params.train_method = "pinv_svd"
+params.train_method = "pinv_lstsq"
 params.tikhonov_beta = 0.01
 params.imed_loss = True
 params.debug = False
@@ -101,5 +92,5 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "/home/niklas/erda_save/mackey_conv_2grad_2dct_anomaly/",
-    steps=1000, step_length=1, step_start=799)
+    model, dataset, "/home/niklas/erda_save/mackey_conv_2grad_1dct_d01_anomaly/",
+    steps=1000, step_length=1, step_start=0)
