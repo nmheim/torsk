@@ -67,7 +67,7 @@ def imed_plot(esn_imed, cycle_imed, labels):
     ax.plot(x, mean_imed, label="ESN")
     ax.fill_between(x, mean_imed+std_imed, mean_imed-std_imed, alpha=0.5)
 
-    ax.set_ylabel(r"IMED$(y_i, d_i)$")
+    ax.set_ylabel(r"Error")
     ax.set_xlabel("Time")
     ax.legend()
 
@@ -110,11 +110,13 @@ def sort_filenames(files, return_indices=False):
 @click.option("--ylogscale", default=False, is_flag=True)
 @click.option("--metric-log-idx", "-i", default=25, type=int,
     help="Prints metric (e.g. IMED) at given index.")
+@click.option("--xlim", default=None, type=int)
+@click.option("--plot-label", default=None, type=str)
 @click.option("--only-first-n", "-n", type=int, default=None,
     help="Evaluate only first n files (for testing)")
 def cli(
     pred_data_ncfiles, save_video, outfile, show, cycle_length, ylogscale,
-    metric_log_idx, only_first_n):
+    metric_log_idx, xlim, plot_label, only_first_n):
 
     sns.set_style("whitegrid")
     sns.set_context("talk")
@@ -168,6 +170,11 @@ def cli(
     esn_imed, cycle_imed = np.array(esn_imed), np.array(cycle_imed)
 
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
+    if xlim is not None:
+        ax.set_xlim(0, xlim)
+    if plot_label is not None:
+        ax.annotate(plot_label, xy=(0.05, 0.9), xycoords='axes fraction',
+            bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
     plt.tight_layout()
     if ylogscale:
         ax.set_yscale("log")
