@@ -126,8 +126,6 @@ def cli(
         pred_data_ncfiles = pred_data_ncfiles[:only_first_n]
         indices = indices[:only_first_n]
 
-    print(indices)
-    
     for ii, (idx, pred_data_nc) in tqdm(
             enumerate(zip(indices, pred_data_ncfiles)), total=len(pred_data_ncfiles)):
         assert "pred_data" in pred_data_nc.as_posix()
@@ -151,7 +149,7 @@ def cli(
                 anim = animate_double_imshow(labels[ii], predictions[ii], title="ESN Pred.")
                 plt.show()
 
-        cpred = np.load(pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy")
+        cpred = np.load(pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy")[:labels[0].shape[0]]
         cycle_imed.append(imed_metric(cpred, labels[-1]))
 
         if show:
