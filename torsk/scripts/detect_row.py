@@ -55,13 +55,9 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, cycle_length, row):
             all_labels.append(labels[-1])
             all_preds.append(outputs[-1])
 
-        train_data_nc = pred_data_nc.parent / f"train_data_idx{idx}.nc"
-        with nc.Dataset(train_data_nc, "r") as src:
-            training_Ftxx = src["labels"][:]
-            cpred, _ = detrend.predict_from_trend_unscaled(
-                training_Ftxx, cycle_length=cycle_length, pred_length=labels.shape[0])
-            pred_cycle = np.abs(cpred[:,row] - labels)
-            cycle_error.append(pred_cycle.mean(axis=0))
+        cpred = np.load(pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy")[:valid_pred_length]
+        pred_cycle = np.abs(cpred[:,row] - labels)
+        cycle_error.append(pred_cycle.mean(axis=0))
 
 
     esn_error = np.array(esn_error)
@@ -88,8 +84,15 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, cycle_length, row):
     im = ax[3].imshow(cycle_error.T, aspect="auto")
     plt.colorbar(im, ax=ax[3])
     ax[3].set_ylabel("Cycle Error")
-    # im = ax[4].imshow(np.log10(esn_score.T), aspect="auto")
-    # plt.colorbar(im, ax=ax[4])
+
+    ax[0].annotate('A', xy=(0.05, 0.8), xycoords='axes fraction',
+        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+    ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction',
+        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+    ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction',
+        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+    ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction',
+        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
 
     plt.tight_layout()
 

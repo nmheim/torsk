@@ -12,11 +12,16 @@ from torsk import Params
 
 @click.command("cycle-predict", short_help="Find anomalies in multiple predicition runs")
 @click.argument("train_data_ncfiles", nargs=-1, type=pathlib.Path)
-@click.option("--cycle-length", "-c", type=int, default=100,
+@click.option("--cycle-length", "-c", type=int, default=73,
     help="Cycle length for cycle-based prediction")
 @click.option("--pred-length", "-p", type=int, default=100,
     help="Prediction length for cycle-based prediction")
-def cli(train_data_ncfiles, cycle_length, pred_length):
+@click.option("--train-length", "-t", type=int, default=730,
+    help="Train length for cycle-based prediction. Must be mulitple of cycle!")
+def cli(train_data_ncfiles, cycle_length, pred_length, train_length):
+
+    if train_length % cycle_length != 0:
+        raise ValueError("Train length must be mulitple of cycle length.")
 
     train_data_ncfiles, indices = sort_filenames(
         train_data_ncfiles, return_indices=True)
@@ -25,7 +30,7 @@ def cli(train_data_ncfiles, cycle_length, pred_length):
 
     for train_data_nc, idx in tqdm(zip(train_data_ncfiles, indices), total=len(indices)):
         with nc.Dataset(train_data_nc, "r") as src:
-            training_Ftxx = src["labels"][:]
+            training_Ftxx = src["labels"][-train_length:]
             cpred, _ = detrend.predict_from_trend_unscaled(
                 training_Ftxx, cycle_length=cycle_length, pred_length=pred_length)
             outfile = train_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
