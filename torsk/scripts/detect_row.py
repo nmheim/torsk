@@ -22,15 +22,10 @@ from torsk import Params
     help="show plots/video or not")
 @click.option("--valid-pred-length", "-p", type=int, default=50,
     help="Pick IMED at this index as value for error sequence")
-@click.option("--large-window", "-l", type=int, default=100,
-    help="Large normality score window")
-@click.option("--small-window", "-s", type=int, default=10,
-    help="Small normality score window")
+@click.option("--cycle-length", "-c", type=int, default=122)
 @click.option("--row", "-r", type=int, required=True,
     help="Specifies row to pick from each frame")
-def cli(
-    pred_data_ncfiles, outfile, show, valid_pred_length,
-    large_window, small_window, row):
+def cli(pred_data_ncfiles, outfile, show, valid_pred_length, cycle_length, row):
 
     sns.set_style("whitegrid")
     sns.set_context("paper")
@@ -43,35 +38,34 @@ def cli(
     cmap = plt.get_cmap("inferno")
     colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
 
-    esn_error, trivial_error, all_labels, all_preds = [], [], [], []
+    esn_error, cycle_error, all_labels, all_preds = [], [], [], []
     for pred_data_nc, idx in tqdm(zip(pred_data_ncfiles, indices), total=len(indices)):
         tqdm.write(pred_data_nc.as_posix())
 
         with nc.Dataset(pred_data_nc, "r") as src:
             
             labels = src["labels"][:valid_pred_length, row]
-            label0 = np.tile(labels[0], (valid_pred_length, 1))
             outputs = src["outputs"][:valid_pred_length, row]
-            pred_trivial = np.abs(labels - label0)
+            # label0 = np.tile(labels[0], (valid_pred_length, 1))
+            # pred_trivial = np.abs(labels - label0)
             pred_esn = np.abs(outputs - labels)
 
             esn_error.append(pred_esn.mean(axis=0)) # TODO: or just last frame instead of mean???
-            trivial_error.append(pred_trivial.mean(axis=0))
+            # trivial_error.append(pred_trivial.mean(axis=0))
             all_labels.append(labels[-1])
             all_preds.append(outputs[-1])
 
-        # train_data_nc = pred_data_nc.parent / f"train_data_idx{idx}.nc"
-        # with nc.Dataset(train_data_nc, "r") as src:
-        #     training_Ftxx = src["labels"][:]
-        #     cpred, _ = detrend.predict_from_trend_unscaled(
-        #         training_Ftxx, cycle_length=cycle_length, pred_length=labels.shape[0])
-        #     cycle_esn = esn_metric(cpred, labels)
-
-        #     cycle_error.append(np.mean(cycle_esn))
+        train_data_nc = pred_data_nc.parent / f"train_data_idx{idx}.nc"
+        with nc.Dataset(train_data_nc, "r") as src:
+            training_Ftxx = src["labels"][:]
+            cpred, _ = detrend.predict_from_trend_unscaled(
+                training_Ftxx, cycle_length=cycle_length, pred_length=labels.shape[0])
+            pred_cycle = np.abs(cpred[:,row] - labels)
+            cycle_error.append(pred_cycle.mean(axis=0))
 
 
     esn_error = np.array(esn_error)
-    trivial_error = np.array(trivial_error)
+    cycle_error = np.array(cycle_error)
     all_labels = np.array(all_labels)
     all_preds = np.array(all_preds)
 
@@ -91,9 +85,9 @@ def cli(
     im = ax[2].imshow(esn_error.T, aspect="auto")
     plt.colorbar(im, ax=ax[2])
     ax[2].set_ylabel("ESN Error")
-    im = ax[3].imshow(trivial_error.T, aspect="auto")
+    im = ax[3].imshow(cycle_error.T, aspect="auto")
     plt.colorbar(im, ax=ax[3])
-    ax[3].set_ylabel("Trivial Error")
+    ax[3].set_ylabel("Cycle Error")
     # im = ax[4].imshow(np.log10(esn_score.T), aspect="auto")
     # plt.colorbar(im, ax=ax[4])
 

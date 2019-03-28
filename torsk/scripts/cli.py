@@ -8,6 +8,7 @@ from torsk.scripts import prediction_performance
 from torsk.scripts import detect
 from torsk.scripts import detect_row
 from torsk.scripts import anomaly_count
+from torsk.scripts import cycle_predict
 
 
 @click.group('torsk')
@@ -24,6 +25,7 @@ cli.add_command(prediction_performance.cli)
 cli.add_command(detect.cli)
 cli.add_command(detect_row.cli)
 cli.add_command(anomaly_count.cli)
+cli.add_command(cycle_predict.cli)
 
 
 if __name__ == "__main__":
