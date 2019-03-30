@@ -11,9 +11,7 @@ can find it [here](https://github.com/nmheim/torsk_archived)
 
 Prediction of a chaotically moving Gaussian blob. The trajectory of the maximum
 governed by the Mackey-Glass time series in the x-dimension and a sine in the
-y-dimension.
-
-![chaotic-blob](https://sid.erda.dk/share_redirect/eosH8APA8K)
+y-dimension. [Link to animation](https://sid.erda.dk/share_redirect/eosH8APA8K)
 
 ## Backend
 
