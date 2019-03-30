@@ -1,23 +1,10 @@
 import pathlib
-from itertools import cycle
-
 import click
-from tqdm import tqdm
-import numpy as np
-import netCDF4 as nc
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from torsk.scripts.prediction_performance import sort_filenames
-from torsk.data.utils import mackey_anomaly_sequence, normalize
-from torsk.data import detrend
-from torsk.anomaly import sliding_score
-from torsk import Params
 
 
 @click.command("detect-row", short_help="Find anomalies in multiple predicition runs")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
-@click.option("--outfile", "-o",  type=pathlib.Path, default=None, help="saves created plot")
+@click.option("--outfile", "-o", type=pathlib.Path, default=None, help="saves created plot")
 @click.option("--show/--no-show", is_flag=True, default=True,
     help="show plots/video or not")
 @click.option("--valid-pred-length", "-p", type=int, default=50,
@@ -25,49 +12,44 @@ from torsk import Params
 @click.option("--row", "-r", type=int, required=True,
     help="Specifies row to pick from each frame")
 def cli(pred_data_ncfiles, outfile, show, valid_pred_length, row):
+    from tqdm import tqdm
+    import numpy as np
+    import netCDF4 as nc
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    from torsk.scripts.pred_perf import sort_filenames
 
     sns.set_style("whitegrid")
     sns.set_context("paper")
 
     pred_data_ncfiles, indices = sort_filenames(
         pred_data_ncfiles, return_indices=True)
-    params = Params(
-        json_path=pred_data_ncfiles[0].parent / f"idx{indices[0]}-params.json")
-
-    cmap = plt.get_cmap("inferno")
-    colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
 
     esn_error, cycle_error, all_labels, all_preds = [], [], [], []
     for pred_data_nc, idx in tqdm(zip(pred_data_ncfiles, indices), total=len(indices)):
         tqdm.write(pred_data_nc.as_posix())
 
         with nc.Dataset(pred_data_nc, "r") as src:
-            
+
             labels = src["labels"][:valid_pred_length, row]
             outputs = src["outputs"][:valid_pred_length, row]
-            # label0 = np.tile(labels[0], (valid_pred_length, 1))
-            # pred_trivial = np.abs(labels - label0)
             pred_esn = np.abs(outputs - labels)
 
-            esn_error.append(pred_esn.mean(axis=0)) # TODO: or just last frame instead of mean???
-            # trivial_error.append(pred_trivial.mean(axis=0))
+            esn_error.append(pred_esn[-1])
             all_labels.append(labels[-1])
             all_preds.append(outputs[-1])
 
-        cpred = np.load(pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy")[:valid_pred_length]
-        pred_cycle = np.abs(cpred[:,row] - labels)
+        cycle_data_nc = pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
+        cpred = np.load(cycle_data_nc)[:valid_pred_length]
+        pred_cycle = np.abs(cpred[:, row] - labels)
         cycle_error.append(pred_cycle.mean(axis=0))
-
 
     esn_error = np.array(esn_error)
     cycle_error = np.array(cycle_error)
     all_labels = np.array(all_labels)
     all_preds = np.array(all_preds)
 
-    # esn_score = sliding_score(
-    #     esn_error, small_window=small_window, large_window=large_window)
-    # esn_score = np.concatenate(
-    #     [np.ones((large_window,) + esn_error.shape[1:]), esn_score])
 
     fig, ax = plt.subplots(4, 1, sharex=True)
 
@@ -84,14 +66,11 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, row):
     plt.colorbar(im, ax=ax[3])
     ax[3].set_ylabel("Cycle Error")
 
-    ax[0].annotate('A', xy=(0.05, 0.8), xycoords='axes fraction',
-        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
-    ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction',
-        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
-    ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction',
-        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
-    ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction',
-        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+    bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 2}
+    ax[0].annotate('A', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+    ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+    ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+    ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
 
     plt.tight_layout()
 

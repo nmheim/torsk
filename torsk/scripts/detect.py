@@ -1,24 +1,10 @@
 import pathlib
-from itertools import cycle
-
 import click
-from tqdm import tqdm
-import numpy as np
-import netCDF4 as nc
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from torsk.scripts.prediction_performance import sort_filenames
-from torsk.data.utils import mackey_anomaly_sequence, normalize
-from torsk.data import detrend
-from torsk.imed import imed_metric
-from torsk.anomaly import sliding_score
-from torsk import Params
 
 
 @click.command("detect", short_help="Find anomalies in multiple predicition runs")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
-@click.option("--outfile", "-o",  type=pathlib.Path, default=None, help="saves created plot")
+@click.option("--outfile", "-o", type=pathlib.Path, default=None, help="saves created plot")
 @click.option("--show/--no-show", is_flag=True, default=True,
     help="show plots/video or not")
 @click.option("--valid-pred-length", "-p", type=int, default=50,
@@ -33,9 +19,20 @@ from torsk import Params
     help="Probability of normality")
 @click.option("--mackey", is_flag=True, default=False,
     help="Set this flag to plot an additional mackey-verification plot")
-def cli(
-    pred_data_ncfiles, outfile, show, valid_pred_length,
-    large_window, small_window, pred_plot_step, prob_normality, mackey):
+def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
+        large_window, small_window, pred_plot_step, prob_normality, mackey):
+    from itertools import cycle
+    from tqdm import tqdm
+    import numpy as np
+    import netCDF4 as nc
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    from torsk.scripts.pred_perf import sort_filenames
+    from torsk.data.utils import mackey_anomaly_sequence, normalize
+    from torsk.imed import imed_metric
+    from torsk.anomaly import sliding_score
+    from torsk import Params
 
     sns.set_style("whitegrid")
     sns.set_context("notebook")
@@ -46,7 +43,7 @@ def cli(
         json_path=pred_data_ncfiles[0].parent / f"idx{indices[0]}-params.json")
 
     nr_plots = 4 if mackey else 3
-    figsize = (8,6) if mackey else (8,5)
+    figsize = (8, 6) if mackey else (8, 5)
     fig, ax = plt.subplots(nr_plots, 1, sharex=True, figsize=figsize)
 
     # ax[0].set_title(r"IMED$(\mathbf{y}, \mathbf{d})$")
@@ -61,24 +58,23 @@ def cli(
         tqdm.write(pred_data_nc.as_posix())
 
         with nc.Dataset(pred_data_nc, "r") as src:
-            
+
             pred_imed = src["imed"][:valid_pred_length]
             labels = src["labels"][:valid_pred_length]
             label0 = np.tile(labels[0], (valid_pred_length, 1, 1))
-            outputs = src["outputs"][:valid_pred_length]
             pred_trivial = imed_metric(labels, label0)
 
             imed_error.append(pred_imed[-1])
             trivial_error.append(pred_trivial[-1])
 
-            if  idx % pred_plot_step == 0:
+            if idx % pred_plot_step == 0:
                 x = np.arange(idx, idx + valid_pred_length)
-                ax[0].plot(x, pred_imed, color=next(colors)) 
+                ax[0].plot(x, pred_imed, color=next(colors))
 
-        cpred = np.load(pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy")[:valid_pred_length]
+        cycle_data_nc = pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
+        cpred = np.load(cycle_data_nc)[:valid_pred_length]
         cycle_imed = imed_metric(cpred, labels)
         cycle_error.append(cycle_imed[-1])
-
 
     imed_error = np.array(imed_error)
     trivial_error = np.array(trivial_error)
@@ -102,22 +98,21 @@ def cli(
     ax[2].plot(shifted_indices[large_window:], trivial_score, label="trivial")
     ax[2].plot(shifted_indices[large_window:], cycle_score, label="cycle")
     ax[2].plot(
-        indices, np.zeros_like(indices)+prob_normality,
+        indices, np.zeros_like(indices) + prob_normality,
         label=rf"$\Sigma={prob_normality}$", color="black")
     ax[2].set_yscale("log")
     ax[2].legend(loc="lower left")
 
-    ax[0].annotate('A', xy=(0.95, 0.8), xycoords='axes fraction',
-        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
-    ax[1].annotate('B', xy=(0.95, 0.8), xycoords='axes fraction',
-        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
-    ax[2].annotate('C', xy=(0.95, 0.8), xycoords='axes fraction',
-        bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
-
+    bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 2}
+    ax[0].annotate('A', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+    ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+    ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
 
     if mackey:
-        mackey_seq, anomaly = mackey_anomaly_sequence(N=indices[-1]+params.train_length,
-            anomaly_start=params.anomaly_start, anomaly_step=params.anomaly_step)
+        mackey_seq, anomaly = mackey_anomaly_sequence(
+            N=indices[-1] + params.train_length,
+            anomaly_start=params.anomaly_start,
+            anomaly_step=params.anomaly_step)
         mackey_seq = normalize(mackey_seq)
 
         length = anomaly[params.train_length:].shape[0]
@@ -126,11 +121,11 @@ def cli(
             np.arange(length), np.zeros(length), anomaly[params.train_length:],
             color="grey", alpha=0.5, label="Anomaly")
         ax[3].legend(loc="lower left")
-        ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction',
-            bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+        ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
 
+    for a in ax:
+        a.set_xlim(0, len(indices))
 
-    for a in ax: a.set_xlim(0, len(indices))
     plt.tight_layout()
 
     if outfile is not None:

@@ -1,7 +1,5 @@
 import click
 import pathlib
-from netCDF4 import Dataset
-from tqdm import tqdm
 
 
 def get_dims(src, variable):
@@ -33,6 +31,8 @@ def create_dims(dst, dims):
 @click.option("--outfile", "-o", type=pathlib.Path, required=True)
 @click.option("--variable", "-V", type=str, default="SSH")
 def cli(infiles, outfile, variable):
+    from netCDF4 import Dataset
+    from tqdm import tqdm
 
     if len(infiles) == 0:
         text = click.get_text_stream("stdin").read()
