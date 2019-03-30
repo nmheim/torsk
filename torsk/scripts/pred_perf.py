@@ -7,7 +7,7 @@ import netCDF4 as nc
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from torsk.visualize import animate_double_imshow, write_video
+from torsk.visualize import animate_triple_imshow, write_video
 from torsk.imed import imed_metric
 
 
@@ -126,39 +126,36 @@ def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
                 f"{esn_imed[ii][metric_log_idx]}")
 
             labels.append(src["labels"][:])
-            predictions.append(src["outputs"][:])
-
-            if save_video is not None:
-                frames = np.concatenate([labels[ii], predictions[ii]], axis=1)
-                videofile = pred_data_nc.with_suffix(f".{save_video}").as_posix()
-                if save_video == "gif":
-                    anim = animate_double_imshow(
-                        labels[ii], predictions[ii], title="ESN Pred.")
-                    anim.save(videofile, writer="imagemagick")
-                else:
-                    write_video(videofile, frames)
-
-            if show:
-                anim = animate_double_imshow(labels[ii], predictions[ii], title="ESN Pred.")
-                plt.tight_layout()
-                plt.show()
+            outputs = src["outputs"][:]
 
         cycle_pred_file = pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
         if cycle_pred_file.exists():
             cpred = np.load(cycle_pred_file)[:labels[0].shape[0]]
             cycle_imed.append(imed_metric(cpred, labels[-1]))
-            if show:
-                anim = animate_double_imshow(
-                    labels[ii], cpred, title="Cycle Pred.")  # NOQA
-                plt.show()
         else:
             raise ValueError(
                 f"{cycle_pred_file} does not exist. "
                 "Cannot compute cycle prediction. "
                 "Create it with `torsk cycle-predict`")
 
+        if save_video is not None:
+            frames = np.concatenate([labels[ii], outputs], axis=1)
+            videofile = pred_data_nc.with_suffix(f".{save_video}").as_posix()
+            if save_video == "gif":
+                anim = animate_triple_imshow(labels[ii], outputs, cpred,
+                    axes_labels=["Truth", "ESN", "Cycle", "Trivial"])
+                anim.save(videofile, writer="imagemagick")
+            else:
+                write_video(videofile, frames)
+
+        if show:
+            anim = animate_triple_imshow(
+                labels[ii], outputs, cpred,
+                axes_labels=["Truth", "ESN", "Cycle", "Trivial"])
+            plt.show()
+
     # plot performance
-    labels, predictions = np.array(labels), np.array(predictions)
+    labels = np.array(labels)
     esn_imed, cycle_imed = np.array(esn_imed), np.array(cycle_imed)
 
     fig, ax = imed_plot(esn_imed, cycle_imed, labels)
