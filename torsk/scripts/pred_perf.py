@@ -1,4 +1,3 @@
-import sys
 import pathlib
 
 import click
@@ -10,25 +9,6 @@ import seaborn as sns
 
 from torsk.visualize import animate_double_imshow, write_video
 from torsk.imed import imed_metric
-from torsk.data import detrend
-
-
-def read_run_metrics(fname):
-    with nc.Dataset(fname, 'r') as src:
-        imed = src["imed"][:]
-        eucd = src["eucd"][:]
-    return imed, eucd
-
-
-def read_all_metrics(directory):
-    pred_data_nc = directory.glob("pred_data_*.nc")
-    imeds, eucds = [], []
-    for fname in pred_data_nc:
-        imed, eucd = read_run_metrics(fname)
-        imeds.append(imed)
-        eucds.append(eucd)
-    
-    return np.array(imeds), np.array(eucds)
 
 
 def trivial_imed(labels):
@@ -40,32 +20,34 @@ def trivial_imed(labels):
 def imed_plot(esn_imed, cycle_imed, labels):
     N = esn_imed.shape[0]
     mean_imed = esn_imed.mean(axis=0)
-    std_imed = esn_imed.std(axis=0)/N
+    std_imed = esn_imed.std(axis=0) / N
 
     mean_cycle_imed = cycle_imed.mean(axis=0)
-    std_cycle_imed = cycle_imed.std(axis=0)/N
+    std_cycle_imed = cycle_imed.std(axis=0) / N
 
     trivial_imeds = np.array([trivial_imed(l) for l in labels])
     mean_trivial_imed = trivial_imeds.mean(axis=0)
-    std_trivial_imed = trivial_imeds.std(axis=0)/N
+    std_trivial_imed = trivial_imeds.std(axis=0) / N
 
     fig, ax = plt.subplots(1, 1)
     x = np.arange(mean_imed.shape[0])
 
     ax.plot(mean_cycle_imed, label="Cycle-based")
     ax.fill_between(
-        x, 
-        mean_cycle_imed+std_cycle_imed,
-        mean_cycle_imed-std_cycle_imed, alpha=0.5)
+        x,
+        mean_cycle_imed + std_cycle_imed,
+        mean_cycle_imed - std_cycle_imed, alpha=0.5)
 
     ax.plot(mean_trivial_imed, label="Trivial")
     ax.fill_between(
-        x, 
-        mean_trivial_imed+std_trivial_imed,
-        mean_trivial_imed-std_trivial_imed, alpha=0.5)
+        x,
+        mean_trivial_imed + std_trivial_imed,
+        mean_trivial_imed - std_trivial_imed, alpha=0.5)
 
     ax.plot(x, mean_imed, label="ESN")
-    ax.fill_between(x, mean_imed+std_imed, mean_imed-std_imed, alpha=0.5)
+    ax.fill_between(x,
+        mean_imed + std_imed,
+        mean_imed - std_imed, alpha=0.5)
 
     ax.set_ylabel(r"Error")
     ax.set_xlabel("Time")
@@ -80,7 +62,7 @@ def sort_filenames(files, return_indices=False):
         pred_data_idx1.nc
         pred_data_idx100.nc
         pred_data_idx10.nc
-        
+
     becomes:
 
         pred_data_idx1.nc
@@ -96,7 +78,7 @@ def sort_filenames(files, return_indices=False):
         return sorted_files
 
 
-@click.command("prediction-performance", short_help="Plot IMED and create animation")
+@click.command("pred-perf", short_help="Plot IMED and create animation")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
 @click.option("--save-video", is_flag=True, default=False,
     help="saves created video at pred_data_idx{idx}_nc.mp4")
@@ -111,10 +93,13 @@ def sort_filenames(files, return_indices=False):
 @click.option("--plot-label", default=None, type=str)
 @click.option("--only-first-n", "-n", type=int, default=None,
     help="Evaluate only first n files (for testing)")
-def cli(
-    pred_data_ncfiles, save_video, outfile, show, ylogscale,
-    metric_log_idx, xlim, plot_label, only_first_n):
-
+def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
+        metric_log_idx, xlim, plot_label, only_first_n):
+    """Create animations and averaged performance plot of prediction files.
+    The ESN `pred_data_ncfiles` must be named like: pred_data_idx0.nc
+    The cycle prediction files are assumed to be in the same directory with
+    names like: cycle_pred_data_idx0.npy as created with `torsk cycle-predict`
+    """
     sns.set_style("whitegrid")
     sns.set_context("talk")
 
@@ -126,6 +111,7 @@ def cli(
         pred_data_ncfiles = pred_data_ncfiles[:only_first_n]
         indices = indices[:only_first_n]
 
+    # read prediction files and animate
     for ii, (idx, pred_data_nc) in tqdm(
             enumerate(zip(indices, pred_data_ncfiles)), total=len(pred_data_ncfiles)):
         assert "pred_data" in pred_data_nc.as_posix()
@@ -149,13 +135,19 @@ def cli(
                 anim = animate_double_imshow(labels[ii], predictions[ii], title="ESN Pred.")
                 plt.show()
 
-        cpred = np.load(pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy")[:labels[0].shape[0]]
-        cycle_imed.append(imed_metric(cpred, labels[-1]))
-
-        if show:
-            anim = animate_double_imshow(labels[ii], cpred, title="Cycle Pred.")
+        cycle_pred_file = pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
+        if cycle_pred_file.exists() and show:
+            cpred = np.load(cycle_pred_file)[:labels[0].shape[0]]
+            cycle_imed.append(imed_metric(cpred, labels[-1]))
+            anim = animate_double_imshow(labels[ii], cpred, title="Cycle Pred.")  # NOQA
             plt.show()
+        else:
+            raise ValueError(
+                f"{cycle_pred_file} does not exist. "
+                "Cannot compute cycle prediction. "
+                "Create it with `torsk cycle-predict`")
 
+    # plot performance
     labels, predictions = np.array(labels), np.array(predictions)
     esn_imed, cycle_imed = np.array(esn_imed), np.array(cycle_imed)
 
@@ -163,8 +155,8 @@ def cli(
     if xlim is not None:
         ax.set_xlim(0, xlim)
     if plot_label is not None:
-        ax.annotate(plot_label, xy=(0.05, 0.9), xycoords='axes fraction',
-            bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
+        bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 2}
+        ax.annotate(plot_label, xy=(0.05, 0.9), xycoords='axes fraction', bbox=bbox)
     plt.tight_layout()
     if ylogscale:
         ax.set_yscale("log")
