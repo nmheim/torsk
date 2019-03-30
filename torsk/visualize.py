@@ -159,9 +159,9 @@ def animate_double_imshow(frames1, frames2,
         frames1[0], animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
 
-    plt.colorbar(im1, ax=ax[0])
-    plt.colorbar(im2, ax=ax[1])
-    plt.colorbar(im3, ax=ax[2])
+    plt.colorbar(im1, ax=ax[0], fraction=0.046, pad=0.04)
+    plt.colorbar(im2, ax=ax[1], fraction=0.046, pad=0.04)
+    plt.colorbar(im3, ax=ax[2], fraction=0.046, pad=0.04)
     text = ax[0].text(.5, 1.05, '', transform=ax[0].transAxes, va='center')
     if time is None:
         time = np.arange(len(frames1))
