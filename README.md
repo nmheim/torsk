@@ -9,9 +9,10 @@ can find it [here](https://github.com/nmheim/torsk_archived)
 
 ## Prediction Examples
 
-Prediction of a chaotically moving Gaussian blob. The trajectory of the maximum
+Prediction of a [chaotically moving Gaussian blob](https://sid.erda.dk/share_redirect/eosH8APA8K). The trajectory of the maximum
 governed by the Mackey-Glass time series in the x-dimension and a sine in the
-y-dimension. [Link to animation](https://sid.erda.dk/share_redirect/eosH8APA8K)
+y-dimension. The true evolution of the time series is visible on the left,
+the ESN prediction in the middle and the trivial prediction on the right.
 
 ## Backend
 
