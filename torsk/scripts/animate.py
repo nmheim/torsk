@@ -15,7 +15,11 @@ def cli(ncfile, variable, outfile, show):
         data = src[variable][:]
 
     if outfile is not None:
-        write_video(outfile.as_posix(), data)
+        if outfile.suffix == ".gif":
+            anim = animate_imshow(data)  # NOQA
+            anim.save(outfile.as_posix(), writer="imagemagick")
+        else:
+            write_video(outfile.as_posix(), data)
 
     if show:
         anim = animate_imshow(data)  # NOQA
