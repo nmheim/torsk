@@ -7,6 +7,12 @@ This is a new implementation of the framework used in my [thesis](https://github
 If you are looking for the legacy `torsk` that was used there you 
 can find it [here](https://github.com/nmheim/torsk_archived)
 
+## Prediction Examples
+
+Prediction of a [chaotically moving Gaussian blob](https://sid.erda.dk/share_redirect/eosH8APA8K). The trajectory of the maximum
+governed by the Mackey-Glass time series in the x-dimension and a sine in the
+y-dimension. The true evolution of the time series is visible on the left,
+the ESN prediction in the middle and the trivial prediction on the right.
 
 ## Backend
 
