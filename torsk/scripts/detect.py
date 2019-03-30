@@ -46,7 +46,7 @@ def cli(
         json_path=pred_data_ncfiles[0].parent / f"idx{indices[0]}-params.json")
 
     nr_plots = 4 if mackey else 3
-    figsize = (8,6)
+    figsize = (8,6) if mackey else (8,5)
     fig, ax = plt.subplots(nr_plots, 1, sharex=True, figsize=figsize)
 
     # ax[0].set_title(r"IMED$(\mathbf{y}, \mathbf{d})$")
@@ -107,11 +107,11 @@ def cli(
     ax[2].set_yscale("log")
     ax[2].legend(loc="lower left")
 
-    ax[0].annotate('A', xy=(0.05, 0.8), xycoords='axes fraction',
+    ax[0].annotate('A', xy=(0.95, 0.8), xycoords='axes fraction',
         bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
-    ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction',
+    ax[1].annotate('B', xy=(0.95, 0.8), xycoords='axes fraction',
         bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
-    ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction',
+    ax[2].annotate('C', xy=(0.95, 0.8), xycoords='axes fraction',
         bbox={"boxstyle":"round", "pad":0.3, "fc":"white", "ec":"gray", "lw":2})
 
 
