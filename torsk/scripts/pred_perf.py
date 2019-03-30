@@ -80,8 +80,8 @@ def sort_filenames(files, return_indices=False):
 
 @click.command("pred-perf", short_help="Plot IMED and create animation")
 @click.argument("pred_data_ncfiles", nargs=-1, type=pathlib.Path)
-@click.option("--save-video", is_flag=True, default=False,
-    help="saves created video at pred_data_idx{idx}_nc.mp4")
+@click.option("--save-video", default=None, type=click.Choice(["mp4", "gif"]),
+    help="saves created video at pred_data_idx{idx}_nc.suffix")
 @click.option("--outfile", "-o", type=pathlib.Path, default=None,
     help="save final plot in outfile path.")
 @click.option("--show/--no-show", is_flag=True, default=True,
@@ -93,15 +93,17 @@ def sort_filenames(files, return_indices=False):
 @click.option("--plot-label", default=None, type=str)
 @click.option("--only-first-n", "-n", type=int, default=None,
     help="Evaluate only first n files (for testing)")
+@click.option("--sns-context", default="talk",
+    type=click.Choice(["notebook", "paper", "talk", "poster"]))
 def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
-        metric_log_idx, xlim, plot_label, only_first_n):
+        metric_log_idx, xlim, plot_label, only_first_n, sns_context):
     """Create animations and averaged performance plot of prediction files.
     The ESN `pred_data_ncfiles` must be named like: pred_data_idx0.nc
     The cycle prediction files are assumed to be in the same directory with
     names like: cycle_pred_data_idx0.npy as created with `torsk cycle-predict`
     """
     sns.set_style("whitegrid")
-    sns.set_context("talk")
+    sns.set_context(sns_context)
 
     labels, predictions = [], []
     esn_imed, cycle_imed = [], []
@@ -126,21 +128,29 @@ def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
             labels.append(src["labels"][:])
             predictions.append(src["outputs"][:])
 
-            if save_video:
+            if save_video is not None:
                 frames = np.concatenate([labels[ii], predictions[ii]], axis=1)
-                videofile = pred_data_nc.with_suffix(".mp4").as_posix()
-                write_video(videofile, frames)
+                videofile = pred_data_nc.with_suffix(f".{save_video}").as_posix()
+                if save_video == "gif":
+                    anim = animate_double_imshow(
+                        labels[ii], predictions[ii], title="ESN Pred.")
+                    anim.save(videofile, writer="imagemagick")
+                else:
+                    write_video(videofile, frames)
 
             if show:
                 anim = animate_double_imshow(labels[ii], predictions[ii], title="ESN Pred.")
+                plt.tight_layout()
                 plt.show()
 
         cycle_pred_file = pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
-        if cycle_pred_file.exists() and show:
+        if cycle_pred_file.exists():
             cpred = np.load(cycle_pred_file)[:labels[0].shape[0]]
             cycle_imed.append(imed_metric(cpred, labels[-1]))
-            anim = animate_double_imshow(labels[ii], cpred, title="Cycle Pred.")  # NOQA
-            plt.show()
+            if show:
+                anim = animate_double_imshow(
+                    labels[ii], cpred, title="Cycle Pred.")  # NOQA
+                plt.show()
         else:
             raise ValueError(
                 f"{cycle_pred_file} does not exist. "
