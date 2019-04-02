@@ -26,10 +26,11 @@ params.input_map_specs = [
     {"type": "conv", "mode": "same", "size": [5, 5], "kernel_type":"gauss", "input_scale": 2.},
     {"type": "conv", "mode": "same", "size": [10,10], "kernel_type":"gauss", "input_scale": 1.5},
     {"type": "conv", "mode": "same", "size": [15, 15], "kernel_type":"gauss", "input_scale": 1.},
+    {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"gauss", "input_scale": 1.},
+    {"type": "conv", "mode": "same", "size": [25, 25], "kernel_type":"gauss", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [ 5, 5], "kernel_type":"random", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},
-    {"type": "dct", "size": [15, 15], "input_scale": 1.},
     {"type": "gradient", "input_scale": 1.},
     {"type": "gradient", "input_scale": 1.}
 ]
@@ -43,7 +44,7 @@ params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "sparse"
 params.backend = "numpy"
-params.train_method = "pinv_lstsq"
+params.train_method = "pinv_svd"
 params.tikhonov_beta = 0.01
 params.imed_loss = True
 params.debug = False
@@ -70,7 +71,7 @@ else:
 logger.info(params)
 
 logger.info("Creating circle dataset ...")
-t = np.arange(0, 200*np.pi, 0.1)[:3000]
+t = np.arange(0, 200*np.pi, 0.02*np.pi)[:3000]
 #x, y = np.sin(t), np.cos(0.3 * t)
 x, y = np.sin(0.3 * t), np.cos(t)
 # x = normalize(mackey_sequence(N=t.shape[0])) * 2 - 1
@@ -89,5 +90,5 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "/home/niklas/erda_save/mackey_conv_small",
+    model, dataset, "output",
     steps=1, step_length=1, step_start=0)
