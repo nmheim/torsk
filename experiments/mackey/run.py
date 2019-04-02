@@ -17,10 +17,10 @@ params.input_map_specs = [
     {"type": "random_weights", "size": [1000], "input_scale": 1.}
 ]
 params.spectral_radius = 1.5
-params.density = 0.05
+params.density = 0.1
 params.input_shape = [1, 1]
 params.train_length = 2200
-params.pred_length = 1000
+params.pred_length = 100
 params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "dense"
@@ -61,7 +61,7 @@ dataset = ImageDataset(mackey, params, scale_images=False)
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
     model, dataset, "mackey_anomaly_output",
-    steps=1, step_length=2)
+    steps=1000, step_length=1, step_start=501)
 
 plt.plot(pred_labels[:,0,0])
 plt.plot(outputs[:,0,0])
