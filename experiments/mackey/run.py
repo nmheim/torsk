@@ -5,11 +5,13 @@ import pathlib
 import numpy as np
 import netCDF4 as nc
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 import torsk
 from torsk.data.utils import mackey_anomaly_sequence, normalize
 from torsk.visualize import animate_double_imshow
 
+sns.set_style("whitegrid")
 np.random.seed(0)
 
 params = torsk.Params()
@@ -20,7 +22,7 @@ params.spectral_radius = 1.5
 params.density = 0.05
 params.input_shape = [1, 1]
 params.train_length = 2200
-params.pred_length = 1000
+params.pred_length = 500
 params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "dense"
@@ -63,6 +65,7 @@ model, outputs, pred_labels = torsk.train_predict_esn(
     model, dataset, "mackey_anomaly_output",
     steps=1, step_length=2)
 
-plt.plot(pred_labels[:,0,0])
-plt.plot(outputs[:,0,0])
+plt.plot(pred_labels[:,0,0], label="Prediction")
+plt.plot(outputs[:,0,0], label="Truth")
+plt.legend()
 plt.show()
