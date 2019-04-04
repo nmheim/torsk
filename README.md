@@ -45,6 +45,13 @@ Prediction of the [Kuroshio](https://sid.erda.dk/share_redirect/ALmNIfYwM5) regi
 at the coast of Japan.
 
 
+## Usage
+
+Running with `pip install -e .` installs the `torsk` package which comes with some
+convenience scripts to inspect prediction outputs.
+After running one of the experiments you can analyse the output files
+with one of the commands listed by running `torsk --help`
+
 ## Change Backends (WIP)
 
 Switching from Numpy to PyTorch (and soon to
