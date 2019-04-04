@@ -13,11 +13,9 @@ as inputs to the ESN.
 
 ## Prediction Examples
 
-For demonstration of the predictive power of the extended ESN
-The trajectory of the maximum
-governed by the Mackey-Glass time series in the x-dimension and a sine in the
-y-dimension. The true evolution of the time series is visible on the left,
-the ESN prediction in the middle and the trivial prediction on the right.
+For a demonstration of the predictive power of the extended ESN check out
+the next three links that compare ESN, cycle-based, and trivial predictions
+of three different problems.
 
 ### Lissajous Figure
 
@@ -27,14 +25,25 @@ defined by:
     x = sin(t)
     y = cos(0.3*t)
 
+The true evolution of the time series is visible in the top left,
+the ESN prediction in the top right, cycle-based prediction lower left,
+and the trivial prediction in the lower right.
+
+
 ### Mackey-Glass Lissajous
 
 Prediction of a [chaotically moving Gaussian blob](https://sid.erda.dk/share_redirect/f4ZaRHe9kZ).
+The trajectory of the maximum is governed by the Mackey-Glass time series in the x-dimension and a sine in the
+y-dimension. The true evolution of the time series is visible in the top left,
+the ESN prediction in the top right, cycle-based prediction lower left,
+and the trivial prediction in the lower right.
+
 
 ### Kuroshio
 
 Prediction of the [Kuroshio](https://sid.erda.dk/share_redirect/ALmNIfYwM5) region
 at the coast of Japan.
+
 
 ## Change Backends (WIP)
 
