@@ -1,36 +1,34 @@
 import sys
 import logging
-
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 import torsk
-from torsk.data.utils import mackey_anomaly_sequence, normalize
+from torsk.data.utils import gauss2d_sequence
+from torsk.visualize import animate_double_imshow
 
 
-sns.set_style("whitegrid")
 np.random.seed(0)
 
 params = torsk.Params()
 params.input_map_specs = [
-    {"type": "random_weights", "size": [1000], "input_scale": 1.}
+    {"type": "random_weights", "size": [10000], "input_scale": 0.125}
 ]
-params.spectral_radius = 1.5
-params.density = 0.05
-params.input_shape = [1, 1]
-params.train_length = 2200
-params.pred_length = 500
+
+params.spectral_radius = 2.0
+params.density = 0.001
+params.input_shape = [30, 30]
+params.train_length = 2000
+params.pred_length = 300
 params.transient_length = 200
 params.dtype = "float64"
-params.reservoir_representation = "dense"
+params.reservoir_representation = "sparse"
 params.backend = "numpy"
-params.train_method = "pinv_svd"
-params.tikhonov_beta = 2.0
-params.debug = False
+params.train_method = "pinv_lstsq"
 params.imed_loss = False
-params.anomaly_start = 2400
-params.anomaly_step = 300
+params.tikhonov_beta = None
+params.debug = False
+
 params.update(sys.argv[1:])
 
 logger = logging.getLogger(__file__)
@@ -47,23 +45,27 @@ else:
     from torsk.data.torch_dataset import TorchImageDataset as ImageDataset
     from torsk.models.torch_esn import TorchESN as ESN
 
+logger.info(params)
+
+logger.info("Creating circle dataset ...")
+t = np.arange(0, 200 * np.pi, 0.02 * np.pi)
+x, y = np.sin(0.3 * t), np.cos(t)
+
+center = np.array([y, x]).T
+images = gauss2d_sequence(center, sigma=0.5, size=params.input_shape)
+dataset = ImageDataset(images, params)
+
 logger.info("Building model ...")
 model = ESN(params)
 
-mackey, _ = mackey_anomaly_sequence(
-    N=3700,
-    anomaly_start=params.anomaly_start,
-    anomaly_step=params.anomaly_step)
-mackey = normalize(mackey) * 2 - 1
-mackey = mackey[:, np.newaxis, np.newaxis]
-dataset = ImageDataset(mackey, params, scale_images=False)
-
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "mackey_anomaly_output",
-    steps=1, step_length=2)
+    model, dataset, outdir="rand_output", steps=1)
 
-plt.plot(pred_labels[:, 0, 0], label="Prediction")
-plt.plot(outputs[:, 0, 0], label="Truth")
-plt.legend()
+logger.info("Visualizing results ...")
+if params.backend == "torch":
+    pred_labels = pred_labels.squeeze().numpy()
+    outputs = outputs.squeeze().numpy()
+
+anim = animate_double_imshow(pred_labels, outputs)
 plt.show()
