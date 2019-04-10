@@ -17,19 +17,6 @@ def cycles(ft,cycle_length):
     nC = n_cycles*cycle_length;
     return ft[:nC].reshape(n_cycles,cycle_length), ft[nC:];
 
-def sine_average(fC, nk):
-    C            = np.mean(fC,axis=0);
-    cycle_length = len(C);
-    cycle_thetas = np.linspace(0,np.pi,cycle_length,endpoint=False);
-    ks           = np.arange(nk);
-    sine_basis   = np.sin(ks[:,None]*cycle_thetas[None,:]);
-#    print(sine_basis.shape, C.shape);
-    cm = la.lstsq(sine_basis.T,C)[0];
-
-#    print(cm.shape)
-    
-    return np.dot(sine_basis.T,cm);
-
 
 def separate_trend_scaled(ft,nT,Cycle_length):
     """Separate out the quadratic trend and average cycle from a time series 'ft'.
@@ -57,7 +44,6 @@ def separate_trend_scaled(ft,nT,Cycle_length):
     # Remove average cycle
     fT=upscale(ft-trend,nT);
     fC,fr=cycles(fT,Cycle_length);
-#    C = sine_average(fC,100)
     C =np.mean(fC,axis=0);
     
     fT_detrended=np.concatenate([
@@ -120,9 +106,9 @@ def recombine_trends(Ftkk_detrended,bkk,Ckk,nT,Cycle_length):
     for k1 in range(nk1):
         for k2 in range(nk2):
             Ftkk[:,k1,k2] = recombine_trend_scaled(
-                Ftkk_detrended[:,k1,k2],bkk[k1,k2],Ckk[k1,k2],nT,Cycle_length
+                Ftkk_detrended[:,k1,k2],bkk[k1,k2],Ckk[k1,k2],nT
             )
-    return Ftkk;a
+    return Ftkk;
 
 # Predict from starting point and calculated trend+avg. cycle.
 # Assumes that prediction starts at avg. cycle start
@@ -173,7 +159,7 @@ def separate_trend_unscaled(ft,cycle_length):
     trend=b[0]+b[1]*ts+b[2]*ts*ts;
     
     # Remove average cycle
-    fc,fr=cycles(ft,cycle_length);
+    fc,fr=cycles(ft-trend,cycle_length);
     c =np.mean(fc,axis=0);
     
     ft_detrended=np.concatenate([
