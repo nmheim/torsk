@@ -1,6 +1,4 @@
-import json
 import pathlib
-import netCDF4 as nc
 import click
 
 
@@ -11,6 +9,8 @@ import click
 @click.option("--vmin", type=int, default=-1)
 @click.option("--vmax", type=int, default=1)
 def cli(ncfile, outfile, vmin, vmax):
+    import json
+    import netCDF4 as nc
 
     with nc.Dataset(ncfile, "r") as src:
         data = src["SSH"][:]

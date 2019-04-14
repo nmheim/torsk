@@ -1,33 +1,36 @@
 import sys
 import logging
-import pathlib
-
 import numpy as np
-import netCDF4 as nc
 import matplotlib.pyplot as plt
 
 import torsk
+from torsk.data.utils import gauss2d_sequence, normalize, mackey_anomaly_sequence
 from torsk.visualize import animate_double_imshow
+
 
 np.random.seed(0)
 
 params = torsk.Params()
 params.input_map_specs = [
-    {"type": "random_weights", "size": [10000], "input_scale": 0.25}
+    {"type": "random_weights", "size": [10000], "input_scale": 0.125}
 ]
+
 params.spectral_radius = 2.0
-params.density = 0.001
+params.density = 0.01
 params.input_shape = [30, 30]
-params.train_length = 1300
+params.train_length = 2000
 params.pred_length = 200
-params.transient_length = 300
+params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "sparse"
 params.backend = "numpy"
 params.train_method = "pinv_svd"
-params.tikhonov_beta = 3e1
+params.imed_loss = False
+params.tikhonov_beta = None
 params.debug = False
-params.imed_loss = True
+params.anomaly_start = 2300
+params.anomaly_step = 300
+
 params.update(sys.argv[1:])
 
 logger = logging.getLogger(__file__)
@@ -44,21 +47,33 @@ else:
     from torsk.data.torch_dataset import TorchImageDataset as ImageDataset
     from torsk.models.torch_esn import TorchESN as ESN
 
+logger.info(params)
 
-ncpath = pathlib.Path('../../data/ocean/kuro_SSH_3daymean_scaled.nc')
+logger.info("Creating circle dataset ...")
+t = np.arange(0, 200 * np.pi, 0.02 * np.pi)
+mackey, _ = mackey_anomaly_sequence(
+    N=t.shape[0],
+    anomaly_start=params.anomaly_start,
+    anomaly_step=params.anomaly_step)
+y = normalize(mackey) * 2 - 1
+x = np.cos(t)
 
-with nc.Dataset(ncpath, "r") as src:
-    from torsk.data.utils import resample2d_sequence
-    images = src["SSH"][:, 90:190, 90:190]
-    images, mask = images.data, images.mask
-    images[mask] = 0.
-    images = resample2d_sequence(images, params.input_shape)
-dataset = ImageDataset(images, params, scale_images=True)
+
+center = np.array([y, x]).T
+images = gauss2d_sequence(center, sigma=0.5, size=params.input_shape)
+dataset = ImageDataset(images, params)
 
 logger.info("Building model ...")
 model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "/home/niklas/erda_save/kuro_basicesn_withimed",
-    steps=1000, step_length=1)
+    model, dataset, outdir="rand_output", steps=1, step_length=11)
+
+logger.info("Visualizing results ...")
+if params.backend == "torch":
+    pred_labels = pred_labels.squeeze().numpy()
+    outputs = outputs.squeeze().numpy()
+
+anim = animate_double_imshow(pred_labels, outputs)
+plt.show()

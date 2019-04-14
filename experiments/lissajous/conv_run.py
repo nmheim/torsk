@@ -4,15 +4,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torsk
-from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize
+from torsk.data.utils import gauss2d_sequence
 from torsk.visualize import animate_double_imshow
-
 
 np.random.seed(0)
 
 params = torsk.Params()
 params.input_map_specs = [
-    {"type": "random_weights", "size": [10000], "input_scale": 0.25}
+    {"type": "pixels", "size": [30, 30], "input_scale": 3.},
+    {"type": "conv", "mode": "same", "size": [5, 5],
+        "kernel_type":"gauss", "input_scale": 4.},
+    {"type": "conv", "mode": "same", "size": [10, 10],
+        "kernel_type":"gauss", "input_scale": 3.},
+    {"type": "conv", "mode": "same", "size": [15, 15],
+        "kernel_type":"gauss", "input_scale": 4.},
+    {"type": "conv", "mode": "same", "size": [5, 5],
+        "kernel_type":"random", "input_scale": 4.},
+    {"type": "conv", "mode": "same", "size": [10, 10],
+        "kernel_type":"random", "input_scale": 4.},
+    {"type": "conv", "mode": "same", "size": [20, 20],
+        "kernel_type":"random", "input_scale": 4.},
+    {"type": "dct", "size": [15, 15], "input_scale": 1.},
+    {"type": "gradient", "input_scale": 4.},
+    {"type": "gradient", "input_scale": 4.}
 ]
 
 params.spectral_radius = 2.0
@@ -24,11 +38,10 @@ params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "sparse"
 params.backend = "numpy"
-params.train_method = "pinv_svd"
-params.tikhonov_beta = 0.01
-params.imed_loss = True
+params.train_method = "pinv_lstsq"
+params.imed_loss = False
+params.tikhonov_beta = None
 params.debug = False
-params.cycle_length = 100
 
 params.update(sys.argv[1:])
 
@@ -49,40 +62,25 @@ else:
 logger.info(params)
 
 logger.info("Creating circle dataset ...")
-t = np.arange(0, 200*np.pi, 0.02*np.pi)
-# x, y = np.sin(0.3 * t), np.cos(t)
-x, y = np.sin(t), np.cos(0.3 * t)
-# y = normalize(mackey_sequence(N=t.shape[0])) * 2 - 1
+t = np.arange(0, 200 * np.pi, 0.02 * np.pi)
+x, y = np.sin(0.3 * t), np.cos(t)
 
 center = np.array([y, x]).T
 images = gauss2d_sequence(center, sigma=0.5, size=params.input_shape)
-dataset = ImageDataset(images, params)
+dataset = ImageDataset(images, params, scale_images=True)
 
 logger.info("Building model ...")
 model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, outdir="sin_cos03_output", steps=1, step_length=11)
+    model, dataset, "conv_output",
+    steps=1, step_length=1, step_start=0)
 
 logger.info("Visualizing results ...")
-from torsk.imed import imed_metric
-
 if params.backend == "torch":
-    real_pixels = pred_labels.squeeze().numpy()
-    predicted_pixels = outputs.squeeze().numpy()
-else:
-    real_pixels = pred_labels
-    predicted_pixels = outputs
+    pred_labels = pred_labels.squeeze().numpy()
+    outputs = outputs.squeeze().numpy()
 
-y, x = 5, 5
-plt.plot(real_pixels[:, y, x])
-plt.plot(predicted_pixels[:, y, x])
+anim = animate_double_imshow(pred_labels, outputs)
 plt.show()
-
-plt.plot(imed_metric(real_pixels, predicted_pixels))
-plt.show()
-
-anim = animate_double_imshow(real_pixels,predicted_pixels)
-plt.show()
-
