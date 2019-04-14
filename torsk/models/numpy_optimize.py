@@ -54,7 +54,7 @@ def tikhonov(inputs, states, labels, beta):
     X = _extended_states(inputs, states)
 
     Id = np.eye(X.shape[0])
-    A = np.dot(X, X.T) + beta + Id
+    A = np.dot(X, X.T) + beta * Id
     B = np.dot(X, labels)
 
     # Solve linear system instead of calculating inverse
