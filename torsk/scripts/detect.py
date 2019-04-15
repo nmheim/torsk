@@ -36,6 +36,10 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
 
     sns.set_style("whitegrid")
     sns.set_context("notebook")
+    kuro = False
+    if kuro:
+        kuro_start = 0
+        kuro_step = 5
 
     pred_data_ncfiles, indices = sort_filenames(
         pred_data_ncfiles, return_indices=True)
@@ -68,7 +72,12 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
             trivial_error.append(pred_trivial[-1])
 
             if idx % pred_plot_step == 0:
-                x = np.arange(idx, idx + valid_pred_length)
+                if kuro:
+                    start = (idx+params.train_length)*kuro_step+kuro_start
+                    stop = start+kuro_step*valid_pred_length
+                    x = np.arange(start, stop, kuro_step)
+                else:
+                    x = np.arange(idx, idx + valid_pred_length)
                 ax[0].plot(x, pred_imed, color=next(colors))
 
         cycle_data_nc = pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
@@ -87,18 +96,27 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
     cycle_score = sliding_score(
         cycle_error, small_window=small_window, large_window=large_window)
 
-    shifted_indices = np.array(indices) + valid_pred_length
+    indices = np.array(indices)
+    if kuro:
+        indices = (indices + params.train_length) * kuro_step + kuro_start
+        shifted_indices = indices + valid_pred_length * kuro_step
+    else:
+        shifted_indices = indices + valid_pred_length
 
     ax[1].plot(shifted_indices, imed_error, label="ESN")
     ax[1].plot(shifted_indices, trivial_error, label="trivial")
     ax[1].plot(shifted_indices, cycle_error, label="cycle")
     ax[1].legend(loc="lower left")
 
+    plot_start = indices[0]
+    plot_end = indices[-1]
+    if kuro:
+        plot_end += valid_pred_length*kuro_step
     ax[2].plot(shifted_indices[large_window:], imed_score, label="ESN")
     ax[2].plot(shifted_indices[large_window:], trivial_score, label="trivial")
     ax[2].plot(shifted_indices[large_window:], cycle_score, label="cycle")
     ax[2].plot(
-        indices, np.zeros_like(indices) + prob_normality,
+        [plot_start, plot_end], [prob_normality, prob_normality],
         label=rf"$\Sigma={prob_normality}$", color="black")
     ax[2].set_yscale("log")
     ax[2].legend(loc="lower left")
@@ -122,9 +140,14 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
             color="grey", alpha=0.5, label="Anomaly")
         ax[3].legend(loc="lower left")
         ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+        ax[3].set_xlabel("Time [days]")
+    else:
+        ax[2].set_xlabel("Time [days]")
 
     for a in ax:
-        a.set_xlim(0, len(indices))
+        if kuro:
+            a.set_xticks(np.arange(0, indices[-1], 365))
+        a.set_xlim(plot_start, plot_end)
 
     plt.tight_layout()
 
