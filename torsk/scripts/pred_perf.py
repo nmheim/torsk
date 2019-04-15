@@ -32,10 +32,11 @@ def imed_plot(esn_imed, cycle_imed, labels):
     fig, ax = plt.subplots(1, 1)
     x = np.arange(mean_imed.shape[0]) * 5
 
-    ax.plot(x, mean_imed, label="ESN", color="C0")
-    ax.fill_between(x,
-        mean_imed + std_imed,
-        mean_imed - std_imed, alpha=0.5, color="C0")
+    ax.plot(x, mean_trivial_imed, ":", label="Trivial", color="C2")
+    ax.fill_between(
+        x,
+        mean_trivial_imed + std_trivial_imed,
+        mean_trivial_imed - std_trivial_imed, alpha=0.5, color="C2")
 
     ax.plot(x, mean_cycle_imed, "-.", label="Cycle-based", color="C1")
     ax.fill_between(
@@ -43,11 +44,10 @@ def imed_plot(esn_imed, cycle_imed, labels):
         mean_cycle_imed + std_cycle_imed,
         mean_cycle_imed - std_cycle_imed, alpha=0.5, color="C1")
 
-    ax.plot(x, mean_trivial_imed, ":", label="Trivial", color="C2")
-    ax.fill_between(
-        x,
-        mean_trivial_imed + std_trivial_imed,
-        mean_trivial_imed - std_trivial_imed, alpha=0.5, color="C2")
+    ax.plot(x, mean_imed, label="ESN", color="C0")
+    ax.fill_between(x,
+        mean_imed + std_imed,
+        mean_imed - std_imed, alpha=0.5, color="C0")
 
     ax.set_ylabel(r"Error")
     ax.legend(loc="upper right")
