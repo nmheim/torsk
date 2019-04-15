@@ -41,6 +41,11 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
         kuro_start = 0
         kuro_step = 5
 
+    if mackey:
+        ax_offset = 1
+    else:
+        ax_offset = 0
+
     pred_data_ncfiles, indices = sort_filenames(
         pred_data_ncfiles, return_indices=True)
     params = Params(
@@ -78,7 +83,7 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
                     x = np.arange(start, stop, kuro_step)
                 else:
                     x = np.arange(idx, idx + valid_pred_length)
-                ax[0].plot(x, pred_imed, color=next(colors))
+                ax[ax_offset].plot(x, pred_imed, color=next(colors))
 
         cycle_data_nc = pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
         cpred = np.load(cycle_data_nc)[:valid_pred_length]
@@ -103,29 +108,6 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
     else:
         shifted_indices = indices + valid_pred_length
 
-    ax[1].plot(shifted_indices, imed_error, label="ESN")
-    ax[1].plot(shifted_indices, trivial_error, label="trivial")
-    ax[1].plot(shifted_indices, cycle_error, label="cycle")
-    ax[1].legend(loc="lower left")
-
-    plot_start = indices[0]
-    plot_end = indices[-1]
-    if kuro:
-        plot_end += valid_pred_length*kuro_step
-    ax[2].plot(shifted_indices[large_window:], imed_score, label="ESN")
-    ax[2].plot(shifted_indices[large_window:], trivial_score, label="trivial")
-    ax[2].plot(shifted_indices[large_window:], cycle_score, label="cycle")
-    ax[2].plot(
-        [plot_start, plot_end], [prob_normality, prob_normality],
-        label=rf"$\Sigma={prob_normality}$", color="black")
-    ax[2].set_yscale("log")
-    ax[2].legend(loc="lower left")
-
-    bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 2}
-    ax[0].annotate('A', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
-    ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
-    ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
-
     if mackey:
         mackey_seq, anomaly = mackey_anomaly_sequence(
             N=indices[-1] + params.train_length,
@@ -134,15 +116,43 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
         mackey_seq = normalize(mackey_seq)
 
         length = anomaly[params.train_length:].shape[0]
-        ax[3].plot(mackey_seq[params.train_length:], label="x-component")
-        ax[3].fill_between(
+        ax[0].plot(mackey_seq[params.train_length:], label="x-Component")
+        ax[0].fill_between(
             np.arange(length), np.zeros(length), anomaly[params.train_length:],
-            color="grey", alpha=0.5, label="Anomaly")
-        ax[3].legend(loc="lower left")
-        ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
-        ax[3].set_xlabel("Time [days]")
-    else:
-        ax[2].set_xlabel("Time [days]")
+            color="grey", alpha=0.5, label="True Anomaly")
+        ax[0].legend(loc="lower left")
+
+    plot_start = indices[0]
+    plot_end = indices[-1]
+    if kuro:
+        plot_end += valid_pred_length*kuro_step
+        ax[-1].set_xlabel("Time [days]")
+
+    plot_indices = shifted_indices[large_window:]
+    ones = np.ones_like(plot_indices)
+
+    ax[ax_offset+1].plot([plot_start, plot_end], [prob_normality, prob_normality], ":",
+        label=rf"$\Sigma={prob_normality}$", color="black")
+    ax[ax_offset+1].plot(plot_indices, imed_score, "-", label="ESN", color="C0")
+    ax[ax_offset+1].fill_between(plot_indices, ones, imed_score > prob_normality,
+        label="Detected Anomaly", alpha=0.5, color="C0")
+    ax[ax_offset+1].set_ylim(1e-2, 1.)
+
+    ax[ax_offset+2].plot([plot_start, plot_end], [prob_normality, prob_normality], ":",
+        label=rf"$\Sigma={prob_normality}$", color="black")
+    ax[ax_offset+2].plot(plot_indices, cycle_score, "-.", label="Cycle", color="C1")
+    ax[ax_offset+2].fill_between(plot_indices, ones, cycle_score > prob_normality,
+        label="Detected Anomaly", alpha=0.5, color="C1")
+    ax[ax_offset+2].set_ylim(1e-2, 1.)
+
+    bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 1}
+    for a, l in zip(ax, 'ABCD'):
+        a.annotate(l, xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+
+    ax[ax_offset+1].set_yscale("log")
+    ax[ax_offset+1].legend(loc="lower left")
+    ax[ax_offset+2].set_yscale("log")
+    ax[ax_offset+2].legend(loc="lower left")
 
     for a in ax:
         if kuro:
