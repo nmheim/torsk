@@ -54,10 +54,7 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
     nr_plots = 4 if mackey else 3
     figsize = (8, 6) if mackey else (8, 5)
     fig, ax = plt.subplots(nr_plots, 1, sharex=True, figsize=figsize)
-
-    # ax[0].set_title(r"IMED$(\mathbf{y}, \mathbf{d})$")
-    # ax[1].set_title("Mean IMED/EUCD")
-    # ax[2].set_title(f"Normality Score. LW:{large_window} SW:{small_window}")
+    ax[ax_offset].set_ylabel("Error")
 
     cmap = plt.get_cmap("inferno")
     colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
@@ -116,7 +113,7 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
         mackey_seq = normalize(mackey_seq)
 
         length = anomaly[params.train_length:].shape[0]
-        ax[0].plot(mackey_seq[params.train_length:], label="x-Component")
+        ax[0].plot(mackey_seq[params.train_length:], label="x-Component", color="black")
         ax[0].fill_between(
             np.arange(length), np.zeros(length), anomaly[params.train_length:],
             color="grey", alpha=0.5, label="True Anomaly")
@@ -137,6 +134,7 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
     ax[ax_offset+1].fill_between(plot_indices, ones, imed_score > prob_normality,
         label="Detected Anomaly", alpha=0.5, color="C0")
     ax[ax_offset+1].set_ylim(1e-2, 1.)
+    ax[ax_offset+1].set_ylabel("Normality")
 
     ax[ax_offset+2].plot([plot_start, plot_end], [prob_normality, prob_normality], ":",
         label=rf"$\Sigma={prob_normality}$", color="black")
@@ -144,6 +142,7 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
     ax[ax_offset+2].fill_between(plot_indices, ones, cycle_score > prob_normality,
         label="Detected Anomaly", alpha=0.5, color="C1")
     ax[ax_offset+2].set_ylim(1e-2, 1.)
+    ax[ax_offset+2].set_ylabel("Normality")
 
     bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 1}
     for a, l in zip(ax, 'ABCD'):
