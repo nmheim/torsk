@@ -30,28 +30,28 @@ def imed_plot(esn_imed, cycle_imed, labels):
     std_trivial_imed = trivial_imeds.std(axis=0) / N
 
     fig, ax = plt.subplots(1, 1)
-    x = np.arange(mean_imed.shape[0])
+    x = np.arange(mean_imed.shape[0]) * 5
 
-    ax.plot(mean_cycle_imed, label="Cycle-based")
+    ax.plot(x, mean_imed, label="ESN", color="C0")
+    ax.fill_between(x,
+        mean_imed + std_imed,
+        mean_imed - std_imed, alpha=0.5, color="C0")
+
+    ax.plot(x, mean_cycle_imed, "-.", label="Cycle-based", color="C1")
     ax.fill_between(
         x,
         mean_cycle_imed + std_cycle_imed,
-        mean_cycle_imed - std_cycle_imed, alpha=0.5)
+        mean_cycle_imed - std_cycle_imed, alpha=0.5, color="C1")
 
-    ax.plot(mean_trivial_imed, label="Trivial")
+    ax.plot(x, mean_trivial_imed, ":", label="Trivial", color="C2")
     ax.fill_between(
         x,
         mean_trivial_imed + std_trivial_imed,
-        mean_trivial_imed - std_trivial_imed, alpha=0.5)
-
-    ax.plot(x, mean_imed, label="ESN")
-    ax.fill_between(x,
-        mean_imed + std_imed,
-        mean_imed - std_imed, alpha=0.5)
+        mean_trivial_imed - std_trivial_imed, alpha=0.5, color="C2")
 
     ax.set_ylabel(r"Error")
-    ax.set_xlabel("Time")
     ax.legend(loc="upper right")
+    ax.set_xlabel("Days")
 
     return fig, ax
 
@@ -105,7 +105,7 @@ def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
     sns.set_style("whitegrid")
     sns.set_context(sns_context)
 
-    labels, predictions = [], []
+    labels = []
     esn_imed, cycle_imed = [], []
     pred_data_ncfiles, indices = sort_filenames(pred_data_ncfiles, return_indices=True)
 
@@ -137,6 +137,12 @@ def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
                 f"{cycle_pred_file} does not exist. "
                 "Cannot compute cycle prediction. "
                 "Create it with `torsk cycle-predict`")
+
+        # japan = np.load("/home/niklas/Downloads/japan.npy")
+        # japan = np.tile(japan, [cpred.shape[0], 1, 1])
+        # cpred = np.ma.masked_array(cpred, mask=japan)[:, ::-1]
+        # labels[ii] = np.ma.masked_array(labels[ii], mask=japan)[:, ::-1]
+        # outputs = np.ma.masked_array(outputs, mask=japan)[:, ::-1]
 
         if save_video is not None:
             frames = np.concatenate([labels[ii], outputs], axis=1)
