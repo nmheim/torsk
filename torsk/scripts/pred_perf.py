@@ -30,7 +30,7 @@ def imed_plot(esn_imed, cycle_imed, labels):
     std_trivial_imed = trivial_imeds.std(axis=0) / N
 
     fig, ax = plt.subplots(1, 1)
-    x = np.arange(mean_imed.shape[0]) * 5
+    x = np.arange(mean_imed.shape[0])
 
     ax.plot(x, mean_trivial_imed, ":", label="Trivial", color="C2")
     ax.fill_between(
@@ -51,7 +51,6 @@ def imed_plot(esn_imed, cycle_imed, labels):
 
     ax.set_ylabel(r"Error")
     ax.legend(loc="upper right")
-    ax.set_xlabel("Days")
 
     return fig, ax
 
