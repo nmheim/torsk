@@ -13,13 +13,16 @@ def sliding_score(error, small_window, large_window):
     lw_std = np.zeros_like(scores)
     sw_mu = np.zeros_like(scores)
 
-    for i in range(small_window, error.shape[0]):
-        end = i + small_window
-        sw_start = max(0, end - small_window)
-        lw_start = max(0, end - large_window)
+    lw_mu[0] = error[0]
+    lw_std[0] = error[:2].std(axis=0)
+    sw_mu[0] = error[0]
 
-        sw_err = error[sw_start:end]
-        lw_err = error[lw_start:end]
+    for i in range(1, error.shape[0]):
+        lw_start = max(0, i - large_window + 1)
+        sw_end   = min(i + small_window, error.shape[0])
+
+        lw_err = error[lw_start:i]
+        sw_err = error[i:sw_end]
 
         lw_mu[i] = lw_err.mean(axis=0)
         lw_std[i] = lw_err.std(axis=0)
