@@ -8,7 +8,7 @@ def qfunction(x):
     return 1 - cumulative_distribution(x)
 
 def sliding_score(error, small_window, large_window):
-    scores = np.zeros(error.shape)
+    scores = np.empty(error.shape)
     lw_mu = np.zeros_like(scores)
     lw_std = np.zeros_like(scores)
     sw_mu = np.zeros_like(scores)
@@ -32,4 +32,5 @@ def sliding_score(error, small_window, large_window):
         s = qfunction(x)
         scores[i] = s
 
+    scores[:small_window] = 1.
     return scores, lw_mu, lw_std, sw_mu
