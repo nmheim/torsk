@@ -26,8 +26,9 @@ def esn_predict(model, inputs, labels, steps):
 ####################  ESN   ####################################################
 
 params = torsk.Params()
+hidden_size = 512
 params.input_map_specs = [
-    {"type": "random_weights", "size": [1000], "input_scale": 1.}
+    {"type": "random_weights", "size": [hidden_size], "input_scale": 1.}
 ]
 params.spectral_radius = 1.5
 params.density = 0.1
@@ -43,8 +44,9 @@ params.tikhonov_beta = 2.0
 params.debug = False
 params.imed_loss = False
 
+output_dir = pathlib.Path(f"esn_output_{hidden_size}")
 model = ESN(params)
-model_path = pathlib.Path("esn_output/model.pkl")
+model_path = output_dir / "model.pkl"
 
 mackey_train, mackey_eval, mackey_test = mackey_train_eval_test()
 
@@ -53,11 +55,11 @@ dataset = NumpyImageDataset(mackey_train[:, None, None], params)
 if not model_path.exists():
     dataset = NumpyImageDataset(mackey_train[:, None, None], params)
     t1 = time.time()
-    torsk.train_esn(model, dataset, outdir="esn_output")
+    torsk.train_esn(model, dataset, outdir=output_dir)
     t2 = time.time()
     print(f"ESN Training Time: {t2-t1} s")
 else:
-    model = torsk.load_model("esn_output")
+    model = torsk.load_model(output_dir)
 
 params.train_length = 100
 params.transient_length = 100
@@ -65,7 +67,7 @@ params.pred_length = 300
 dataset = NumpyImageDataset(mackey_test[:, None, None], params)
 inputs, _, _ = dataset[0]
 
-esn_error_path = pathlib.Path("esn_output/esn_error.npy")
+esn_error_path = output_dir / "esn_error.npy"
 if not esn_error_path.exists():
     esn_error = []
     print("Generating ESN predictions")
@@ -94,10 +96,11 @@ hp.dtype = "float32"
 hp.train_length = 100
 hp.pred_length = 300
 hp.batch_size = 32
-output_dir = "lstm_output_h128"
+hp.hidden_size = 512
+output_dir = f"lstm_output_h{hp.hidden_size}"
  
-lstm_model = LSTM(1, 128)
-lstm_model.load_state_dict(torch.load(f"{output_dir}/lstm_model_19.pth"))
+lstm_model = LSTM(1, hp.hidden_size)
+lstm_model.load_state_dict(torch.load(f"{output_dir}/lstm_model_7.pth"))
 
 _, _, loader = get_data_loaders(hp)
 inputs, labels, pred_labels = next(iter(loader))

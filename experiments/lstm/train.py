@@ -44,7 +44,8 @@ def run():
     hp.train_length = 200
     hp.pred_length = 100
     hp.batch_size = 32
-    output_dir = "lstm_output"
+    hp.hidden_size = 512
+    output_dir = f"lstm_output_h{hp.hidden_size}"
     
     train_dl, eval_dl, test_dl = get_data_loaders(hp)
     model = LSTM(input_size=1, hidden_size=512)
