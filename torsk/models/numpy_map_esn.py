@@ -33,10 +33,16 @@ def apply_input_map(image, F):
         _features = image
         for f in F["operations"]:
             _features = apply_input_map(_features, f)
-        F["dbg_size"] = F["operations"][-1]["size"];
+        F["dbg_size"] = hidden_size_of(image.shape,F["operations"][-1])
     else:
         raise ValueError(spec)
-    _features = F["input_scale"] * _features
+
+    if "input_scale" in F.keys():
+        scale = F["input_scale"]
+    else:
+        scale = 1
+    
+    _features = scale * _features
     return _features
 
 
@@ -61,25 +67,30 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
             spec["bias_ih"] = bias_ih.astype(dtype)
     return input_map_specs
 
-
+def hidden_size_of(input_shape, F):
+    shape = input_shape
+    if F["type"] == "conv":
+        if F["mode"] == "valid":
+            shape = conv2d_output_shape(input_shape, F["size"])
+        elif F["mode"] == "same":
+            size  = shape[0] * shape[1]
+    elif F["type"] == "random_weights":
+        size = F["size"][0]
+    elif F["type"] == "gradient":
+        size = input_shape[0] * input_shape[1] * 2  # For 2d pictures
+    elif F["type"] == "compose":
+        shape = input_shape
+        for f in F["operations"]:
+            size, shape = hidden_size_of(shape,f);
+    else:
+        shape = F["size"]
+        size  = shape[0] * shape[1]
+    return size, shape
+            
 def get_hidden_size(input_shape, input_map_specs):
     hidden_size = 0
-    for spec in input_map_specs:
-        if spec["type"] == "conv":
-            if spec["mode"] == "valid":
-                shape = conv2d_output_shape(input_shape, spec["size"])
-            elif spec["mode"] == "same":
-                shape = input_shape
-                hidden_size += shape[0] * shape[1]
-        elif spec["type"] == "random_weights":
-            hidden_size += spec["size"][0]
-        elif spec["type"] == "gradient":
-            hidden_size += input_shape[0] * input_shape[1] * 2  # For 2d pictures
-        elif spec["type"] == "compose":
-            hidden_size += spec["operations"][-1]["size"]
-        else:
-            shape = spec["size"]
-            hidden_size += shape[0] * shape[1]
+    for F in input_map_specs:
+        hidden_size += hidden_size_of(input_shape,F)[0]
     return hidden_size
 
 

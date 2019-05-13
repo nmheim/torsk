@@ -12,8 +12,9 @@ from torsk.data.conv import get_kernel as get_np_kernel
 from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservoir
 from torsk.models.numpy_map_esn import get_hidden_size
 
-from torsk.data.utils import resample2d, normalize
-from torsk.data.dct import dct2
+
+#TODO: Use Torch to perform operations instead of NumPy
+from torsk.models.numpy_map_esn import apply_input_map
 
 logger = logging.getLogger(__name__)
 
@@ -22,36 +23,6 @@ def get_kernel(kernel_shape, kernel_type, dtype_str):
     dtype = getattr(torch, dtype_str)
     kernel = get_np_kernel(kernel_shape, kernel_type, dtype_str)
     return torch.tensor(kernel[None, None, :, :], dtype=dtype)
-
-#TODO: Use Torch to perform operations instead of NumPy
-def apply_input_map(image, F):
-    if F["type"] == "pixels":
-        _features = resample2d(image, F["size"]).reshape(-1)
-        F["dbg_size"] = F["size"]
-    elif F["type"] == "dct":
-        _features = dct2(image, *F["size"]).reshape(-1)
-        F["dbg_size"] = F["size"]
-    elif F["type"] == "gradient":
-        grad = np.concatenate(np.gradient(image))
-        _features = normalize(grad.reshape(-1)) * 2 - 1
-        F["dbg_size"] = grad.shape
-    elif F["type"] == "conv":
-        _features = convolve2d(
-            image, F["kernel"], mode='same', boundary="symm")
-        F["dbg_size"] = _features.shape
-        _features = normalize(_features.reshape(-1)) * 2 - 1
-    elif F["type"] == "random_weights":
-        _features = np.dot(F["weight_ih"], image.reshape(-1))
-        _features += F["bias_ih"]
-        F["dbg_size"] = F["size"]
-    elif F["type"] == "compose":
-        _features = image
-        for f in F["operations"]:
-            _features = apply_input_map(_features, f)
-    else:
-        raise ValueError(spec)
-    _features = F["input_scale"] * _features
-    return _features
 
 
 def input_map(image, operations):

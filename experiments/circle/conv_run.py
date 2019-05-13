@@ -30,7 +30,11 @@ params.input_map_specs = [
     {"type": "conv", "mode": "same", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},
     {"type": "dct", "size": [15, 15], "input_scale": 1.},
-    {"type": "gradient", "input_scale": 1.},
+    {"type": "compose", "operations": [
+        {"type": "gradient", "input_scale": 1.},
+        {"type": "pixels",   "size": [20,20]}
+        ]
+    },
     {"type": "gradient", "input_scale": 1.}
 ]
 
@@ -89,5 +93,5 @@ model = ESN(params)
 
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
-    model, dataset, "/home/niklas/erda_save/mackey_conv_small",
+    model, dataset, "/tmp/mackey_conv_small",
     steps=1, step_length=1, step_start=0)
