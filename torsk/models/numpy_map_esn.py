@@ -9,33 +9,40 @@ from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservo
 
 logger = logging.getLogger(__name__)
 
+def apply_input_map(image, F):
+    if F["type"] == "pixels":
+        _features = resample2d(image, F["size"]).reshape(-1)
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "dct":
+        _features = dct2(image, *F["size"]).reshape(-1)
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "gradient":
+        grad = np.concatenate(np.gradient(image))
+        _features = normalize(grad.reshape(-1)) * 2 - 1
+        F["dbg_size"] = grad.shape
+    elif F["type"] == "conv":
+        _features = convolve2d(
+            image, F["kernel"], mode='same', boundary="symm")
+        F["dbg_size"] = _features.shape
+        _features = normalize(_features.reshape(-1)) * 2 - 1
+    elif F["type"] == "random_weights":
+        _features = np.dot(F["weight_ih"], image.reshape(-1))
+        _features += F["bias_ih"]
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "compose":
+        _features = image
+        for f in F["operations"]:
+            _features = apply_input_map(_features, f)
+    else:
+        raise ValueError(spec)
+    _features = F["input_scale"] * _features
+    return _features
 
-def input_map(image, input_map_specs):
+
+def input_map(image, operations):
     features = []
-    for spec in input_map_specs:
-        if spec["type"] == "pixels":
-            _features = resample2d(image, spec["size"]).reshape(-1)
-            spec["dbg_size"] = spec["size"]
-        elif spec["type"] == "dct":
-            _features = dct2(image, *spec["size"]).reshape(-1)
-            spec["dbg_size"] = spec["size"]
-        elif spec["type"] == "gradient":
-            grad = np.concatenate(np.gradient(image))
-            _features = normalize(grad.reshape(-1)) * 2 - 1
-            spec["dbg_size"] = grad.shape
-        elif spec["type"] == "conv":
-            _features = convolve2d(
-                image, spec["kernel"], mode='same', boundary="symm")
-            spec["dbg_size"] = _features.shape
-            _features = normalize(_features.reshape(-1)) * 2 - 1
-        elif spec["type"] == "random_weights":
-            _features = np.dot(spec["weight_ih"], image.reshape(-1))
-            _features += spec["bias_ih"]
-            spec["dbg_size"] = spec["size"]
-        else:
-            raise ValueError(spec)
-        _features = spec["input_scale"] * _features
-        features.append(_features)
+    for F in operations:
+        features.append(apply_input_map(image,F))
     return features
 
 

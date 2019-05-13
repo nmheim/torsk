@@ -12,6 +12,9 @@ from torsk.data.conv import get_kernel as get_np_kernel
 from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservoir
 from torsk.models.numpy_map_esn import get_hidden_size
 
+from torsk.data.utils import resample2d, normalize
+from torsk.data.dct import dct2
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,29 +23,68 @@ def get_kernel(kernel_shape, kernel_type, dtype_str):
     kernel = get_np_kernel(kernel_shape, kernel_type, dtype_str)
     return torch.tensor(kernel[None, None, :, :], dtype=dtype)
 
+#TODO: Use Torch to perform operations instead of NumPy
+def apply_input_map(image, F):
+    if F["type"] == "pixels":
+        _features = resample2d(image, F["size"]).reshape(-1)
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "dct":
+        _features = dct2(image, *F["size"]).reshape(-1)
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "gradient":
+        grad = np.concatenate(np.gradient(image))
+        _features = normalize(grad.reshape(-1)) * 2 - 1
+        F["dbg_size"] = grad.shape
+    elif F["type"] == "conv":
+        _features = convolve2d(
+            image, F["kernel"], mode='same', boundary="symm")
+        F["dbg_size"] = _features.shape
+        _features = normalize(_features.reshape(-1)) * 2 - 1
+    elif F["type"] == "random_weights":
+        _features = np.dot(F["weight_ih"], image.reshape(-1))
+        _features += F["bias_ih"]
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "compose":
+        _features = image
+        for f in F["operations"]:
+            _features = apply_input_map(_features, f)
+    else:
+        raise ValueError(spec)
+    _features = F["input_scale"] * _features
+    return _features
 
-def input_map(image, input_map_specs):
+
+def input_map(image, operations):
     features = []
-    for spec in input_map_specs:
-        if spec["type"] == "pixels":
-            _features = ttf.resize(
-                Image.fromarray(image.numpy(), mode="F"), spec["size"])
-            _features = torch.tensor(
-                np.array(_features).reshape(-1), dtype=image.dtype)
-            _features = _features * spec["input_scale"]
-        elif spec["type"] == "dct":
-            raise NotImplementedError
-        elif spec["type"] == "conv":
-            if spec["mode"] == "same":
-                raise ValueError("Torch backend does not implement 'same' mode.")
-            _features = F.conv2d(image[None, None, :, :], spec["kernel"]).reshape(-1)
-            _features = _features * spec["input_scale"]
-        elif spec["type"] == "random_weights":
-            _features = torch.mv(spec["weight_ih"], image.reshape(-1))
-        else:
-            raise ValueError(spec)
-        features.append(_features)
+    for F in operations:
+#TODO: Use Torch to perform operations instead of NumPy        
+        features.append(apply_input_map(image.numpy(), F))
     return features
+
+
+
+# def input_map(image, input_map_specs):
+#     features = []
+#     for spec in input_map_specs:
+#         if spec["type"] == "pixels":
+#             _features = ttf.resize(
+#                 Image.fromarray(image.numpy(), mode="F"), spec["size"])
+#             _features = torch.tensor(
+#                 np.array(_features).reshape(-1), dtype=image.dtype)
+#             _features = _features * spec["input_scale"]
+#         elif spec["type"] == "dct":
+#             raise NotImplementedError
+#         elif spec["type"] == "conv":
+#             if spec["mode"] == "same":
+#                 raise ValueError("Torch backend does not implement 'same' mode.")
+#             _features = F.conv2d(image[None, None, :, :], spec["kernel"]).reshape(-1)
+#             _features = _features * spec["input_scale"]
+#         elif spec["type"] == "random_weights":
+#             _features = torch.mv(spec["weight_ih"], image.reshape(-1))
+#         else:
+#             raise ValueError(spec)
+#         features.append(_features)
+#     return features
 
 
 def init_input_map_specs(input_map_specs, input_shape, dtype_str):
