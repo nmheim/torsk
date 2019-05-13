@@ -33,6 +33,7 @@ def apply_input_map(image, F):
         _features = image
         for f in F["operations"]:
             _features = apply_input_map(_features, f)
+        F["dbg_size"] = F["operations"][-1]["size"];
     else:
         raise ValueError(spec)
     _features = F["input_scale"] * _features
@@ -74,6 +75,8 @@ def get_hidden_size(input_shape, input_map_specs):
             hidden_size += spec["size"][0]
         elif spec["type"] == "gradient":
             hidden_size += input_shape[0] * input_shape[1] * 2  # For 2d pictures
+        elif spec["type"] == "compose":
+            hidden_size += spec["operations"][-1]["size"]
         else:
             shape = spec["size"]
             hidden_size += shape[0] * shape[1]
