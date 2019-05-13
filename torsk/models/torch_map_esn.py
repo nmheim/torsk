@@ -28,10 +28,9 @@ def get_kernel(kernel_shape, kernel_type, dtype_str):
 def input_map(image, operations):
     features = []
     for F in operations:
-#TODO: Use Torch to perform operations instead of NumPy        
-        features.append(apply_input_map(image.numpy(), F))
+#TODO: Implement operations with Torch instead of using NumPy-implementation        
+        features.append(torch.tensor(apply_input_map(image.numpy(), F)))
     return features
-
 
 
 # def input_map(image, input_map_specs):

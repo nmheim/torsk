@@ -32,7 +32,7 @@ params.input_map_specs = [
     {"type": "dct", "size": [15, 15], "input_scale": 1.},
     {"type": "compose", "operations": [
         {"type": "gradient", "input_scale": 1.},
-        {"type": "pixels",   "size": [20,20]}
+        {"type": "pixels",   "size": [40,20]}
         ]
     },
     {"type": "gradient", "input_scale": 1.}
@@ -46,7 +46,7 @@ params.pred_length = 200
 params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "sparse"
-params.backend = "numpy"
+params.backend = "torch"
 params.train_method = "pinv_lstsq"
 params.tikhonov_beta = 0.01
 params.imed_loss = True
