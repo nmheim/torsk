@@ -28,9 +28,9 @@ def sliding_score(error, small_window, large_window):
         lw_std[i] = lw_err.std(axis=0)
         sw_mu[i] = sw_err.mean(axis=0)
 
-        x = np.abs(lw_mu[i] - sw_mu[i]) / lw_std[i]
+        x = np.maximum(0, sw_mu[i] - lw_mu[i]) / lw_std[i]
         s = qfunction(x)
         scores[i] = s
 
-    scores[:small_window] = 1.
+    scores[:large_window//10] = 1.
     return scores, lw_mu, lw_std, sw_mu
