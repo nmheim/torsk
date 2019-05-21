@@ -52,7 +52,7 @@ def get_params():
     hp.dtype = "float32"
     hp.train_length = 200
     hp.pred_length = 100
-    hp.batch_size = 32
+    hp.batch_size = 4
     hp.hidden_size = 4096
     hp.input_shape = [10, 10]
     return hp
@@ -68,12 +68,15 @@ def run_lstm():
     model = LSTM(input_size=input_size, hidden_size=hp.hidden_size)
     params = model.parameters()
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    model.to(device)
+    print(model)
+    raise
     
     optimizer = torch.optim.Adam(params, lr=1e-3)
     loss = nn.MSELoss()
     metrics = {'loss': Loss(loss)}
-    trainer = create_supervised_trainer(model, optimizer, loss)
-    evaluator = create_supervised_evaluator(model, metrics=metrics)
+    trainer = create_supervised_trainer(model, optimizer, loss, device=device)
+    evaluator = create_supervised_evaluator(model, metrics=metrics, device=device)
     checkpoint_handler = ModelCheckpoint(
         output_dir, "lstm", save_interval=1, n_saved=10, require_empty=False)
     timer = Timer(average=True)

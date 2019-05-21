@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 
 def apply_input_map(image, F):
     if F["type"] == "pixels":
-        _features = resample2d(image, F["size"]).reshape(-1)
+        _features = resample2d(image, F["size"])
+        if F["flatten"]:
+            _features = _features.reshape(-1)
         F["dbg_size"] = F["size"]
     elif F["type"] == "dct":
         _features = dct2(image, *F["size"]).reshape(-1)
@@ -65,6 +67,9 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
                 size=spec["size"])
             spec["weight_ih"] = weight_ih.astype(dtype)
             spec["bias_ih"] = bias_ih.astype(dtype)
+        elif spec["type"] == "compose":
+            spec["operations"] = init_input_map_specs(
+                spec["operations"], input_shape, dtype)
     return input_map_specs
 
 def hidden_size_of(input_shape, F):

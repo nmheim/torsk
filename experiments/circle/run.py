@@ -71,4 +71,4 @@ model = ESN(params)
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
     model, dataset, "basicesn",
-    steps=1, step_length=5, step_start=0)
+    steps=100, step_length=5, step_start=0)
