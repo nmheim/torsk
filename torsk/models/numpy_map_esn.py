@@ -16,17 +16,23 @@ def apply_input_map(image, F):
             _features = _features.reshape(-1)
         F["dbg_size"] = F["size"]
     elif F["type"] == "dct":
-        _features = dct2(image, *F["size"]).reshape(-1)
+        _features = dct2(image, *F["size"])
+        if F["flatten"]:
+            _features = _features.reshape(-1)
         F["dbg_size"] = F["size"]
     elif F["type"] == "gradient":
         grad = np.concatenate(np.gradient(image))
-        _features = normalize(grad.reshape(-1)) * 2 - 1
+        _features = normalize(grad) * 2 - 1
+        if F["flatten"]:
+            _features = _features.reshape(-1)
         F["dbg_size"] = grad.shape
     elif F["type"] == "conv":
         _features = convolve2d(
             image, F["kernel"], mode='same', boundary="symm")
         F["dbg_size"] = _features.shape
-        _features = normalize(_features.reshape(-1)) * 2 - 1
+        _features = normalize(_features) * 2 - 1
+        if F["flatten"]:
+            _features = _features.reshape(-1)
     elif F["type"] == "random_weights":
         _features = np.dot(F["weight_ih"], image.reshape(-1))
         _features += F["bias_ih"]
@@ -35,7 +41,7 @@ def apply_input_map(image, F):
         _features = image
         for f in F["operations"]:
             _features = apply_input_map(_features, f)
-        F["dbg_size"] = hidden_size_of(image.shape,F["operations"][-1])
+        F["dbg_size"] = hidden_size_of(image.shape,F)[1]
     else:
         raise ValueError(spec)
 
@@ -43,7 +49,7 @@ def apply_input_map(image, F):
         scale = F["input_scale"]
     else:
         scale = 1
-    
+
     _features = scale * _features
     return _features
 
@@ -72,6 +78,7 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
                 spec["operations"], input_shape, dtype)
     return input_map_specs
 
+
 def hidden_size_of(input_shape, F):
     shape = input_shape
     if F["type"] == "conv":
@@ -83,6 +90,7 @@ def hidden_size_of(input_shape, F):
         size = F["size"][0]
     elif F["type"] == "gradient":
         size = input_shape[0] * input_shape[1] * 2  # For 2d pictures
+        shape = (input_shape[0] * 2, input_shape[1])
     elif F["type"] == "compose":
         shape = input_shape
         for f in F["operations"]:
