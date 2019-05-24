@@ -218,11 +218,33 @@ def dump_prediction(fname, outputs, labels, states, attrs=None):
         dst["eucd"][:] = eucd_metric(outputs, labels)
 
 
-def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
-                      step_length=1, step_start=0):
+def train_esn(model, dataset, outdir):
     if outdir is not None and not isinstance(outdir, pathlib.Path):
         outdir = pathlib.Path(outdir)
 
+    inputs, labels, _ = dataset[0]
+
+    tlen = model.params.transient_length
+    hidden_size = model.esn_cell.hidden_size
+    backend = model.params.backend
+    dtype = model.esn_cell.dtype
+
+    zero_state = initial_state(hidden_size, dtype, backend)
+    _, states = model.forward(inputs, zero_state, states_only=True)
+    if outdir is not None:
+        outfile = outdir / f"train_data_idx0.nc"
+        logger.info(f"Saving training to {outfile}")
+        dump_training(outfile, dataset, 0, states=states)
+
+    logger.info("Optimizing output weights")
+    model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
+
+    save_model(outdir, model)
+
+
+
+def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
+                      step_length=1, step_start=0):
     if outdir is not None and not isinstance(outdir, pathlib.Path):
         outdir = pathlib.Path(outdir)
 

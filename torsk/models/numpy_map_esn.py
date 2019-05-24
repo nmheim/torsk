@@ -5,37 +5,53 @@ from scipy.signal import convolve2d
 from torsk.data.conv import get_kernel, conv2d_output_shape
 from torsk.data.utils import resample2d, normalize
 from torsk.data.dct import dct2
-from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservoir
+from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir
 
 logger = logging.getLogger(__name__)
 
+def apply_input_map(image, F):
+    if F["type"] == "pixels":
+        _features = resample2d(image, F["size"])
+        if F["flatten"]:
+            _features = _features.reshape(-1)
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "dct":
+        _features = dct2(image, *F["size"]).reshape(-1)
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "gradient":
+        grad = np.concatenate(np.gradient(image))
+        _features = normalize(grad.reshape(-1)) * 2 - 1
+        F["dbg_size"] = grad.shape
+    elif F["type"] == "conv":
+        _features = convolve2d(
+            image, F["kernel"], mode='same', boundary="symm")
+        F["dbg_size"] = _features.shape
+        _features = normalize(_features.reshape(-1)) * 2 - 1
+    elif F["type"] == "random_weights":
+        _features = np.dot(F["weight_ih"], image.reshape(-1))
+        _features += F["bias_ih"]
+        F["dbg_size"] = F["size"]
+    elif F["type"] == "compose":
+        _features = image
+        for f in F["operations"]:
+            _features = apply_input_map(_features, f)
+        F["dbg_size"] = hidden_size_of(image.shape,F["operations"][-1])
+    else:
+        raise ValueError(spec)
 
-def input_map(image, input_map_specs):
+    if "input_scale" in F.keys():
+        scale = F["input_scale"]
+    else:
+        scale = 1
+    
+    _features = scale * _features
+    return _features
+
+
+def input_map(image, operations):
     features = []
-    for spec in input_map_specs:
-        if spec["type"] == "pixels":
-            _features = resample2d(image, spec["size"]).reshape(-1)
-            spec["dbg_size"] = spec["size"]
-        elif spec["type"] == "dct":
-            _features = dct2(image, *spec["size"]).reshape(-1)
-            spec["dbg_size"] = spec["size"]
-        elif spec["type"] == "gradient":
-            grad = np.concatenate(np.gradient(image))
-            _features = normalize(grad.reshape(-1)) * 2 - 1
-            spec["dbg_size"] = grad.shape
-        elif spec["type"] == "conv":
-            _features = convolve2d(
-                image, spec["kernel"], mode='same', boundary="symm")
-            spec["dbg_size"] = _features.shape
-            _features = normalize(_features.reshape(-1)) * 2 - 1
-        elif spec["type"] == "random_weights":
-            _features = np.dot(spec["weight_ih"], image.reshape(-1))
-            _features += spec["bias_ih"]
-            spec["dbg_size"] = spec["size"]
-        else:
-            raise ValueError(spec)
-        _features = spec["input_scale"] * _features
-        features.append(_features)
+    for F in operations:
+        features.append(apply_input_map(image,F))
     return features
 
 
@@ -51,25 +67,35 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
                 size=spec["size"])
             spec["weight_ih"] = weight_ih.astype(dtype)
             spec["bias_ih"] = bias_ih.astype(dtype)
+        elif spec["type"] == "compose":
+            spec["operations"] = init_input_map_specs(
+                spec["operations"], input_shape, dtype)
     return input_map_specs
 
-
+def hidden_size_of(input_shape, F):
+    shape = input_shape
+    if F["type"] == "conv":
+        if F["mode"] == "valid":
+            shape = conv2d_output_shape(input_shape, F["size"])
+        elif F["mode"] == "same":
+            size  = shape[0] * shape[1]
+    elif F["type"] == "random_weights":
+        size = F["size"][0]
+    elif F["type"] == "gradient":
+        size = input_shape[0] * input_shape[1] * 2  # For 2d pictures
+    elif F["type"] == "compose":
+        shape = input_shape
+        for f in F["operations"]:
+            size, shape = hidden_size_of(shape,f);
+    else:
+        shape = F["size"]
+        size  = shape[0] * shape[1]
+    return size, shape
+            
 def get_hidden_size(input_shape, input_map_specs):
     hidden_size = 0
-    for spec in input_map_specs:
-        if spec["type"] == "conv":
-            if spec["mode"] == "valid":
-                shape = conv2d_output_shape(input_shape, spec["size"])
-            elif spec["mode"] == "same":
-                shape = input_shape
-                hidden_size += shape[0] * shape[1]
-        elif spec["type"] == "random_weights":
-            hidden_size += spec["size"][0]
-        elif spec["type"] == "gradient":
-            hidden_size += input_shape[0] * input_shape[1] * 2  # For 2d pictures
-        else:
-            shape = spec["size"]
-            hidden_size += shape[0] * shape[1]
+    for F in input_map_specs:
+        hidden_size += hidden_size_of(input_shape,F)[0]
     return hidden_size
 
 
@@ -157,11 +183,13 @@ class NumpyMapSparseESNCell(object):
         self.hidden_size = self.get_hidden_size(input_shape)
         logger.info(f"ESN hidden size: {self.hidden_size}")
         nonzeros_per_row = int(self.hidden_size * density)
-        self.weight_hh = sparse_nzpr_esn_reservoir(
+        self.weight_hh = sparse_esn_reservoir(
             dim=self.hidden_size,
             spectral_radius=self.spectral_radius,
-            nonzeros_per_row=nonzeros_per_row,
-            dtype=self.dtype)
+            #nonzeros_per_row=nonzeros_per_row,
+            density=density,
+            symmetric=True)
+            #dtype=self.dtype)
 
         self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)
 
@@ -179,7 +207,8 @@ class NumpyMapSparseESNCell(object):
         return np.concatenate(input_stack, axis=0)
 
     def state_map(self, state):
-        return self.weight_hh.sparse_dense_mv(state)
+        s = self.weight_hh.dot(state)
+        return s.astype(self.dtype)
 
     def forward(self, image, state):
         self.check_dtypes(image, state)

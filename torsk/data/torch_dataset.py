@@ -10,7 +10,9 @@ class TorchImageDataset(Dataset):
     """Dataset that contains the raw images and does nothing but providing
     convenient access to inputs/labels/pred_labels
     """
-    def __init__(self, images, params, scale_images=True):
+    def __init__(self, images, params, scale_images=True, return_pred_labels=False):
+        if images.ndim == 3:
+            images = images.reshape(images.shape[0], -1)
         self.train_length = params.train_length
         self.pred_length = params.pred_length
         self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
@@ -23,6 +25,7 @@ class TorchImageDataset(Dataset):
             logger.debug("Scaling input images to (-1, 1)")
             self._images = self.scale(_images)
         self.image_shape = images.shape[1:]
+        self.plbls = return_pred_labels
 
     def scale(self, images):
         self.min = torch.min(images)
@@ -48,7 +51,10 @@ class TorchImageDataset(Dataset):
         inputs, labels, pred_labels = split_train_label_pred(
             images, self.train_length, self.pred_length)
 
-        return inputs, labels, pred_labels
+        if self.plbls:
+            return inputs, labels, pred_labels
+        else:
+            return inputs, labels
 
     def __len__(self):
         return self.nr_sequences

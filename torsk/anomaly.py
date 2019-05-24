@@ -8,17 +8,29 @@ def qfunction(x):
     return 1 - cumulative_distribution(x)
 
 def sliding_score(error, small_window, large_window):
-    shape = (error.shape[0] - large_window,) + error.shape[1:]
-    scores = np.zeros(shape)
+    scores = np.empty(error.shape)
+    lw_mu = np.zeros_like(scores)
+    lw_std = np.zeros_like(scores)
+    sw_mu = np.zeros_like(scores)
 
-    for i in range(shape[0]):
-        j = i + large_window
-        sw_err = error[j:j+small_window]
-        lw_err = error[j-large_window:j+small_window]
-        mu = lw_err.mean(axis=0)
-        std = lw_err.std(axis=0)
-        sw_mu = sw_err.mean(axis=0)
-        x = np.abs(mu - sw_mu) / std
+    lw_mu[0] = error[0]
+    lw_std[0] = error[:2].std(axis=0)
+    sw_mu[0] = error[0]
+
+    for i in range(1, error.shape[0]):
+        lw_start = max(0, i - large_window + 1)
+        sw_end   = min(i + small_window, error.shape[0])
+
+        lw_err = error[lw_start:i]
+        sw_err = error[i:sw_end]
+
+        lw_mu[i] = lw_err.mean(axis=0)
+        lw_std[i] = lw_err.std(axis=0)
+        sw_mu[i] = sw_err.mean(axis=0)
+
+        x = np.maximum(0, sw_mu[i] - lw_mu[i]) / lw_std[i]
         s = qfunction(x)
         scores[i] = s
-    return scores
+
+    scores[:large_window//10] = 1.
+    return scores, lw_mu, lw_std, sw_mu

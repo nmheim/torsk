@@ -36,6 +36,15 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
 
     sns.set_style("whitegrid")
     sns.set_context("notebook")
+    kuro = False
+    if kuro:
+        kuro_start = 0
+        kuro_step = 5
+
+    if mackey:
+        ax_offset = 1
+    else:
+        ax_offset = 0
 
     pred_data_ncfiles, indices = sort_filenames(
         pred_data_ncfiles, return_indices=True)
@@ -45,15 +54,12 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
     nr_plots = 4 if mackey else 3
     figsize = (8, 6) if mackey else (8, 5)
     fig, ax = plt.subplots(nr_plots, 1, sharex=True, figsize=figsize)
-
-    # ax[0].set_title(r"IMED$(\mathbf{y}, \mathbf{d})$")
-    # ax[1].set_title("Mean IMED/EUCD")
-    # ax[2].set_title(f"Normality Score. LW:{large_window} SW:{small_window}")
+    ax[ax_offset].set_ylabel("Error")
 
     cmap = plt.get_cmap("inferno")
     colors = cycle([cmap(i) for i in np.linspace(0, 1, 10)])
 
-    imed_error, cycle_error, trivial_error = [], [], []
+    imed_error, cycle_error = [], []
     for pred_data_nc, idx in tqdm(zip(pred_data_ncfiles, indices), total=len(indices)):
         tqdm.write(pred_data_nc.as_posix())
 
@@ -61,52 +67,36 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
 
             pred_imed = src["imed"][:valid_pred_length]
             labels = src["labels"][:valid_pred_length]
-            label0 = np.tile(labels[0], (valid_pred_length, 1, 1))
-            pred_trivial = imed_metric(labels, label0)
-
-            imed_error.append(pred_imed[-1])
-            trivial_error.append(pred_trivial[-1])
+            imed_error.append(pred_imed.mean(axis=0))
 
             if idx % pred_plot_step == 0:
-                x = np.arange(idx, idx + valid_pred_length)
-                ax[0].plot(x, pred_imed, color=next(colors))
+                if kuro:
+                    start = (idx+params.train_length)*kuro_step+kuro_start
+                    stop = start+kuro_step*valid_pred_length
+                    x = np.arange(start, stop, kuro_step)
+                else:
+                    x = np.arange(idx, idx + valid_pred_length)
+                ax[ax_offset].plot(x, pred_imed, color=next(colors))
 
         cycle_data_nc = pred_data_nc.parent / f"cycle_pred_data_idx{idx}.npy"
         cpred = np.load(cycle_data_nc)[:valid_pred_length]
         cycle_imed = imed_metric(cpred, labels)
-        cycle_error.append(cycle_imed[-1])
+        cycle_error.append(cycle_imed.mean(axis=0))
 
     imed_error = np.array(imed_error)
-    trivial_error = np.array(trivial_error)
     cycle_error = np.array(cycle_error)
 
-    imed_score = sliding_score(
+    imed_score, lw_mu, lw_std, sw_mu = sliding_score(
         imed_error, small_window=small_window, large_window=large_window)
-    trivial_score = sliding_score(
-        trivial_error, small_window=small_window, large_window=large_window)
-    cycle_score = sliding_score(
+    cycle_score, _, _, _ = sliding_score(
         cycle_error, small_window=small_window, large_window=large_window)
 
-    shifted_indices = np.array(indices) + valid_pred_length
-
-    ax[1].plot(shifted_indices, imed_error, label="ESN")
-    ax[1].plot(shifted_indices, trivial_error, label="trivial")
-    ax[1].plot(shifted_indices, cycle_error, label="cycle")
-    ax[1].legend(loc="lower left")
-
-    ax[2].plot(shifted_indices[large_window:], imed_score, label="ESN")
-    ax[2].plot(shifted_indices[large_window:], trivial_score, label="trivial")
-    ax[2].plot(shifted_indices[large_window:], cycle_score, label="cycle")
-    ax[2].plot(
-        indices, np.zeros_like(indices) + prob_normality,
-        label=rf"$\Sigma={prob_normality}$", color="black")
-    ax[2].set_yscale("log")
-    ax[2].legend(loc="lower left")
-
-    bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 2}
-    ax[0].annotate('A', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
-    ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
-    ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+    indices = np.array(indices)
+    if kuro:
+        indices = (indices + params.train_length) * kuro_step + kuro_start
+        shifted_indices = indices + valid_pred_length * kuro_step
+    else:
+        shifted_indices = indices + valid_pred_length
 
     if mackey:
         mackey_seq, anomaly = mackey_anomaly_sequence(
@@ -116,15 +106,58 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length,
         mackey_seq = normalize(mackey_seq)
 
         length = anomaly[params.train_length:].shape[0]
-        ax[3].plot(mackey_seq[params.train_length:], label="x-component")
-        ax[3].fill_between(
+        ax[0].plot(mackey_seq[params.train_length:], label="x-Component", color="black")
+        ax[0].fill_between(
             np.arange(length), np.zeros(length), anomaly[params.train_length:],
-            color="grey", alpha=0.5, label="Anomaly")
-        ax[3].legend(loc="lower left")
-        ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+            color="grey", alpha=0.5, label="True Anomaly")
+        ax[0].legend(loc="lower left")
+
+    plot_start = indices[0]
+    plot_end = indices[-1]
+    if kuro:
+        plot_end += valid_pred_length*kuro_step
+        ax[-1].set_xlabel("Time [days]")
+    else:
+        plot_end += valid_pred_length
+
+    plot_indices = shifted_indices
+    ones = np.ones_like(plot_indices)
+
+    ax[ax_offset+1].plot([plot_start, plot_end], [prob_normality, prob_normality], ":",
+        label=rf"$\Sigma={prob_normality}$", color="black")
+    ax[ax_offset+1].plot(plot_indices, imed_score, "-", label="ESN", color="C0")
+    ax[ax_offset+1].fill_between(plot_indices, ones, imed_score > prob_normality,
+        label="Detected Anomaly", alpha=0.5, color="C0")
+    ax[ax_offset+1].set_ylim(1e-3, 1.)
+    ax[ax_offset+1].set_ylabel("Normality")
+
+    ax[ax_offset+2].plot([plot_start, plot_end], [prob_normality, prob_normality], ":",
+        label=rf"$\Sigma={prob_normality}$", color="black")
+    ax[ax_offset+2].plot(plot_indices, cycle_score, "-.", label="Cycle", color="C1")
+    ax[ax_offset+2].fill_between(plot_indices, ones, cycle_score > prob_normality,
+        label="Detected Anomaly", alpha=0.5, color="C1")
+    ax[ax_offset+2].set_ylim(1e-3, 1.)
+    ax[ax_offset+2].set_ylabel("Normality")
+
+    # ax[ax_offset+2].plot(plot_indices, imed_error, label=r"error", color="black")
+    # ax[ax_offset+2].plot(plot_indices, lw_mu, label=r"$\mu_m$")
+    # ax[ax_offset+2].plot(plot_indices, lw_std, label=r"$\sigma_m$")
+    # ax[ax_offset+2].plot(plot_indices, sw_mu, label=r"$\mu_n$")
+
+
+    bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 1}
+    for a, l in zip(ax, 'ABCD'):
+        a.annotate(l, xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+
+    ax[ax_offset+1].set_yscale("log")
+    ax[ax_offset+1].legend(loc="lower left")
+    ax[ax_offset+2].set_yscale("log")
+    ax[ax_offset+2].legend(loc="lower left")
 
     for a in ax:
-        a.set_xlim(0, len(indices))
+        if kuro:
+            a.set_xticks(np.arange(0, indices[-1], 365))
+        a.set_xlim(plot_start, plot_end)
 
     plt.tight_layout()
 

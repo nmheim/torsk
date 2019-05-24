@@ -56,11 +56,11 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window,
     trivial_error = np.array(trivial_error)
     cycle_error = np.array(cycle_error)
 
-    pixel_score = sliding_score(
+    pixel_score, _, _, _ = sliding_score(
         pixel_error, small_window=small_window, large_window=large_window)
-    trivial_score = sliding_score(
+    trivial_score, _, _, _ = sliding_score(
         trivial_error, small_window=small_window, large_window=large_window)
-    cycle_score = sliding_score(
+    cycle_score, _, _, _ = sliding_score(
         cycle_error, small_window=small_window, large_window=large_window)
 
     fig, ax = plt.subplots(1, 3, figsize=(9, 3))
@@ -74,11 +74,11 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, large_window,
         trivial_count = np.ma.masked_array(trivial_count, mask=mask)
         cycle_count = np.ma.masked_array(cycle_count, mask=mask)
 
-    im = ax[0].imshow(pixel_count[::-1])
+    im = ax[0].imshow(trivial_count[::-1])
     plt.colorbar(im, ax=ax[0], fraction=0.046, pad=0.04)
-    im = ax[1].imshow(trivial_count[::-1])
+    im = ax[1].imshow(cycle_count[::-1])
     plt.colorbar(im, ax=ax[1], fraction=0.046, pad=0.04)
-    im = ax[2].imshow(cycle_count[::-1])
+    im = ax[2].imshow(pixel_count[::-1])
     plt.colorbar(im, ax=ax[2], fraction=0.046, pad=0.04)
 
     bbox = {"boxstyle": "round", "pad": 0.3, "fc": "white", "ec": "gray", "lw": 2}
