@@ -1,3 +1,4 @@
+# coding: future_fstrings
 import click
 import pathlib
 

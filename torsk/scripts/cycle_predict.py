@@ -1,3 +1,4 @@
+# coding: future_fstrings
 import pathlib
 import click
 
@@ -27,7 +28,8 @@ def cli(train_data_ncfiles, cycle_length, pred_length, train_length):
     train_data_ncfiles = sort_filenames(train_data_ncfiles)
 
     for train_data_nc in tqdm(train_data_ncfiles):
-        assert "train" in train_data_nc.as_posix()
+        if not "train" in train_data_nc.as_posix():
+            print(train_data_nc.as_posix())
         with nc.Dataset(train_data_nc, "r") as src:
             training_Ftxx = src["labels"][-train_length:]
             cpred, _ = detrend.predict_from_trend_unscaled(

@@ -1,3 +1,4 @@
+#coding: future_fstrings
 import pathlib
 from shutil import copyfile
 import click
