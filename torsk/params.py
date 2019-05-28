@@ -1,3 +1,4 @@
+# coding: future_fstrings
 import json
 import pathlib
 from marshmallow import Schema, fields, validate
@@ -81,7 +82,7 @@ class Params:
             self.__dict__ = schema.load(params)
 
     def save(self, json_path):
-        with open(json_path, 'w') as f:
+        with open(json_path.as_posix(), 'w') as f:
             dump = ParamsSchema().dump(self.__dict__)
             json.dump(dump, f, indent=4)
 
