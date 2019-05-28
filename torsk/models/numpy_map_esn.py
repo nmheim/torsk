@@ -6,34 +6,26 @@ from scipy.signal import convolve2d
 from torsk.data.conv import get_kernel, conv2d_output_shape
 from torsk.data.utils import resample2d, normalize
 from torsk.data.dct import dct2
-from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir
+from torsk.models.initialize import dense_esn_reservoir, sparse_nzpr_esn_reservoir, sparse_esn_reservoir
 
 logger = logging.getLogger(__name__)
 
 def apply_input_map(image, F):
     if F["type"] == "pixels":
         _features = resample2d(image, F["size"])
-        if F["flatten"]:
-            _features = _features.reshape(-1)
         F["dbg_size"] = F["size"]
     elif F["type"] == "dct":
         _features = dct2(image, *F["size"])
-        if F["flatten"]:
-            _features = _features.reshape(-1)
         F["dbg_size"] = F["size"]
     elif F["type"] == "gradient":
         grad = np.concatenate(np.gradient(image))
         _features = normalize(grad) * 2 - 1
-        if F["flatten"]:
-            _features = _features.reshape(-1)
         F["dbg_size"] = grad.shape
     elif F["type"] == "conv":
         _features = convolve2d(
             image, F["kernel"], mode='same', boundary="symm")
         F["dbg_size"] = _features.shape
         _features = normalize(_features) * 2 - 1
-        if F["flatten"]:
-            _features = _features.reshape(-1)
     elif F["type"] == "random_weights":
         _features = np.dot(F["weight_ih"], image.reshape(-1))
         _features += F["bias_ih"]
@@ -42,11 +34,12 @@ def apply_input_map(image, F):
         _features = image
         for f in F["operations"]:
             _features = apply_input_map(_features, f)
+
         F["dbg_size"] = hidden_size_of(image.shape,F)[1]
     else:
         raise ValueError(spec)
 
-    if "input_scale" in F.keys():
+    if "input_scale" in F:
         scale = F["input_scale"]
     else:
         scale = 1
@@ -58,7 +51,7 @@ def apply_input_map(image, F):
 def input_map(image, operations):
     features = []
     for F in operations:
-        features.append(apply_input_map(image,F))
+        features.append(apply_input_map(image,F).reshape(-1))
     return features
 
 
@@ -192,13 +185,18 @@ class NumpyMapSparseESNCell(object):
         self.hidden_size = self.get_hidden_size(input_shape)
         logger.info(f"ESN hidden size: {self.hidden_size}")
         nonzeros_per_row = int(self.hidden_size * density)
+#         self.weight_hh = sparse_nzpr_esn_reservoir(
+#             dim=self.hidden_size,
+#             spectral_radius=self.spectral_radius,
+#             nonzeros_per_row=nonzeros_per_row,
+# #            density=density,
+# #            symmetric=True)
+#             dtype=self.dtype)
         self.weight_hh = sparse_esn_reservoir(
             dim=self.hidden_size,
             spectral_radius=self.spectral_radius,
-            #nonzeros_per_row=nonzeros_per_row,
             density=density,
             symmetric=True)
-            #dtype=self.dtype)
 
         self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)
 
@@ -216,6 +214,7 @@ class NumpyMapSparseESNCell(object):
         return np.concatenate(input_stack, axis=0)
 
     def state_map(self, state):
+#        return self.weight_hh.sparse_dense_mv(state)
         s = self.weight_hh.dot(state)
         return s.astype(self.dtype)
 
