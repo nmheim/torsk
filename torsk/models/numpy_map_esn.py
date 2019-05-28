@@ -12,8 +12,6 @@ logger = logging.getLogger(__name__)
 def apply_input_map(image, F):
     if F["type"] == "pixels":
         _features = resample2d(image, F["size"])
-        if F["flatten"]:
-            _features = _features.reshape(-1)
         F["dbg_size"] = F["size"]
     elif F["type"] == "dct":
         _features = dct2(image, *F["size"]).reshape(-1)
@@ -39,7 +37,7 @@ def apply_input_map(image, F):
     else:
         raise ValueError(spec)
 
-    if "input_scale" in F.keys():
+    if "input_scale" in F:
         scale = F["input_scale"]
     else:
         scale = 1
@@ -51,7 +49,7 @@ def apply_input_map(image, F):
 def input_map(image, operations):
     features = []
     for F in operations:
-        features.append(apply_input_map(image,F))
+        features.append(apply_input_map(image,F).reshape(-1))
     return features
 
 
