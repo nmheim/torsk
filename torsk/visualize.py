@@ -91,7 +91,7 @@ def to_byte(data,mask):
     return (data*255*(mask==False)).astype(np.uint8);
 
 
-def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):   
+def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.inferno):   
     (nt,ny,nx) = Ftxx.shape;
 
     if(mask is None):
@@ -111,7 +111,7 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):
     writer.close()
 
 
-def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis):   
+def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.inferno):   
     assert(Ftxx1.shape == Ftxx2.shape);
     (nt,ny,nx) = Ftxx1.shape;
    
