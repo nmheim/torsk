@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 import torsk
 from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize, mackey_anomaly_sequence
-from torsk.visualize import animate_double_imshow
+from torsk.visualize import animate_double_imshow, write_double_video
 
 
 np.random.seed(0)
@@ -71,4 +71,7 @@ model = ESN(params)
 logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
     model, dataset, "basicesn",
-    steps=100, step_length=5, step_start=0)
+    steps=1, step_length=5, step_start=0)
+
+
+write_double_video("circle-random.mp4", pred_labels,outputs)

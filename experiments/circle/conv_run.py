@@ -1,12 +1,14 @@
+# coding: future_fstrings
 import sys
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 import torsk
 from torsk.data.utils import gauss2d_sequence, mackey_sequence, normalize, mackey_anomaly_sequence
 from torsk.imed import imed_metric
-from torsk.visualize import animate_double_imshow
+from torsk.visualize import animate_double_imshow, write_double_video
 
 np.random.seed(11)
 
@@ -30,23 +32,23 @@ params.input_map_specs = [
     {"type": "conv", "mode": "same", "size": [10, 10], "kernel_type":"random", "input_scale": 1.},
     {"type": "conv", "mode": "same", "size": [20, 20], "kernel_type":"random", "input_scale": 1.},
     {"type": "dct", "size": [15, 15], "input_scale": 1.},
-    {"type": "compose", "operations": [
+#    {"type": "compose", "operations": [
         {"type": "gradient", "input_scale": 1.},
-        {"type": "pixels",   "size": [40,20]}
-        ]
-    },
+#        {"type": "pixels",   "size": [40,20]}
+#        ]
+#    },
     {"type": "gradient", "input_scale": 1.}
 ]
 
 params.spectral_radius = 2.0
-params.density = 0.01
+params.density = 0.05
 params.input_shape = [30, 30]
 params.train_length = 2000
 params.pred_length = 200
 params.transient_length = 200
 params.dtype = "float64"
 params.reservoir_representation = "sparse"
-params.backend = "torch"
+params.backend = "numpy"
 params.train_method = "pinv_lstsq"
 params.tikhonov_beta = 0.01
 params.imed_loss = True
@@ -95,3 +97,5 @@ logger.info("Training + predicting ...")
 model, outputs, pred_labels = torsk.train_predict_esn(
     model, dataset, "/tmp/mackey_conv_small",
     steps=1, step_length=1, step_start=0)
+
+write_double_video("circle-conv.mp4", pred_labels,outputs)
