@@ -1,3 +1,4 @@
+import time
 import logging
 import pathlib
 
@@ -266,7 +267,10 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
 
         logger.info(f"Creating {inputs.shape[0]} training states")
         zero_state = initial_state(hidden_size, dtype, backend)
+        t1 = time.time()
         _, states = model.forward(inputs, zero_state, states_only=True)
+        t2 = time.time()
+        logger.info(f"Creating {inputs.shape[0]} training states took: {t2-t1}")
 
         if outdir is not None:
             outfile = outdir / f"train_data_idx{idx}.nc"
@@ -274,15 +278,21 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
             dump_training(outfile, dataset, idx, states=states)
 
         logger.info("Optimizing output weights")
+        t1 = time.time()
         model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
+        t2 = time.time()
+        logger.info(f"Optimizing output weights took: {t2-t1}")
 
         if outdir is not None:
             save_model(outdir, model, prefix=f"idx{idx}")
 
         logger.info(f"Predicting the next {model.params.pred_length} frames")
         init_inputs = labels[-1]
+        t1 = time.time()
         outputs, out_states = model.predict(
             init_inputs, states[-1], nr_predictions=model.params.pred_length)
+        t2 = time.time()
+        logger.info(f"Predicting the next {model.params.pred_length} frames took: {t2-t1}")
 
         if outdir is not None:
             outfile = outdir / f"pred_data_idx{idx}.nc"
