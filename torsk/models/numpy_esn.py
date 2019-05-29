@@ -55,7 +55,9 @@ class NumpyESN(object):
 
         self.ones = np.ones([1], dtype=self.esn_cell.dtype)
 
-    def forward(self, inputs, state, states_only=True):
+    def forward(self, inputs, state=None, states_only=True):
+        if state is None:
+            state = np.zeros([self.esn_cell.hidden_size], dtype=self.esn_cell.dtype)
         if self.params.debug:
             logger.debug("Calling forward function in debug mode")
             return self._forward_debug(inputs, state)

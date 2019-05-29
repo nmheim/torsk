@@ -9,10 +9,11 @@ _MODULE_DIR = pathlib.Path(__file__).parent.absolute()
 class InputMap(Schema):
     type = fields.String(
         validate=validate.OneOf(
-            ["pixels", "dct", "conv", "random_weights", "gradient"]),
+            ["pixels", "dct", "conv", "random_weights", "gradient", "compose"]),
         required=True)
 
-    input_scale = fields.Float(required=True)
+    input_scale = fields.Float()
+    operations = fields.List(fields.Dict())
 
     # xsize if pixels
     # ksize if dct
