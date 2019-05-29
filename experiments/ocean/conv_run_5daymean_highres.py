@@ -18,10 +18,10 @@ np.random.seed(0)
 params = torsk.Params()
 params.input_map_specs = [
     {"type": "pixels", "size": [60, 60], "input_scale": 3., "flatten":True},
-    {"type": "compose", "operations":[
-        {"type": "conv", "mode": "same", "size": [5, 5], "kernel_type":"gauss", "input_scale": 2.},
-        {"type": "pixels", "size":[30,30], "flatten": True},
-    ]},
+    #{"type": "compose", "operations":[
+    #    {"type": "conv", "mode": "same", "size": [5, 5], "kernel_type":"gauss", "input_scale": 2.},
+    #    {"type": "pixels", "size":[30,30], "flatten": True},
+    #]},
     {"type": "compose", "operations":[
         {"type": "conv", "mode": "same", "size": [10, 10], "kernel_type":"gauss", "input_scale": 1.5},
         {"type": "pixels", "size":[30,30], "flatten": True},
@@ -50,7 +50,7 @@ params.input_map_specs = [
 ]
 
 params.spectral_radius = 1.5
-params.density = 0.01
+params.density = 0.05
 params.input_shape = [100, 100]
 params.train_length = 12*73
 params.pred_length = 73
