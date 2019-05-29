@@ -13,7 +13,7 @@ class InputMap(Schema):
         required=True)
 
     input_scale = fields.Float()
-    operations = fields.List(fields.Dict())
+    operations = fields.Nested("self", many=True)
 
     # xsize if pixels
     # ksize if dct
