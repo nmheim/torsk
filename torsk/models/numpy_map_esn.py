@@ -5,7 +5,7 @@ from scipy.signal import convolve2d
 from torsk.data.conv import get_kernel, conv2d_output_shape
 from torsk.data.utils import resample2d, normalize
 from torsk.data.dct import dct2
-from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir
+from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir, sparse_nzpr_esn_reservoir
 
 logger = logging.getLogger(__name__)
 
@@ -181,13 +181,18 @@ class NumpyMapSparseESNCell(object):
         self.hidden_size = self.get_hidden_size(input_shape)
         logger.info(f"ESN hidden size: {self.hidden_size}")
         nonzeros_per_row = int(self.hidden_size * density)
-        self.weight_hh = sparse_esn_reservoir(
+        self.weight_hh = sparse_nzpr_esn_reservoir(
             dim=self.hidden_size,
             spectral_radius=self.spectral_radius,
-            #nonzeros_per_row=nonzeros_per_row,
-            density=density,
-            symmetric=True)
-            #dtype=self.dtype)
+            nonzeros_per_row=nonzeros_per_row,
+            dtype=self.dtype)
+        #self.weight_hh = sparse_esn_reservoir(
+        #    dim=self.hidden_size,
+        #    spectral_radius=self.spectral_radius,
+        #    #nonzeros_per_row=nonzeros_per_row,
+        #    density=density,
+        #    symmetric=True)
+        #    #dtype=self.dtype)
 
         self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)
 
@@ -205,8 +210,9 @@ class NumpyMapSparseESNCell(object):
         return np.concatenate(input_stack, axis=0)
 
     def state_map(self, state):
-        s = self.weight_hh.dot(state)
-        return s.astype(self.dtype)
+        #s = self.weight_hh.dot(state)
+        #return s.astype(self.dtype)
+        return self.weight_hh.sparse_dense_mv(state)
 
     def forward(self, image, state):
         self.check_dtypes(image, state)
