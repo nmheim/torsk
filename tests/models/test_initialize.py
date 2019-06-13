@@ -20,4 +20,5 @@ def test_reservoir_initialization():
 
     # sparse reservoir matrix
     res = init.sparse_esn_reservoir(dim, spectral_radius, density, symmetric)
-    assert np.all((res.transpose() == res).data)
+    dense = res.data
+    assert np.all(dense.T == dense)

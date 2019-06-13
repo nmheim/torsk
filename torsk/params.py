@@ -75,14 +75,14 @@ class Params:
         schema = ParamsSchema()
 
         if json_path is not None:
-            with open(json_path) as f:
+            with open(str(json_path)) as f:
                 self.__dict__ = schema.loads(f.read())
 
         if params is not None:
             self.__dict__ = schema.load(params)
 
     def save(self, json_path):
-        with open(json_path, 'w') as f:
+        with open(str(json_path), 'w') as f:
             dump = ParamsSchema().dump(self.__dict__)
             json.dump(dump, f, indent=4)
 
