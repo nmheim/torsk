@@ -1,3 +1,4 @@
+# coding: future_fstrings
 import logging
 import numpy as np
 from torsk.data import detrend
