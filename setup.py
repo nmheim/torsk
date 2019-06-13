@@ -10,6 +10,7 @@ setup(
     install_requires=[
         "click",
         "joblib",
+        "future-fstrings",
         "marshmallow>=3.0.0b12",
         "matplotlib",
         "netCDF4",
