@@ -122,7 +122,7 @@ def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis
     write_video(filename,Ftxx,mask,fps,colormap)
 
 
-def animate_triple_imshow(frames1, frames2, frames3,
+def animate_triple_imshow(frames1, frames2, frames3, frames4,
                           time=None, vmin=None, vmax=None,
                           cmap_name="inferno", figsize=(6, 6), title=None,
                           axes_labels=None):
@@ -162,7 +162,7 @@ def animate_triple_imshow(frames1, frames2, frames3,
         cmap=plt.get_cmap(cmap_name))
     # trivial prediciton
     im4 = ax[3].imshow(
-        frames1[0], animated=True, vmin=vmin, vmax=vmax,
+        frames4[0], animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
 
     plt.colorbar(im1, ax=ax[0], fraction=0.046, pad=0.04)
@@ -183,13 +183,15 @@ def animate_triple_imshow(frames1, frames2, frames3,
         im1.set_data(frames1[0])
         im2.set_data(frames2[0])
         im3.set_data(frames3[0])
-        return im1, im2, im3, text
+        im4.set_data(frames4[0])
+        return im1, im2, im3, im4, text
 
     def animate(i):
         text.set_text(str(time[i]))
         im1.set_data(frames1[i])
         im2.set_data(frames2[i])
         im3.set_data(frames3[i])
+        im4.set_data(frames4[i])
         return im1, im2, im3, text
 
     anim = animation.FuncAnimation(

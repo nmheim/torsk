@@ -242,6 +242,7 @@ def train_esn(model, dataset, outdir):
     model.optimize(inputs=inputs[tlen:], states=states[tlen:], labels=labels[tlen:])
 
     save_model(outdir, model)
+    return inputs, states, labels
 
 
 

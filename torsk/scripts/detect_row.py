@@ -81,6 +81,11 @@ def cli(pred_data_ncfiles, outfile, show, valid_pred_length, row):
     ax[1].annotate('B', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
     ax[2].annotate('C', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
     ax[3].annotate('D', xy=(0.05, 0.8), xycoords='axes fraction', bbox=bbox)
+    ax[0].annotate("Year 1", xy=(0.08, 1.05), xycoords="axes fraction")
+    ax[0].annotate("Year 2", xy=(0.27, 1.05), xycoords="axes fraction")
+    ax[0].annotate("Year 3", xy=(0.5, 1.05), xycoords="axes fraction")
+    ax[0].annotate("Year 4", xy=(0.7, 1.05), xycoords="axes fraction")
+    ax[0].annotate("Year 5", xy=(0.9, 1.05), xycoords="axes fraction")
     ax[3].set_xlabel("Time [days]")
 
     for a in ax:

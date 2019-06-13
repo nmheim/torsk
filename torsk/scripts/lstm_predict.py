@@ -12,7 +12,7 @@ import click
 @click.option("--params", type=pathlib.Path, default=None)
 def cli(lstm_path, train_data_ncfiles, pred_length, train_length, params=None):
     """Create lstm-based prediction. Results are stored in
-    `lstm_{train_data_nc.stem}.npy` and overwritten if already present.
+    `lstm_{train_data_nc.stem}.npy` and skipped if already present.
     """
     import torch
     from tqdm import tqdm
@@ -42,12 +42,19 @@ def cli(lstm_path, train_data_ncfiles, pred_length, train_length, params=None):
 
     for train_data_nc in tqdm(train_data_ncfiles):
         assert "train" in train_data_nc.as_posix()
-        with nc.Dataset(train_data_nc, "r") as src:
-            labels = src["labels"][-train_length:]
-            labels = torch.Tensor(labels.reshape([1, train_length, -1]))
-            lstm_pred = lstm_model.predict(labels, steps=pred_length)
-            lstm_pred = lstm_pred.detach().numpy().reshape([pred_length,] + params.input_shape)
-            name = train_data_nc.stem.replace("train", "pred")
-            outfile = train_data_nc.parent / f"lstm_{name}.npy"
-            tqdm.write(f"Saving lstm-based prediction at {outfile}")
-            np.save(outfile, lstm_pred)
+        name = train_data_nc.stem.replace("train", "pred")
+        outfile = train_data_nc.parent / f"lstm_{name}.npy"
+
+        if not outfile.exists():
+            with nc.Dataset(train_data_nc, "r") as src:
+                labels = src["labels"][-train_length:]
+                labels = torch.Tensor(labels.reshape([1, train_length, -1]))
+                lstm_pred = lstm_model.predict(labels, steps=pred_length)
+                lstm_pred = lstm_pred.detach().numpy().reshape(
+                    [pred_length,] + params.input_shape)
+                name = train_data_nc.stem.replace("train", "pred")
+                outfile = train_data_nc.parent / f"lstm_{name}.npy"
+                tqdm.write(f"Saving lstm-based prediction at {outfile}")
+                np.save(outfile, lstm_pred)
+        else:
+            tqdm.write(f"Skipping {outfile}")

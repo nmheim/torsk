@@ -94,8 +94,10 @@ def sort_filenames(files, return_indices=False):
     help="Evaluate only first n files (for testing)")
 @click.option("--sns-context", default="talk",
     type=click.Choice(["notebook", "paper", "talk", "poster"]))
+@click.option("--lstm-pred-path", default=None, type=pathlib.Path,
+    help="If given, replace trivial prediction with LSTM prediction")
 def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
-        metric_log_idx, xlim, plot_label, only_first_n, sns_context):
+        metric_log_idx, xlim, plot_label, only_first_n, sns_context, lstm_pred_path):
     """Create animations and averaged performance plot of prediction files.
     The ESN `pred_data_ncfiles` must be named like: pred_data_idx0.nc
     The cycle prediction files are assumed to be in the same directory with
@@ -137,6 +139,9 @@ def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
                 "Cannot compute cycle prediction. "
                 "Create it with `torsk cycle-predict`")
 
+        if lstm_pred_path is not None:
+            lstm_pred = np.load(lstm_pred_path)
+
         # japan = np.load("/home/niklas/Downloads/japan.npy")
         # japan = np.tile(japan, [cpred.shape[0], 1, 1])
         # cpred = np.ma.masked_array(cpred, mask=japan)[:, ::-1]
@@ -147,16 +152,16 @@ def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
             frames = np.concatenate([labels[ii], outputs], axis=1)
             videofile = pred_data_nc.with_suffix(f".{save_video}").as_posix()
             if save_video == "gif":
-                anim = animate_triple_imshow(labels[ii], outputs, cpred,
-                    axes_labels=["Truth", "ESN", "Cycle", "Trivial"])
+                anim = animate_triple_imshow(labels[ii], outputs, lstm_pred, cpred,
+                    axes_labels=["Truth", "ESN", "LSTM", "Cycle"])
                 anim.save(videofile, writer="imagemagick")
             else:
                 write_video(videofile, frames)
 
         if show:
             anim = animate_triple_imshow(
-                labels[ii], outputs, cpred,
-                axes_labels=["Truth", "ESN", "Cycle", "Trivial"])
+                labels[ii], outputs, lstm_pred, cpred,
+                axes_labels=["Truth", "ESN", "LSTM", "Cycle"])
             plt.show()
 
     # plot performance
