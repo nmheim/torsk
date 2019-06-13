@@ -17,6 +17,7 @@ setup(
         "numpy",
         "tqdm",
         "seaborn",
+        "scikit-image",
         "scikit-optimize",
         "imageio",
         "imageio-ffmpeg",
