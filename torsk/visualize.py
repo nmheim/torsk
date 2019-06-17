@@ -91,7 +91,7 @@ def to_byte(data,mask):
     return (data*255*(mask==False)).astype(np.uint8);
 
 
-def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):   
+def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.inferno):   
     (nt,ny,nx) = Ftxx.shape;
 
     if(mask is None):
@@ -102,7 +102,7 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):
         
     vmin, vmax = Ftxx.reshape(-1).min(), Ftxx.reshape(-1).max();
     writer = imageio.get_writer(
-        filename, fps=fps, quality=10, macro_block_size=None)
+        filename, fps=fps, codec='libx264',quality=10, macro_block_size=None) #, pixelformat='yuvj444p')
 
     for i in range(nt):
         img_rgbaf = colormap(normalize(Ftxx[i],vmin,vmax));
@@ -111,7 +111,7 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):
     writer.close()
 
 
-def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis):   
+def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.inferno):   
     assert(Ftxx1.shape == Ftxx2.shape);
     (nt,ny,nx) = Ftxx1.shape;
    
