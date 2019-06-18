@@ -55,6 +55,9 @@ class NumpyESN(object):
         self.wout = np.zeros(wout_shape, dtype=self.esn_cell.dtype)
 
         self.ones = np.ones([1], dtype=self.esn_cell.dtype)
+        self.imed_G = None
+        self.imed_w = None
+        self.imed_V = None
 
     def forward(self, inputs, state=None, states_only=True):
         if state is None:
@@ -143,10 +146,11 @@ class NumpyESN(object):
         if self.params.imed_loss:
             from torsk.imed import metric_matrix
             import scipy as sp
-            logger.debug("Calculating metric matrix")
-            G = metric_matrix(inputs.shape[1:])
-            #U, s, Vh = sp.linalg.svd(G)
-            w, V = sp.linalg.eigh(G)
+            if self.imed_G is None:
+                logger.debug("Calculating metric matrix...")
+                self.imed_G = metric_matrix(inputs.shape[1:])
+                self.imed_w, self.imed_V = sp.linalg.eigh(self.imed_G)
+            G, w, V = self.imed_G, self.imed_w, self.imed_V
             S = np.diag(np.sqrt(w))
             G12 = V.dot(S.dot(V.T))
 
