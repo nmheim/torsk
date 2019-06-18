@@ -142,11 +142,13 @@ class NumpyESN(object):
         
         if self.params.imed_loss:
             from torsk.imed import metric_matrix
+            import scipy as sp
             logger.debug("Calculating metric matrix")
             G = metric_matrix(inputs.shape[1:])
-            w, V = np.linalg.eigh(G)
-            W = np.diag(w)
-            G12 = V.dot((W**.5).dot(V.T))
+            #U, s, Vh = sp.linalg.svd(G)
+            w, V = sp.linalg.eigh(G)
+            S = np.diag(np.sqrt(w))
+            G12 = V.dot(S.dot(V.T))
 
             logger.debug("Reprojecting inputs/labels with metric matrix")
             flat_inputs = np.matmul(G12, flat_inputs[:,:,None])[:,:,0]
@@ -172,7 +174,9 @@ class NumpyESN(object):
             raise ValueError(f'Unkown training method: {method}')
 
         if self.params.imed_loss:
-            wout = np.linalg.inv(G12).dot(wout)
+            invS12 = np.diag(1. / np.sqrt(w))
+            invG12 = V.dot(invS12.dot(V.T))
+            wout = invG12.dot(wout)
 
         if(wout.shape != self.wout.shape):
             raise ValueError("Optimized and original Wout shape do not match."
