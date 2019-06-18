@@ -1,4 +1,5 @@
 # coding: future_fstrings
+import time
 import logging
 import numpy as np
 
@@ -148,8 +149,13 @@ class NumpyESN(object):
             import scipy as sp
             if self.imed_G is None:
                 logger.debug("Calculating metric matrix...")
+                t1 = time.time()
                 self.imed_G = metric_matrix(inputs.shape[1:])
+                t2 = time.time()
+                logger.info(f"Computing metric matrix took: {t2-t1}")
                 self.imed_w, self.imed_V = sp.linalg.eigh(self.imed_G)
+                t3 = time.time()
+                logger.info(f"Diagonalizing metric matrix took: {t3-t2}")
             G, w, V = self.imed_G, self.imed_w, self.imed_V
             S = np.diag(np.sqrt(w))
             G12 = V.dot(S.dot(V.T))
