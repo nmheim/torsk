@@ -107,7 +107,33 @@ class Params:
         return self.__dict__
 
     def __str__(self):
-        return json.dumps(self.__dict__, indent=4, sort_keys=True)
+        ps = self.__dict__.copy()
+        maps = ps.pop("input_map_specs")
+        def maps_table_row(imap):
+            if 'input_scale' in imap:
+                scale = f"{imap['input_scale']:.2f}"
+            else:
+                scale = " -- "
+
+            if imap['type'] in ['pixels', 'dct', 'random_weights']:
+                maps_row = f"  {imap['type']:<8} {scale:<3} {imap['size']}\n"
+            elif imap['type'] == 'conv':
+                maps_row = f"  {imap['type']:<8} {scale:<3} {str(imap['size']):<9} {imap['kernel_type']}\n"
+            elif imap['type'] == 'gradient':
+                maps_row = f"  {imap['type']:<8} {scale:<3}\n"
+            elif imap['type'] == 'compose':
+                ops = imap['operations']
+                maps_row = "  compose\n"
+                for m in ops:
+                    maps_row += f"  {maps_table_row(m)}"
+            return maps_row
+
+        maps_table = ""
+        for imap in maps:
+            maps_table += maps_table_row(imap)
+
+        ps_dump = json.dumps(ps, indent=4, sort_keys=True)
+        return f"Params:\n{ps_dump}\nInput maps:\n{maps_table}"
 
 
 def default_params():
