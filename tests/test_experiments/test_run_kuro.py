@@ -45,6 +45,7 @@ def test_kuro():
     params.tikhonov_beta = 3e1
     params.debug = False
     params.imed_loss = True
+    params.imed_sigma = 1.
     
     images = np.load(pathlib.Path(__file__).parent / "kuro_test_sequence.npy")
     dataset = ImageDataset(images, params, scale_images=True)
@@ -63,4 +64,6 @@ def test_kuro():
 
     error = np.abs(outputs - pred_labels)
     assert error.mean() < 0.2
-    assert error.max() < 1.5
+    assert error.max() < 1.3
+    logger.info(error.mean())
+    logger.info(error.max())
