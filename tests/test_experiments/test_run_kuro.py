@@ -53,9 +53,7 @@ def test_kuro():
     model = ESN(params)
     
     logger.info("Training + predicting ...")
-    model, outputs, pred_labels = torsk.train_predict_esn(
-        model, dataset, "kuro_conv_5daymean",
-        steps=1, step_length=1)
+    model, outputs, pred_labels = torsk.train_predict_esn(model, dataset)
     
     # logger.info("Visualizing results ...")
     # import matplotlib.pyplot as plt
@@ -65,4 +63,4 @@ def test_kuro():
 
     error = np.abs(outputs - pred_labels)
     assert error.mean() < 0.2
-    assert error.max() < 1.1
+    assert error.max() < 1.5

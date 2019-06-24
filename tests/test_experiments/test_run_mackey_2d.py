@@ -72,8 +72,7 @@ def test_mackey_2d(tmpdir):
     model = ESN(params)
     
     logger.info("Training + predicting ...")
-    model, outputs, pred_labels = torsk.train_predict_esn(
-        model, dataset, outdir="conv_output", steps=1)
+    model, outputs, pred_labels = torsk.train_predict_esn(model, dataset)
 
     # logger.info("Visualizing results ...")
     # import matplotlib.pyplot as plt
