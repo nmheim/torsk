@@ -1,7 +1,6 @@
 # coding: future_fstrings
-import time
+from time import time
 import logging
-import numpy as np
 
 from torsk.models.initialize import dense_esn_reservoir
 from torsk.models.numpy_map_esn import NumpyMapESNCell, NumpyMapSparseESNCell
@@ -9,7 +8,8 @@ import torsk.models.numpy_optimize as opt
 
 logger = logging.getLogger(__name__)
 
-
+from torsk.numpy_accelerate import *
+    
 class NumpyESN(object):
     """Complete ESN with output layer. Only supports batch=1 for now!!!
 
@@ -53,16 +53,16 @@ class NumpyESN(object):
 
         input_size = params.input_shape[0] * params.input_shape[1]
         wout_shape = [input_size, self.esn_cell.hidden_size + input_size + 1]
-        self.wout = np.zeros(wout_shape, dtype=self.esn_cell.dtype)
+        self.wout = bh.zeros(wout_shape, dtype=self.esn_cell.dtype)
 
-        self.ones = np.ones([1], dtype=self.esn_cell.dtype)
+        self.ones = bh.ones([1], dtype=self.esn_cell.dtype)
         self.imed_G = None
         self.imed_w = None
         self.imed_V = None
 
     def forward(self, inputs, state=None, states_only=True):
         if state is None:
-            state = np.zeros([self.esn_cell.hidden_size], dtype=self.esn_cell.dtype)
+            state = bh.zeros([self.esn_cell.hidden_size], dtype=self.esn_cell.dtype)
         if self.params.debug:
             logger.debug("Calling forward function in debug mode")
             return self._forward_debug(inputs, state)
@@ -71,59 +71,121 @@ class NumpyESN(object):
         else:
             return self._forward(inputs, state)
 
+    def _reset_timers(self):
+        self.esn_cell.times = {
+            'input_map':0.0,'concatenate':0.0,'state_map':0.0,'tanh':0.0, 'copy':0.0,'dot':0.0
+        };
+        self.esn_cell.input_map_times = {
+            'pixels':0.0,'dct':0.0,'gradient':0.0,'conv':0.0,'random_weights':0.0,'compose':0.0
+        };
+        
     def _forward_states_only(self, inputs, state):
-        states = []
-        for inp in inputs:
-            state = self.esn_cell.forward(inp, state)
-            states.append(state)
-        return None, np.asarray(states)
+        print("forward states only")
+        t0 = time()
+        (T, H) = (len(inputs), len(state))
+        
+        states = bh.empty((T,H),dtype=bh.float64) # "Bohrium does not support the dtype 'float64'", talk to Mads
+        state  = to_bh(state)
 
+        self._reset_timers()
+        for i in range(T):
+            state = self.esn_cell.forward(inputs[i], state)
+            states[i] = state
+
+        t1 = time()
+        print(f"finished forward states only: {t1-t0}")
+        print(f"times={self.esn_cell.times}\n")
+        print(f"input_map_times={self.esn_cell.input_map_times}\n")        
+        return None, states
+    
     def _forward(self, inputs, state):
-        outputs, states = [], []
-        for inp in inputs:
-            state = self.esn_cell.forward(inp, state)
-            ext_state = np.concatenate([self.ones, inp.reshape(-1), state], axis=0)
-            output = np.dot(self.wout, ext_state)
 
-            outputs.append(output)
-            states.append(state)
-        return np.asarray(outputs).reshape(inputs.shape), np.asarray(states)
+        print("forward")
+        t0 = time()
+        (T,H) = (len(inputs),len(state))
+        states  = bh.empty((T,H),dtype=state.dtype)
+        outputs = bh.empty(inputs.shape,dtype=inputs.dtype)
+
+        self._reset_timers()
+        for i in range(T):
+            inp       = inputs[i]
+            state     = self.esn_cell.forward(inp, state)
+            t2 = time()
+            ext_state = bh.concatenate([self.ones, inp.reshape(-1), state], axis=0) #TODO: What is self.ones doing here??
+            t3 = time()
+            outputs[i] = bh.dot(self.wout, ext_state).reshape(inputs.shape[1:])
+            t4 = time()
+            states[i]  = state
+            t5 = time()
+            self.esn_cell.times['concatenate'] += t3-t2
+            self.esn_cell.times['dot'] += t4-t3
+            self.esn_cell.times['copy'] += t5-t4
+        t1 = time()
+        print("finished forward:",t1-t0)
+        return outputs, states
 
     def _forward_debug(self, inputs, state):
         from torsk.visualize import plot_iteration
-        outputs, states = [], []
-        idx = 0
-        for inp in inputs:
-            new_state = self.esn_cell.forward(inp, state)
-            ext_state = np.concatenate([self.ones, inp.reshape(-1), new_state], axis=0)
-            output = np.dot(self.wout, ext_state)
+        print("forward debug")
+        t0 = time()
 
-            outputs.append(output)
-            states.append(new_state)
+        (T,H) = (len(inputs),len(state))
+        states  = bh.empty((T,H),dtype=state.dtype)
+        outputs = bh.empty(inputs.shape,dtype=inputs.dtype)
 
-            if (idx == 200):
-                plot_iteration(self, idx, inp, state)
+        print("inputs:",inputs.shape)
+        print("state:",state.shape)
+        self._reset_timers()
+        for i in range(T):
+            inp        = inputs[i]
+            new_state  = self.esn_cell.forward(inp, state)
+            ext_state  = bh.concatenate([self.ones, inp.reshape(-1), new_state], axis=0)
+            outputs[i] = bh.dot(self.wout, ext_state).reshape(inputs.shape[1:])
+            states[i]  = state
 
-            state = new_state
-            idx += 1
-        return np.asarray(outputs).reshape(inputs.shape), np.asarray(states)
+            if (i == 200):
+                plot_iteration(self, i, inp, state)
 
-    def predict(self, initial_inputs, initial_state, nr_predictions):
-        inp_shape = initial_inputs.shape
-        inp = initial_inputs
+            state = new_state   # TODO: What's going on here?
+
+        t1 = time()
+        print("finished forward debug:",t1-t0)
+        print(f"times={self.esn_cell.times}\n")        
+        return outputs, states
+
+    def predict(self, initial_input, initial_state, nr_predictions):
+        print("predict")
+        t0 = time()
+        (T,H) = (nr_predictions,len(initial_state))
+        (M,N) = initial_input.shape
+        inp = initial_input
         state = initial_state
-        outputs, states = [], []
 
-        for ii in range(nr_predictions):
+        states  = bh.empty((T,H),dtype=state.dtype)
+        outputs = bh.empty((T,M,N),dtype=inp.dtype)
+
+        self._reset_timers()
+        for i in range(T):
             state = self.esn_cell.forward(inp, state)
-            ext_state = np.concatenate([self.ones, inp.reshape(-1), state], axis=0)
-            output = np.dot(self.wout, ext_state).reshape(inp_shape)
+            t2 = time()            
+            ext_state = bh.concatenate([self.ones, inp.reshape(-1), state], axis=0)
+            t3 = time()
+            output = bh.dot(self.wout, ext_state).reshape(M,N)
+            t4 = time()
+            
+            inp = to_np(output)
 
-            inp = output
-
-            outputs.append(output)
-            states.append(state)
-        return np.asarray(outputs), np.asarray(states)
+            outputs[i] = output
+            states[i]  = state
+            t5 = time()
+            
+            self.esn_cell.times['concatenate'] += t3-t2
+            self.esn_cell.times['dot'] += t4-t3
+            self.esn_cell.times['copy'] += t5-t4            
+        t1 =time()
+        print("finished predicting ",T," states:",t1-t0)
+        print(f"times={self.esn_cell.times}\n")
+        return outputs, states
 
     def optimize(self, inputs, states, labels):
         """Train the output layer.
@@ -148,22 +210,27 @@ class NumpyESN(object):
             from torsk.imed import metric_matrix
             import scipy as sp
             if self.imed_G is None:
-                logger.debug("Calculating metric matrix...")
-                t1 = time.time()
-                self.imed_G = metric_matrix(
-                    inputs.shape[1:], sigma=self.params.imed_sigma)
-                t2 = time.time()
-                logger.info(f"Computing metric matrix took: {t2-t1}")
+                print("Calculating metric matrix...")
+                t1 = time()
+                self.imed_G = metric_matrix(inputs.shape[1:])
+                t2 = time()
+                print(f"Computing metric matrix took: {t2-t1}")
                 self.imed_w, self.imed_V = sp.linalg.eigh(self.imed_G)
-                t3 = time.time()
-                logger.info(f"Diagonalizing metric matrix took: {t3-t2}")
+                t3 = time()
+                print(f"Diagonalizing metric matrix took: {t3-t2}")
             G, w, V = self.imed_G, self.imed_w, self.imed_V
             S = np.diag(np.sqrt(w))
             G12 = V.dot(S.dot(V.T))
 
-            logger.debug("Reprojecting inputs/labels with metric matrix")
-            flat_inputs = np.matmul(G12, flat_inputs[:,:,None])[:,:,0]
-            flat_labels = np.matmul(G12, flat_labels[:,:,None])[:,:,0]
+            print("Reprojecting inputs/labels with metric matrix")
+            print("G12:",G12.shape)
+            print("flat_inputs:",flat_inputs.shape)
+            FI = np.matmul(G12, flat_inputs[:,:,None])
+            print("FI:",FI.shape)
+            FL = np.matmul(G12, flat_labels[:,:,None])            
+            print("FL:",FL.shape)
+            flat_inputs = FI[:,:,0];
+            flat_labels = FL[:,:,0]
 
         if method == 'tikhonov':
             if beta is None:
@@ -185,7 +252,7 @@ class NumpyESN(object):
             raise ValueError(f'Unkown training method: {method}')
 
         if self.params.imed_loss:
-            invS12 = np.diag(1. / np.sqrt(w))
+            invS12 = bh.diag(1. / bh.sqrt(w))
             invG12 = V.dot(invS12.dot(V.T))
             wout = invG12.dot(wout)
 
@@ -232,22 +299,22 @@ class NumpyStandardESNCell(object):
 
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.dtype = np.dtype(dtype)
+        self.dtype = bh.dtype(dtype)
 
-        self.weight_ih = np.random.uniform(
+        self.weight_ih = to_bh(np.random.uniform(
             low=-in_weight_init,
             high=in_weight_init,
-            size=[hidden_size, input_size]).astype(dtype)
+            size=[hidden_size, input_size])).astype(dtype)
 
         self.weight_hh = dense_esn_reservoir(
             dim=hidden_size, spectral_radius=spectral_radius,
             density=density, symmetric=False)
         self.weight_hh = self.weight_hh.astype(dtype)
 
-        self.bias_ih = np.random.uniform(
+        self.bias_ih = to_bh(np.random.uniform(
             low=-in_bias_init,
             high=in_bias_init,
-            size=[hidden_size]).astype(dtype)
+            size=[hidden_size])).astype(dtype)
 
     def check_dtypes(self, *args):
         for arg in args:
@@ -257,8 +324,8 @@ class NumpyStandardESNCell(object):
         self.check_dtypes(inputs, state)
 
         # next state
-        x_inputs = np.dot(self.weight_ih, inputs)
-        x_state = np.dot(self.weight_hh, state)
-        new_state = np.tanh(x_inputs + x_state + self.bias_ih)
+        x_inputs = bh.dot(self.weight_ih, inputs)
+        x_state = bh.dot(self.weight_hh, state)
+        new_state = bh.tanh(x_inputs + x_state + self.bias_ih)
 
         return new_state
