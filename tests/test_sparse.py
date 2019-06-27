@@ -12,8 +12,8 @@ def test_square_sparse():
 
     dense = np.eye(10) * values
 
-    mat = SparseMatrix(values, row_idx, col_idx, nonzeros_per_row, dense_shape)
-    dmat = SparseMatrix.from_dense(dense, nonzeros_per_row)
+    mat = SparseMatrix(values, col_idx, nonzeros_per_row, dense_shape)
+    dmat = SparseMatrix.from_dense(dense)
     assert np.all(mat.values == dmat.values)
     assert np.all(mat.row_idx == dmat.row_idx)
     assert np.all(mat.col_idx == dmat.col_idx)

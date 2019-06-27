@@ -12,6 +12,7 @@ if numpy_acceleration == "bohrium":
     def to_np(A):
         if bh_check(A):
             return A.copy2numpy()
+        #return bh.interop_numpy.get_array(A)
         else:
             return A
     
@@ -60,20 +61,25 @@ def bohriumize(model,old_state=None):
     print("Done bohriumizing...")
 
 def numpyize(model):
+    print("Numpyizing...")
     old_state = {};
     old_state["esn_cell.weight_hh.values"]  = model.esn_cell.weight_hh.values;
     old_state["esn_cell.weight_hh.col_idx"] = model.esn_cell.weight_hh.col_idx;
     old_state["ones"] = model.ones; 
     old_state["wout"] = model.wout;
-
+    
     model.esn_cell.weight_hh.values  = to_np(model.esn_cell.weight_hh.values)
     model.esn_cell.weight_hh.col_idx = to_np(model.esn_cell.weight_hh.col_idx)
-
+    model.ones = to_np(model.ones)
+    model.wout = to_np(model.wout)
+    
     #E = {}
-    # for D in [model.__dict__, model.esn_cell.__dict__, model.esn_cell.weight_hh.__dict__]:
-    #     for k,v in D.items():
-    #         if isinstance(v,bh_type):
-    #             print("Numpyizing ",k)
-    #             E[k] = v
-    #             D[k] = to_np(v)                        
+    for D in [model.__dict__, model.esn_cell.__dict__, model.esn_cell.weight_hh.__dict__]:
+        for k,v in D.items():
+            if isinstance(v,bh_type):
+                print("Numpyizing ",k)
+                #E[k] = v
+                D[k] = to_np(v)                        
     #return E
+
+    return old_state

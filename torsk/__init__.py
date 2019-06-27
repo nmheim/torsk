@@ -310,7 +310,7 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
             outfile = outdir / f"pred_data_idx{idx}.nc"
             logger.info(f"Saving prediction to {outfile}")
             dump_prediction(
-                outfile, outputs=outputs, labels=pred_labels, states=out_states)
+                outfile, outputs=to_np(outputs), labels=to_np(pred_labels), states=to_np(out_states))
 
     logger.info(f"Done")
     return model, outputs, pred_labels
