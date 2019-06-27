@@ -112,7 +112,6 @@ def sparse_nzpr_esn_reservoir(dim, spectral_radius, nonzeros_per_row, dtype):
 
     matrix = SparseMatrix(
         values=matrix.data,
-        row_idx=matrix.row,
         col_idx=matrix.col,
         nonzeros_per_row=nonzeros_per_row,
         dense_shape=dense_shape)
