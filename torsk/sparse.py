@@ -17,8 +17,8 @@ def sparse_dense_mv(A, x):
     assert bh_check(A.col_idx)
     assert bh_check(x)
 
-    values  = A.values.reshape(A.m,A.n_nz)    
-    col_idx = A.col_idx.reshape(A.m,A.n_nz)
+    values  = A.values.reshape((A.m,A.n_nz))    
+    col_idx = A.col_idx.reshape((A.m,A.n_nz))
     
     # print(values.shape)
     # print(col_idx.shape)
@@ -37,8 +37,8 @@ class SparseMatrix:
 
         (m,n,n_nz) = (dense_shape[0],dense_shape[1],nonzeros_per_row)
         
-        self.values = to_bh(values).reshape(m,n_nz)
-        self.col_idx = to_bh(col_idx).reshape(m,n_nz)
+        self.values  = to_bh(values).reshape((m,n_nz))
+        self.col_idx = to_bh(col_idx).reshape((m,n_nz))
         self.nonzeros_per_row = nonzeros_per_row
         self.dense_shape = dense_shape
 

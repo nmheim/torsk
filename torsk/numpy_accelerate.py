@@ -21,8 +21,12 @@ elif numpy_acceleration == "bh107":
     bh       = bh107
     bh_type  = bh.BhArray
     bh_check = lambda A: isinstance(A,bh.BhArray)    
-    to_bh    = bh.from_numpy
-    to_np    = lambda A: A.asnumpy()
+    to_bh    = bh.BhArray.from_numpy
+    def to_np(A):
+        if isinstance(A,bh_type):
+            return A.asnumpy()
+        else:
+            return A
 
 
 else:
@@ -44,10 +48,10 @@ def after_storage(model,old_state=None):
 def bohriumize(model,old_state=None):
     print("Bohriumizing...")
     if old_state is None:
-        model.esn_cell.weight_hh.values = to_bh(model.esn_cell.weight_hh.values)
-        model.esn_cell.weight_hh.col_idx = to_bh(model.esn_cell.weight_hh.col_idx)        
-        model.ones = to_bh(model.ones)
-        model.wout = to_bh(model.wout)
+        model.esn_cell.weight_hh.values = bh.array(model.esn_cell.weight_hh.values.astype(np.float64))
+        model.esn_cell.weight_hh.col_idx = bh.array(model.esn_cell.weight_hh.col_idx.astype(np.float64))
+        model.ones = bh.array(model.ones.astype(np.float64))
+        model.wout = bh.array(model.wout.astype(np.float64))
     else:
         model.esn_cell.weight_hh.values  = old_state["esn_cell.weight_hh.values"]
         model.esn_cell.weight_hh.col_idx = old_state["esn_cell.weight_hh.col_idx"]
