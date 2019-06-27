@@ -82,9 +82,9 @@ class NumpyESN(object):
     def _forward_states_only(self, inputs, state):
         print("forward states only")
         t0 = time()
-        (T, H) = (len(inputs), len(state))
+        (T, H) = (inputs.shape[0], state.shape[0])
         
-        states = bh.empty((T,H),dtype=bh.float64) # "Bohrium does not support the dtype 'float64'", talk to Mads
+        states = bh.empty((T,H),dtype=np.float64) # "Bohrium does not support the dtype 'float64'", talk to Mads
         state  = to_bh(state)
 
         self._reset_timers()
@@ -102,7 +102,7 @@ class NumpyESN(object):
 
         print("forward")
         t0 = time()
-        (T,H) = (len(inputs),len(state))
+        (T,H) = (inputs.shape[0],state.shape[0])
         states  = bh.empty((T,H),dtype=state.dtype)
         outputs = bh.empty(inputs.shape,dtype=inputs.dtype)
 
@@ -129,7 +129,7 @@ class NumpyESN(object):
         print("forward debug")
         t0 = time()
 
-        (T,H) = (len(inputs),len(state))
+        (T,H) = (inputs.shape[0],state.shape[0])
         states  = bh.empty((T,H),dtype=state.dtype)
         outputs = bh.empty(inputs.shape,dtype=inputs.dtype)
 
@@ -156,10 +156,10 @@ class NumpyESN(object):
     def predict(self, initial_input, initial_state, nr_predictions):
         print("predict")
         t0 = time()
-        (T,H) = (nr_predictions,len(initial_state))
+        (T,H) = (nr_predictions,initial_state.shape[0])
         (M,N) = initial_input.shape
-        inp = initial_input
-        state = initial_state
+        inp   = to_bh(initial_input)
+        state = to_bh(initial_state)
 
         states  = bh.empty((T,H),dtype=state.dtype)
         outputs = bh.empty((T,M,N),dtype=inp.dtype)
@@ -173,7 +173,7 @@ class NumpyESN(object):
             output = bh.dot(self.wout, ext_state).reshape(M,N)
             t4 = time()
             
-            inp = to_np(output)
+            inp = output
 
             outputs[i] = output
             states[i]  = state
@@ -203,8 +203,17 @@ class NumpyESN(object):
         beta = self.params.tikhonov_beta
 
         train_length = inputs.shape[0]
-        flat_inputs = inputs.reshape([train_length, -1])
-        flat_labels = labels.reshape([train_length, -1])
+        print("Flushing before optimize")
+        t0 = time()
+        bh.flush()
+        t1 = time()
+        print("Flushing took ",t1-t0,"seconds")
+        flat_inputs = to_bh(inputs.reshape([train_length, -1]))
+        flat_labels = to_bh(labels.reshape([train_length, -1]))
+        t0 = time()
+        bh.flush()
+        t1 = time()
+        print("bh.array constructor took ",t1-t0,"seconds")
         
         if self.params.imed_loss:
             from torsk.imed import metric_matrix
@@ -218,20 +227,28 @@ class NumpyESN(object):
                 self.imed_w, self.imed_V = sp.linalg.eigh(self.imed_G)
                 t3 = time()
                 print(f"Diagonalizing metric matrix took: {t3-t2}")
-            G, w, V = self.imed_G, self.imed_w, self.imed_V
-            S = np.diag(np.sqrt(w))
+            G, w, V = to_bh(self.imed_G.astype(np.float64)), to_bh(self.imed_w.astype(np.float64)), to_bh(self.imed_V.astype(np.float64))
+            S = bh.diag(bh.sqrt(w))
             G12 = V.dot(S.dot(V.T))
+            print("Flushing after G12-calc")
+            t0 = time()
+            bh.flush()
+            t1 = time()
+            print("Flushing took ",t1-t0,"seconds")
 
             print("Reprojecting inputs/labels with metric matrix")
             print("G12:",G12.shape)
             print("flat_inputs:",flat_inputs.shape)
-            FI = np.matmul(G12, flat_inputs[:,:,None])
-            print("FI:",FI.shape)
-            FL = np.matmul(G12, flat_labels[:,:,None])            
-            print("FL:",FL.shape)
-            flat_inputs = FI[:,:,0];
-            flat_labels = FL[:,:,0]
-
+            flat_inputs = bh.sum(G12[None,:,:]*flat_inputs[:,None,:],axis=2)
+            flat_labels = bh.sum(G12[None,:,:]*flat_labels[:,None,:],axis=2)
+            print("Flushing after G12-multiplication")
+            t0 = time()
+            bh.flush()
+            t1 = time()
+            print("Flushing took ",t1-t0,"seconds")
+            print("FI:",flat_inputs.shape)        
+            print("FL:",flat_labels.shape)
+            
         if method == 'tikhonov':
             if beta is None:
                 raise ValueError(
