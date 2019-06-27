@@ -8,7 +8,7 @@ from torsk.numpy_accelerate import *
 
 def _extended_states(inputs, states):
     print("flushing bh")
-    bh.flush()
+    bh_flush()
     print("concatenating states")
     ones = bh.ones([inputs.shape[0], 1], dtype=inputs.dtype)
     assert(bh_check(ones))

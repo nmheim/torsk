@@ -110,12 +110,16 @@ class NumpyESN(object):
         for i in range(T):
             inp       = inputs[i]
             state     = self.esn_cell.forward(inp, state)
+            bh_flush()
             t2 = time()
             ext_state = bh.concatenate([self.ones, inp.reshape(-1), state], axis=0) #TODO: What is self.ones doing here??
+            bh_flush()            
             t3 = time()
             outputs[i] = bh.dot(self.wout, ext_state).reshape(inputs.shape[1:])
+            bh_flush()            
             t4 = time()
             states[i]  = state
+            bh_flush()            
             t5 = time()
             self.esn_cell.times['concatenate'] += t3-t2
             self.esn_cell.times['dot'] += t4-t3
@@ -167,10 +171,13 @@ class NumpyESN(object):
         self._reset_timers()
         for i in range(T):
             state = self.esn_cell.forward(inp, state)
-            t2 = time()            
+            bh_flush()
+            t2 = time()
             ext_state = bh.concatenate([self.ones, inp.reshape(-1), state], axis=0)
+            bh_flush()            
             t3 = time()
             output = bh.dot(self.wout, ext_state).reshape(M,N)
+            bh_flush()            
             t4 = time()
             
             inp = output
@@ -205,13 +212,13 @@ class NumpyESN(object):
         train_length = inputs.shape[0]
         print("Flushing before optimize")
         t0 = time()
-        bh.flush()
+        bh_flush()
         t1 = time()
         print("Flushing took ",t1-t0,"seconds")
         flat_inputs = to_bh(inputs.reshape([train_length, -1]))
         flat_labels = to_bh(labels.reshape([train_length, -1]))
         t0 = time()
-        bh.flush()
+        bh_flush()
         t1 = time()
         print("bh.array constructor took ",t1-t0,"seconds")
         
@@ -232,7 +239,7 @@ class NumpyESN(object):
             G12 = V.dot(S.dot(V.T))
             print("Flushing after G12-calc")
             t0 = time()
-            bh.flush()
+            bh_flush()
             t1 = time()
             print("Flushing took ",t1-t0,"seconds")
 
@@ -243,7 +250,7 @@ class NumpyESN(object):
             flat_labels = bh.sum(G12[None,:,:]*flat_labels[:,None,:],axis=2)
             print("Flushing after G12-multiplication")
             t0 = time()
-            bh.flush()
+            bh_flush()
             t1 = time()
             print("Flushing took ",t1-t0,"seconds")
             print("FI:",flat_inputs.shape)        

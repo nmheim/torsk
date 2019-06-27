@@ -1,6 +1,10 @@
 import numpy as np
 from torsk.config import *
 
+Id = lambda A: A
+def void():
+    return
+
 if numpy_acceleration == "bohrium":
     import bohrium 
 
@@ -8,7 +12,9 @@ if numpy_acceleration == "bohrium":
     bh_type  = bh.ndarray
     bh_check = bh.bhary.check    
     to_bh    = bh.array
-
+    to_np_base = bh.array #bh.interop_numpy.get_array
+    bh_flush = bh.flush
+    
     def to_np(A):
         if bh_check(A):
             return A.copy2numpy()
@@ -23,6 +29,9 @@ elif numpy_acceleration == "bh107":
     bh_type  = bh.BhArray
     bh_check = lambda A: isinstance(A,bh.BhArray)    
     to_bh    = bh.BhArray.from_numpy
+    to_np_base = lambda A: A.asnumpy();
+    bh_flush = bh.flush
+    
     def to_np(A):
         if isinstance(A,bh_type):
             return A.asnumpy()
@@ -33,10 +42,11 @@ elif numpy_acceleration == "bh107":
 else:
     bh = np
     bh_type  = bh.ndarray
-    bh_check = lambda A: True;    
-    to_bh    = bh.array
-    to_np    = np.array
-
+    bh_check = lambda A: isinstance(A,bh_type);
+    to_bh      = Id
+    to_np      = Id
+    to_np_base = Id
+    bh_flush   = void
 
 
     
@@ -50,7 +60,7 @@ def bohriumize(model,old_state=None):
     print("Bohriumizing...")
     if old_state is None:
         model.esn_cell.weight_hh.values = bh.array(model.esn_cell.weight_hh.values.astype(np.float64))
-        model.esn_cell.weight_hh.col_idx = bh.array(model.esn_cell.weight_hh.col_idx.astype(np.float64))
+        model.esn_cell.weight_hh.col_idx = bh.array(model.esn_cell.weight_hh.col_idx.astype(np.int32))
         model.ones = bh.array(model.ones.astype(np.float64))
         model.wout = bh.array(model.wout.astype(np.float64))
     else:
