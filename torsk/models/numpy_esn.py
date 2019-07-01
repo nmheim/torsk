@@ -228,7 +228,7 @@ class NumpyESN(object):
             if self.imed_G is None:
                 print("Calculating metric matrix...")
                 t1 = time()
-                self.imed_G = metric_matrix(inputs.shape[1:])
+                self.imed_G = metric_matrix(inputs.shape[1:], sigma=self.params.imed_sigma)
                 t2 = time()
                 print(f"Computing metric matrix took: {t2-t1}")
                 self.imed_w, self.imed_V = sp.linalg.eigh(self.imed_G)
