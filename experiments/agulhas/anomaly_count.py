@@ -14,9 +14,9 @@ args = initialize()
 data_dir = pathlib.Path("/mnt/data/torsk_experiments")
 outdir = data_dir / "agulhas_3daymean_50x30"
 pred_data_ncfiles = list(outdir.glob("pred_data_idx*.nc"))
-valid_pred_length = 10
+valid_pred_length = 25
 large_window = 100
-small_window = 5
+small_window = 10
 normality_threshold = 0.001
 
 sns.set_context("notebook")
@@ -42,7 +42,7 @@ pixel_score, _, _, _ = sliding_score(
 fig, ax = plt.subplots(1, 1)
 pixel_count = np.sum(pixel_score < normality_threshold, axis=0)
 
-im = ax.imshow(pixel_count[::-1])
+im = ax.imshow(pixel_count)
 plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
 finalize(args, fig, [ax], loc="lower left")

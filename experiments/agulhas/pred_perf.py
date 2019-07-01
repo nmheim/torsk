@@ -1,3 +1,4 @@
+import time
 import pathlib
 import torch
 from torch.utils.data import DataLoader
@@ -17,18 +18,19 @@ sns.set_style("whitegrid")
 
 def esn_perf(outdir, animate=False):
     pred_data_nc_files = list(outdir.glob("pred_data_idx*.nc"))
+    nr_files = len(pred_data_nc_files)
 
     with nc.Dataset(pred_data_nc_files[0], "r") as src:
         img_shape = src["outputs"].shape[1:]
         pred_length = src["outputs"].shape[0]
         G = metric_matrix(img_shape)
-    esn_error = np.empty(len(pred_data_nc_files), pred_length)
-    trivial_error = np.empty(len(pred_data_nc_files), pred_length)
+    esn_error = np.empty([nr_files, pred_length])
+    trivial_error = np.empty([nr_files, pred_length])
 
 
     G = None
     img_shape = None
-    for i, pred_data_nc in tqdm(enumerate(pred_data_nc_files)):
+    for i, pred_data_nc in tqdm(enumerate(pred_data_nc_files), total=nr_files):
         with nc.Dataset(pred_data_nc, 'r') as src:
 
             esn_error[i] = src["imed"][:]
@@ -36,11 +38,17 @@ def esn_perf(outdir, animate=False):
             example_lbls = src["labels"][:]
             example_pred = src["outputs"][:]
             triv_pred = np.tile(example_lbls[0], (example_lbls.shape[0], 1, 1))
-            trivial_error[i] = imed_metric(triv_pred, example_lbls, G=G)
+            t1 = time.time()
+            im = imed_metric(triv_pred, example_lbls, G=G)
+            t2 = time.time()
+            trivial_error[i] = im
+            t3 = time.time()
+            tqdm.write(f"imed: {t2-t1}")
+            tqdm.write(f"asgn: {t3-t2}")
     if animate:
         anim = animate_double_imshow(example_lbls, example_pred)
         plt.show()
-    return np.array(error).mean(axis=0), np.array(trivial_error).mean(axis=0)
+    return np.array(esn_error).mean(axis=0), np.array(trivial_error).mean(axis=0)
 
 
     
