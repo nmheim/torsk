@@ -150,13 +150,23 @@ class NumpyESN(object):
             if self.imed_G is None:
                 logger.debug("Calculating metric matrix...")
                 t1 = time.time()
-                self.imed_G = metric_matrix(inputs.shape[1:])
+                self.imed_G = metric_matrix(
+                    inputs.shape[1:], sigma=self.params.imed_sigma)
                 t2 = time.time()
                 logger.info(f"Computing metric matrix took: {t2-t1}")
                 self.imed_w, self.imed_V = sp.linalg.eigh(self.imed_G)
                 t3 = time.time()
                 logger.info(f"Diagonalizing metric matrix took: {t3-t2}")
+
+                n = np.sum(self.imed_w < 0)
+                if np.any(np.abs(self.imed_w[:n]) > 1e-14):
+                    raise ValueError(
+                        "Large negative eigenvalues of IMED metric matrix G detected.")
+                self.imed_w = self.imed_w[n:]
+                self.imed_V = self.imed_V[:, n:]
+
             G, w, V = self.imed_G, self.imed_w, self.imed_V
+
             S = np.diag(np.sqrt(w))
             G12 = V.dot(S.dot(V.T))
 

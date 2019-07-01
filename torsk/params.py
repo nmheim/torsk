@@ -46,6 +46,7 @@ class ParamsSchema(Schema):
         required=True)
     tikhonov_beta = fields.Float(missing=None)
     imed_loss = fields.Boolean(required=True)
+    imed_sigma = fields.Float(missing=None)
 
     backend = fields.String(
         validate=validate.OneOf(["numpy", "torch"]), required=True)
