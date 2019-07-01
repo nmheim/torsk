@@ -14,14 +14,18 @@ __all__ = ["Params", "default_params", "load_model", "save_model"]
 
 logger = logging.getLogger(__name__)
 
+from torsk.numpy_accelerate import *
 
 def _save_numpy_model(model_pth, model, prefix):
+    old_state = before_storage(model)    
     joblib.dump(model, model_pth)
+    after_storage(model,old_state)
 
 
 def _load_numpy_model(model_pth):
-    return joblib.load(model_pth)
-
+    model = joblib.load(model_pth)
+    after_storage(model)
+    return model
 
 def _save_torch_model(model_pth, model, prefix):
     import torch
@@ -86,6 +90,9 @@ def save_model(modeldir, model, prefix=None):
         modelfile = modeldir / f"{prefix}model.pkl"
         logger.info(f"Saving model to {modelfile}")
         _save_numpy_model(modelfile, model, prefix)
+    if model.params.backend == "bohrium":
+        modelfile = modeldir / f"{prefix}model.pkl"
+        
     elif model.params.backend == "torch":
         modelfile = modeldir / f"{prefix}model.pth"
         logger.info(f"Saving model to {modelfile}")
@@ -103,15 +110,18 @@ def load_model(modeldir, prefix=None):
     if params.backend == "numpy":
         model_pth = modeldir / f"{prefix}model.pkl"
         model = _load_numpy_model(model_pth)
+        after_storage(model)
     elif params.backend == "torch":
         model_pth = modeldir / f"{prefix}model.pth"
         model = _load_torch_model(model_pth, params)
+
+
     return model
 
 
 def initial_state(hidden_size, dtype, backend):
     if backend == "numpy":
-        zero_state = np.zeros([hidden_size], dtype=dtype)
+        zero_state = bh.zeros([hidden_size], dtype=np.float64)
     elif backend == "torch":
         import torch
         zero_state = torch.zeros([1, hidden_size], dtype=dtype)
@@ -174,10 +184,10 @@ def dump_training(fname, dataset, idx, states, attrs=None):
         if attrs is not None:
             dst.setncatts(attrs)
 
-        dst["inputs"][:] = inputs
-        dst["labels"][:] = labels
-        dst["states"][:] = states
-        dst["pred_labels"][:] = pred_labels
+        dst["inputs"][:] = to_np(inputs)
+        dst["labels"][:] = to_np(labels)
+        dst["states"][:] = to_np(states)
+        dst["pred_labels"][:] = to_np(pred_labels)
 
 
 def dump_prediction(fname, outputs, labels, states, attrs=None):
@@ -300,7 +310,7 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
             outfile = outdir / f"pred_data_idx{idx}.nc"
             logger.info(f"Saving prediction to {outfile}")
             dump_prediction(
-                outfile, outputs=outputs, labels=pred_labels, states=out_states)
+                outfile, outputs=to_np(outputs), labels=to_np(pred_labels), states=to_np(out_states))
 
     logger.info(f"Done")
     return model, outputs, pred_labels

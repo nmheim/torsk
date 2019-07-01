@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def metric_matrix(img_shape, sigma=1):
+def metric_matrix(img_shape, sigma=1.):
     M, N = img_shape
 
     X = np.arange(M)  # M,N
@@ -10,7 +10,7 @@ def metric_matrix(img_shape, sigma=1):
     P = (X[None, :, None, None] - X[None, None, None, :])**2 \
         + (Y[:, None, None, None] - Y[None, None, :, None])**2
 
-    G = 1 / (2 * np.pi * sigma**2) * np.exp(-(0.5 / (2 * sigma**2)) * P)
+    G = 1 / (2 * np.pi * sigma**2) * np.exp(- P / (2 * sigma**2))
 
     return G.reshape((M * N, M * N))
 

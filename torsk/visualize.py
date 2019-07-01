@@ -7,17 +7,19 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib import cm
 from torsk.data.utils import normalize
+from torsk.numpy_accelerate import *
 import contextlib
 import imageio
 
 logger = logging.getLogger(__name__)
 
 
+
 def plot_iteration(model, idx, inp, state):
-    new_state = model.esn_cell.forward(inp, state)
-    input_stack = model.esn_cell.input_map(inp)
-    x_input = model.esn_cell.cat_input_map(input_stack)
-    x_state = model.esn_cell.state_map(state)
+    new_state   = to_np(model.esn_cell.forward(inp, state))
+    input_stack = to_np(model.esn_cell.input_map(inp))
+    x_input     = to_np(model.esn_cell.cat_input_map(input_stack))
+    x_state     = to_np(model.esn_cell.state_map(state))
 
     def vec_to_rect(vec):
         size = int(np.ceil(vec.shape[0]**.5))
@@ -91,7 +93,7 @@ def to_byte(data,mask):
     return (data*255*(mask==False)).astype(np.uint8);
 
 
-def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):   
+def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.inferno):   
     (nt,ny,nx) = Ftxx.shape;
 
     if(mask is None):
@@ -102,7 +104,7 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):
         
     vmin, vmax = Ftxx.reshape(-1).min(), Ftxx.reshape(-1).max();
     writer = imageio.get_writer(
-        filename, fps=fps, quality=10, macro_block_size=None)
+        filename, fps=fps, codec='libx264',quality=10, macro_block_size=None) #, pixelformat='yuvj444p')
 
     for i in range(nt):
         img_rgbaf = colormap(normalize(Ftxx[i],vmin,vmax));
@@ -111,7 +113,7 @@ def write_video(filename,Ftxx,mask=None,fps=24,colormap=cm.viridis):
     writer.close()
 
 
-def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.viridis):   
+def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.inferno):   
     assert(Ftxx1.shape == Ftxx2.shape);
     (nt,ny,nx) = Ftxx1.shape;
    
@@ -152,18 +154,18 @@ def animate_triple_imshow(frames1, frames2, frames3, frames4,
         fig.suptitle(title)
 
     im1 = ax[0].imshow(
-        frames1[0], animated=True, vmin=vmin, vmax=vmax,
+        to_np(frames1[0]), animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
     im2 = ax[1].imshow(
-        frames2[0], animated=True, vmin=vmin, vmax=vmax,
+        to_np(frames2[0]), animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
     im3 = ax[2].imshow(
-        frames3[0], animated=True, vmin=vmin, vmax=vmax,
+        to_np(frames3[0]), animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
     # trivial prediciton
-    im4 = ax[3].imshow(
-        frames4[0], animated=True, vmin=vmin, vmax=vmax,
-        cmap=plt.get_cmap(cmap_name))
+    # im4 = ax[3].imshow(
+    #     to_np(frames4[0]), animated=True, vmin=vmin, vmax=vmax,
+    #     cmap=plt.get_cmap(cmap_name))
 
     plt.colorbar(im1, ax=ax[0], fraction=0.046, pad=0.04)
     plt.colorbar(im2, ax=ax[1], fraction=0.046, pad=0.04)
@@ -176,22 +178,22 @@ def animate_triple_imshow(frames1, frames2, frames3, frames4,
     plt.tight_layout()
 
     if time is None:
-        time = np.arange(len(frames1))
+        time = np.arange(frames1.shape[0])
 
     def init():
         text.set_text("")
-        im1.set_data(frames1[0])
-        im2.set_data(frames2[0])
-        im3.set_data(frames3[0])
-        im4.set_data(frames4[0])
+        im1.set_data(to_np(frames1[0]))
+        im2.set_data(to_np(frames2[0]))
+        im3.set_data(to_np(frames3[0]))
+        im4.set_data(to_np(frames4[0]))
         return im1, im2, im3, im4, text
 
     def animate(i):
         text.set_text(str(time[i]))
-        im1.set_data(frames1[i])
-        im2.set_data(frames2[i])
-        im3.set_data(frames3[i])
-        im4.set_data(frames4[i])
+        im1.set_data(to_np(frames1[i]))
+        im2.set_data(to_np(frames2[i]))
+        im3.set_data(to_np(frames3[i]))
+        im4.set_data(to_np(frames4[i]))
         return im1, im2, im3, text
 
     anim = animation.FuncAnimation(
@@ -224,38 +226,38 @@ def animate_double_imshow(frames1, frames2,
             # ax.figure.canvas.blit(ax.bbox)
             ax.figure.canvas.blit(ax.figure.bbox)
     matplotlib.animation.Animation._blit_draw = _blit_draw
-    fig, ax = plt.subplots(1, 3, figsize=figsize)
+    fig, ax = plt.subplots(1, 2, figsize=figsize)
     if title is not None:
         fig.suptitle(title)
 
     im1 = ax[0].imshow(
-        frames1[0], animated=True, vmin=vmin, vmax=vmax,
+        to_np(frames1[0]), animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
     im2 = ax[1].imshow(
-        frames2[0], animated=True, vmin=vmin, vmax=vmax,
+        to_np(frames2[0]), animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
     # trivial prediciton
-    im3 = ax[2].imshow(
-        frames1[0], animated=True, vmin=vmin, vmax=vmax,
-        cmap=plt.get_cmap(cmap_name))
+#    im3 = ax[2].imshow(
+#        frames1[0], animated=True, vmin=vmin, vmax=vmax,
+#        cmap=plt.get_cmap(cmap_name))
 
     plt.colorbar(im1, ax=ax[0], fraction=0.046, pad=0.04)
     plt.colorbar(im2, ax=ax[1], fraction=0.046, pad=0.04)
-    plt.colorbar(im3, ax=ax[2], fraction=0.046, pad=0.04)
+#    plt.colorbar(im3, ax=ax[2], fraction=0.046, pad=0.04)
     text = ax[0].text(.5, 1.05, '', transform=ax[0].transAxes, va='center')
     if time is None:
         time = np.arange(len(frames1))
 
     def init():
         text.set_text("")
-        im1.set_data(frames1[0])
-        im2.set_data(frames2[0])
+        im1.set_data(to_np(frames1[0]))
+        im2.set_data(to_np(frames2[0]))
         return im1, im2, text
 
     def animate(i):
         text.set_text(str(time[i]))
-        im1.set_data(frames1[i])
-        im2.set_data(frames2[i])
+        im1.set_data(to_np(frames1[i]))
+        im2.set_data(to_np(frames2[i]))
         return im1, im2, text
 
     anim = animation.FuncAnimation(fig, animate, init_func=init,
@@ -288,22 +290,22 @@ def animate_imshow(frames, time=None, vmin=None, vmax=None,
     matplotlib.animation.Animation._blit_draw = _blit_draw
     fig = plt.figure(figsize=figsize)
     ax = plt.gca()
-    im = ax.imshow(frames[0], animated=True, vmin=vmin, vmax=vmax,
+    im = ax.imshow(to_np(frames[0]), animated=True, vmin=vmin, vmax=vmax,
                    cmap=plt.get_cmap(cmap_name))
     plt.colorbar(im)
     text = ax.text(.5, 1.05, '', transform=ax.transAxes, va='center')
 
     if time is None:
-        time = np.arange(len(frames))
+        time = np.arange(frames.shape[0])
 
     def init():
         text.set_text("")
-        im.set_data(frames[0])
+        im.set_data(to_np(frames[0]))
         return im, text
 
     def animate(i):
         text.set_text(str(time[i]))
-        im.set_data(frames[i])
+        im.set_data(to_np(frames[i]))
         return im, text
 
     anim = animation.FuncAnimation(fig, animate, init_func=init,

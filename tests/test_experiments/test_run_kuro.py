@@ -64,4 +64,6 @@ def test_kuro():
 
     error = np.abs(outputs - pred_labels)
     assert error.mean() < 0.2
-    assert error.max() < 1.5
+    assert error.max() < 1.3
+    logger.info(error.mean())
+    logger.info(error.max())
