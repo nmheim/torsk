@@ -12,17 +12,13 @@ def sparse_dense_mm(A, X):
 
 def sparse_dense_mv(A, x):
     """Matrix-vector multiplication for fixed nonzero per row sparse matrix"""
-    assert A.dense_shape[1] == x.shape[0]
-    assert bh_check(A.values)
-    assert bh_check(A.col_idx)
-    assert bh_check(x)
+    # assert A.dense_shape[1] == x.shape[0]
+    # assert bh_check(A.values)
+    # assert bh_check(A.col_idx)
+    # assert bh_check(x)
 
     values  = A.values.reshape((A.m,A.n_nz))    
     col_idx = A.col_idx.reshape((A.m,A.n_nz))
-    
-    # print(values.shape)
-    # print(col_idx.shape)
-    # print(x[col_idx].shape)
 
     Axv = values * x[col_idx]
     return bh.sum(Axv, axis=1)

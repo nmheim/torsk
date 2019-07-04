@@ -8,6 +8,7 @@ from torsk.data.conv import get_kernel, conv2d_output_shape
 from torsk.data.utils import resample2d, normalize
 from torsk.data.dct import dct2
 from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir, sparse_nzpr_esn_reservoir
+from torsk.timing import *
 
 logger = logging.getLogger(__name__)
 
@@ -50,15 +51,15 @@ def apply_input_map(image, F):
     return _features
 
 
-def input_map(image, operations):
+def input_map(image, operations, timer=None):
+    start_timer(timer,"input_map")
     features = []
-    times = {'pixels':0.0,'dct':0.0,'gradient':0.0,'conv':0.0,'random_weights':0.0,'compose':0.0}
-    I = to_np(image)
     for F in operations:
-        t0 = time()
-        features.append(apply_input_map(I,F).reshape(-1))
-        times[F['type']] += time()-t0
-    return features, times
+        start_timer(timer,F['type'])
+        features.append(apply_input_map(image,F).reshape(-1))
+        end_timer(timer)
+    end_timer(timer)
+    return features
 
 
 def init_input_map_specs(input_map_specs, input_shape, dtype):
@@ -162,7 +163,7 @@ class NumpyMapESNCell(object):
         return input_map(image, self.input_map_specs)
 
     def cat_input_map(self, input_stack):
-        return to_bh(np.concatenate(input_stack, axis=0))
+        return np.concatenate(input_stack, axis=0)
 
     def state_map(self, state):
         return bh.dot(self.weight_hh, state)
@@ -186,8 +187,6 @@ class NumpyMapSparseESNCell(object):
         self.density = density
         self.dtype = np.dtype(dtype)
 
-        self.times = {'input_map':0.0,'concatenate':0.0,'state_map':0.0,'tanh':0.0};
-        self.input_map_times = {'pixels':0.0,'dct':0.0,'gradient':0.0,'conv':0.0,'random_weights':0.0,'compose':0.0};
         self.hidden_size = self.get_hidden_size(input_shape)
         logger.info(f"ESN hidden size: {self.hidden_size}")
         nonzeros_per_row = int(self.hidden_size * density)
@@ -214,34 +213,20 @@ class NumpyMapSparseESNCell(object):
         return get_hidden_size(input_shape, self.input_map_specs)
 
     def input_map(self, image):
-        hiddens, times = input_map(image, self.input_map_specs)
-        for k in times:
-            self.input_map_times[k] += times[k]
-        return hiddens
-
-    def cat_input_map(self, input_stack):
-        return np.concatenate(input_stack, axis=0)
+        return input_map(image, self.input_map_specs, self.timer)
 
     def state_map(self, state):
-        #s = self.weight_hh.dot(state)
-        #return s.astype(self.dtype)
         return self.weight_hh.sparse_dense_mv(state)
 
     def forward(self, image, state):
+        start_timer(self.timer,"forward")
+        
         self.check_dtypes(image, state)
 
-        t0 = time()
-        input_stack = self.input_map(image)
-        t1 = time()        
-        x_input = to_bh(self.cat_input_map(input_stack))
-        t2 = time()        
-        x_state = self.state_map(state)
-        t3 = time()        
-        new_state = bh.tanh(x_input + x_state)
-        t4 = time()
+        input_stack = self.input_map(to_np(image))       # np
+        x_input     = to_bh(np.concatenate(input_stack)) # np -> bh
+        x_state     = self.state_map(to_bh(state))       # bh
+        new_state   = bh.tanh(x_input + x_state)         # bh
 
-        self.times['input_map']   += t1-t0;
-        self.times['concatenate'] += t2-t1;
-        self.times['state_map']   += t3-t2;
-        self.times['tanh']        += t4-t3;        
+        end_timer(self.timer)
         return new_state

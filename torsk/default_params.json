@@ -19,5 +19,6 @@
 
   "dtype": "float64",
   "backend": "numpy",
+  "timing_depth": 4,
   "debug": false
 }

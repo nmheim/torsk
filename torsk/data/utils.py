@@ -1,26 +1,64 @@
 import numpy as np
 import skimage.transform as skt
+import scipy as sp
 from scipy.fftpack import dct, idct, fft, ifft, fftshift, ifftshift;
+from torsk.timing import *
 
-def resample2d(image, size):
-    res = skt.resize(image, size, mode="reflect", anti_aliasing=True)
-    return res.astype(image.dtype)
+def svd(A,timer=None):
+    start_timer(timer,"svd")
+    U, s, Vh = sp.linalg.svd(A)
+    end_timer(timer)
+    return U, s, Vh
+
+def eigh(A, timer=None):
+    start_timer(timer,"eigh")
+    lambdas, U = sp.linalg.eigh(A)
+    end_timer(timer)
+    return lambdas, U
+
+def lstsq(A,B,timer=None):
+    start_timer(timer,"lstsq")
+    X,b,c,s = sp.linalg.lstsq(A,B)
+    end_timer(timer)
+    return X,b,c,s
 
 
-def resample2d_sequence(sequence, size):
-    """Resample a squence of 2d-arrays to size using PIL.Image.resize"""
+def resample2d(image, size, timer=None):
+    start_timer(timer,"resample2d")
+    res = skt.resize(image, size, mode="reflect", anti_aliasing=True).astype(image.dtype)
+    end_timer(timer)
+    return res
+
+
+def resample2d_sequence(sequence, size, timer=None):
+    """Resample a squence of 2d-arrays to size"""
+    start_timer(timer,"resample2d_sequence")
+    
     dtype = sequence.dtype
-    sequence = [skt.resize(img, size, mode="reflect", anti_aliasing=True)
-                for img in sequence]
-    return np.asarray(sequence, dtype=dtype)
+    scaled_sequence = np.empty(sequence.shape,dtype=dtype)
+    for i in range(len(sequence)):
+        scaled_sequence[i] = resample2d(sequence[i], size)
 
-def upscale(ft,nX):
+    end_timer(timer)
+    return scaled_sequence
+
+def upscale(ft,nX,timer=None):
+    start_timer(timer,"upscale")
+
     ct=dct(ft,norm='ortho');
-    return idct(ct,n=nX,norm='ortho');
+    result = idct(ct,n=nX,norm='ortho');
 
-def downscale(Ft,nx):
+    end_timer(timer)
+    return result
+
+def downscale(Ft,nx,timer=None):
+    start_timer(timer,"downscale")
+    
     ct=dct(Ft,norm='ortho')[:nx];
-    return idct(ct,norm='ortho');
+    result = idct(ct,norm='ortho');
+
+    end_timer(timer)
+    return result
 
 def fft_derivative_1d(fx,order=1):
     N  = len(fx)
@@ -121,3 +159,5 @@ def sine_sequence(periods=30, N=20):
     y = np.sin(x)
     y = np.tile(y, periods)
     return y
+
+

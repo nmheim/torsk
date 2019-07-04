@@ -57,6 +57,7 @@ class ParamsSchema(Schema):
 
     anomaly_start = fields.Int()
     anomaly_step = fields.Int()
+    timing_depth = fields.Int()
 
 
 class Params:

@@ -12,16 +12,17 @@ if numpy_acceleration == "bohrium":
     bh_type  = bh.ndarray
     bh_check = bh.bhary.check    
     to_bh    = bh.array
-    to_np_base = bh.array #bh.interop_numpy.get_array
     bh_flush = bh.flush
-    
+    bh_diag  = bh.diag
+    bh_dot   = bh.dot
     def to_np(A):
         if bh_check(A):
             return A.copy2numpy()
-        #return bh.interop_numpy.get_array(A)
         else:
             return A
-    
+
+    accel_capabilities = ["streaming"]
+        
 elif numpy_acceleration == "bh107":
     import bh107
 
@@ -29,26 +30,29 @@ elif numpy_acceleration == "bh107":
     bh_type  = bh.BhArray
     bh_check = lambda A: isinstance(A,bh.BhArray)    
     to_bh    = bh.BhArray.from_numpy
-    to_np_base = lambda A: A.asnumpy();
     bh_flush = bh.flush
-    
+    bh_diag  = lambda A: to_bh(np.diag(A.asnumpy()))
+    bh_dot   = lambda A,B: to_bh(np.dot(to_np(A), to_np(B)))
     def to_np(A):
         if isinstance(A,bh_type):
+            bh.flush()          # Make sure everything pending is already written to A
             return A.asnumpy()
         else:
             return A
-
-
+    accel_capabilities = ["streaming"]
+    
 else:
     bh = np
     bh_type  = bh.ndarray
     bh_check = lambda A: isinstance(A,bh_type);
     to_bh      = Id
     to_np      = Id
-    to_np_base = Id
     bh_flush   = void
+    bh_diag    = np.diag
+    bh_dot     = np.dot
+    accel_capabilities = []
 
-
+    
     
 def before_storage(model):
     numpyize(model)
@@ -59,10 +63,10 @@ def after_storage(model,old_state=None):
 def bohriumize(model,old_state=None):
     print("Bohriumizing...")
     if old_state is None:
-        model.esn_cell.weight_hh.values = bh.array(model.esn_cell.weight_hh.values.astype(np.float64))
-        model.esn_cell.weight_hh.col_idx = bh.array(model.esn_cell.weight_hh.col_idx.astype(np.int32))
-        model.ones = bh.array(model.ones.astype(np.float64))
-        model.wout = bh.array(model.wout.astype(np.float64))
+        model.esn_cell.weight_hh.values  = to_bh(model.esn_cell.weight_hh.values)
+        model.esn_cell.weight_hh.col_idx = to_bh(model.esn_cell.weight_hh.col_idx)
+        model.ones = to_bh(model.ones)
+        model.wout = to_bh(model.wout)
     else:
         model.esn_cell.weight_hh.values  = old_state["esn_cell.weight_hh.values"]
         model.esn_cell.weight_hh.col_idx = old_state["esn_cell.weight_hh.col_idx"]
