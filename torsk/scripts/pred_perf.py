@@ -7,7 +7,7 @@ import netCDF4 as nc
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from torsk.visualize import animate_triple_imshow, write_video
+from torsk.visualize import animate_quad_imshow, write_video
 from torsk.imed import imed_metric
 
 
@@ -152,14 +152,14 @@ def cli(pred_data_ncfiles, save_video, outfile, show, ylogscale,
             frames = np.concatenate([labels[ii], outputs], axis=1)
             videofile = pred_data_nc.with_suffix(f".{save_video}").as_posix()
             if save_video == "gif":
-                anim = animate_triple_imshow(labels[ii], outputs, lstm_pred, cpred,
+                anim = animate_quad_imshow(labels[ii], outputs, lstm_pred, cpred,
                     axes_labels=["Truth", "ESN", "LSTM", "Cycle"])
                 anim.save(videofile, writer="imagemagick")
             else:
                 write_video(videofile, frames)
 
         if show:
-            anim = animate_triple_imshow(
+            anim = animate_quad_imshow(
                 labels[ii], outputs, lstm_pred, cpred,
                 axes_labels=["Truth", "ESN", "LSTM", "Cycle"])
             plt.show()
