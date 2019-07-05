@@ -1,0 +1,11 @@
+valid_pred_length = 50
+large_window = 100
+small_window = 10
+    col = 38
+    col = 41
+    ?col = 9
+
+large_window = 100
+small_window = 10
+valid_pred_length = 25
+    col = 41

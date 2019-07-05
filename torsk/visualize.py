@@ -124,7 +124,7 @@ def write_double_video(filename,Ftxx1,Ftxx2,mask=None,fps=24,colormap=cm.inferno
     write_video(filename,Ftxx,mask,fps,colormap)
 
 
-def animate_triple_imshow(frames1, frames2, frames3, frames4,
+def animate_quad_imshow(frames1, frames2, frames3, frames4,
                           time=None, vmin=None, vmax=None,
                           cmap_name="inferno", figsize=(6, 6), title=None,
                           axes_labels=None):
@@ -162,10 +162,9 @@ def animate_triple_imshow(frames1, frames2, frames3, frames4,
     im3 = ax[2].imshow(
         to_np(frames3[0]), animated=True, vmin=vmin, vmax=vmax,
         cmap=plt.get_cmap(cmap_name))
-    # trivial prediciton
-    # im4 = ax[3].imshow(
-    #     to_np(frames4[0]), animated=True, vmin=vmin, vmax=vmax,
-    #     cmap=plt.get_cmap(cmap_name))
+    im4 = ax[3].imshow(
+        to_np(frames4[0]), animated=True, vmin=vmin, vmax=vmax,
+        cmap=plt.get_cmap(cmap_name))
 
     plt.colorbar(im1, ax=ax[0], fraction=0.046, pad=0.04)
     plt.colorbar(im2, ax=ax[1], fraction=0.046, pad=0.04)

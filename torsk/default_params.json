@@ -15,7 +15,7 @@
   "transient_length": 100,
   "train_method": "pinv_svd",
   "imed_loss": true,
-  "imed_sigma": 1,
+  "imed_sigma": 1.0,
 
   "dtype": "float64",
   "backend": "numpy",

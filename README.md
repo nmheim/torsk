@@ -14,35 +14,37 @@ as inputs to the ESN.
 ## Prediction Examples
 
 For a demonstration of the predictive power of the extended ESN check out
-the next three links that compare ESN, cycle-based, and trivial predictions
+the next three links that compare ESN, LSTM, and cycle-based
 of three different problems.
 
 ### Lissajous Figure
 
-Prediction of a Gaussian blob that moves according to a [Lissajous figure](https://sid.erda.dk/share_redirect/FAtJdDbtah) that is
+Prediction of a Gaussian blob that moves according to a [Lissajous figure](https://sid.erda.dk/share_redirect/eySGWidv4I) that is
 defined by:
 
     x = sin(t)
     y = cos(0.3*t)
 
 The true evolution of the time series is visible in the top left,
-the ESN prediction in the top right, cycle-based prediction lower left,
-and the trivial prediction in the lower right.
+the ESN prediction in the top right, LSTM prediction lower left,
+and the cycle-based prediction in the lower right.
 
 
 ### Mackey-Glass Lissajous
 
-Prediction of a [chaotically moving Gaussian blob](https://sid.erda.dk/share_redirect/f4ZaRHe9kZ).
+Prediction of a [chaotically moving Gaussian blob](https://sid.erda.dk/share_redirect/gkcHuk6xjR).
 The trajectory of the maximum is governed by the Mackey-Glass time series in the x-dimension and a sine in the
 y-dimension. The true evolution of the time series is visible in the top left,
-the ESN prediction in the top right, cycle-based prediction lower left,
-and the trivial prediction in the lower right.
+the ESN prediction in the top right, LSTM prediction lower left,
+and the cycle-based prediction in the lower right.
 
 
 ### Kuroshio
 
-Prediction of the [Kuroshio](https://sid.erda.dk/share_redirect/ALmNIfYwM5) region
-at the coast of Japan.
+Prediction of the [Kuroshio](https://sid.erda.dk/share_redirect/fhkVWXAYBX) region
+at the coast of Japan. Again: The true evolution of the time series is visible
+in the top left, the ESN prediction in the top right, LSTM prediction lower
+left, and the cycle-based prediction in the lower right.
 
 
 ## Usage

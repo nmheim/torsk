@@ -184,6 +184,7 @@ class NumpyESN(object):
             from torsk.imed import metric_matrix
             import scipy as sp
             if self.imed_G is None:
+<<<<<<< HEAD
                 self.timer.begin("IMED initialize")
                 self.imed_G              = metric_matrix(inputs.shape[1:])
                 self.imed_w, self.imed_V = eigh(self.imed_G)
@@ -199,6 +200,45 @@ class NumpyESN(object):
             flat_inputs = np.matmul(G12, flat_inputs[:,:,None])[:,:,0]
             flat_labels = np.matmul(G12, flat_labels[:,:,None])[:,:,0]
             self.timer.end()
+=======
+                print("Calculating metric matrix...")
+                t1 = time()
+                self.imed_G = metric_matrix(inputs.shape[1:], sigma=self.params.imed_sigma)
+                t2 = time()
+                print(f"Computing metric matrix took: {t2-t1}")
+                self.imed_w, self.imed_V = sp.linalg.eigh(self.imed_G)
+                t3 = time()
+                print(f"Diagonalizing metric matrix took: {t3-t2}")
+
+                n = np.sum(self.imed_w < 0)
+                if np.any(np.abs(self.imed_w[:n]) > 1e-14):
+                    raise ValueError(
+                        "Large negative eigenvalues of IMED metric matrix G detected.")
+                self.imed_w = self.imed_w[n:]
+                self.imed_V = self.imed_V[:, n:]
+
+            G, w, V = to_bh(self.imed_G.astype(np.float64)), to_bh(self.imed_w.astype(np.float64)), to_bh(self.imed_V.astype(np.float64))
+            S = bh.diag(bh.sqrt(w))
+            G12 = V.dot(S.dot(V.T))
+            print("Flushing after G12-calc")
+            t0 = time()
+            bh_flush()
+            t1 = time()
+            print("Flushing took ",t1-t0,"seconds")
+
+            print("Reprojecting inputs/labels with metric matrix")
+            print("G12:",G12.shape)
+            print("flat_inputs:",flat_inputs.shape)
+            flat_inputs = bh.sum(G12[None,:,:]*flat_inputs[:,None,:],axis=2)
+            flat_labels = bh.sum(G12[None,:,:]*flat_labels[:,None,:],axis=2)
+            print("Flushing after G12-multiplication")
+            t0 = time()
+            bh_flush()
+            t1 = time()
+            print("Flushing took ",t1-t0,"seconds")
+            print("FI:",flat_inputs.shape)        
+            print("FL:",flat_labels.shape)
+>>>>>>> 07bd8eeec3a19a65ca91ea642b04373d0748d362
             
         if method == 'tikhonov':
             if beta is None:
