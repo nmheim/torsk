@@ -1,8 +1,11 @@
+import logging
 import numpy as np
 import skimage.transform as skt
 import scipy as sp
 from scipy.fftpack import dct, idct, fft, ifft, fftshift, ifftshift;
 from torsk.timing import *
+
+logger = logging.getLogger(__name__)
 
 def svd(A,timer=None):
     start_timer(timer,"svd")
@@ -22,22 +25,54 @@ def lstsq(A,B,timer=None):
     end_timer(timer)
     return X,b,c,s
 
-
-def resample2d(image, size, timer=None):
-    start_timer(timer,"resample2d")
+def resample2d_skt(image, size, timer=None):
+    start_timer(timer,"resample2d skimage")
     res = skt.resize(image, size, mode="reflect", anti_aliasing=True).astype(image.dtype)
     end_timer(timer)
     return res
 
+def resample2d_numpy(image,size,timer=None):
+    start_timer(timer,"resample2d bilinear numpy")
+
+    (N,M) = image.shape[-2:];
+    (n,m) = size;
+
+    xs = np.linspace(1,M-1,m)[None,:];
+    ys = np.linspace(1,N-1,n)[:,None];
+
+    yminus,iminus= np.modf(ys-0.5);
+    yplus, iplus = np.modf(ys+0.5);
+    xminus,jminus= np.modf(xs-0.5);
+    xplus, jplus = np.modf(xs+0.5);     
+
+    I = image.reshape((-1,M*N))
+    
+    LD = (iminus*M + jminus).astype(np.uint64); # x-,y-
+    LU = (iplus *M + jminus).astype(np.uint64); # x-,y+
+    RD = (iminus*M + jplus).astype(np.uint64);  # x+,y-
+    RU = (iplus *M + jplus).astype(np.uint64);  # x+,y+
+
+    I_bilin = (1-xminus)*(1-yminus)*I[:,LD] \
+             +(1-xminus)*yplus     *I[:,LU] \
+             +xplus     *yplus     *I[:,RD] \
+             +xplus*(1-yminus)     *I[:,RU];    
+
+    new_shape = image.shape[:-2]+(n,m)
+    end_timer(timer)
+    return I_bilin.reshape(new_shape)
+
+def resample2d(image,size,timer=None):
+    return resample2d_numpy(image,size,timer)
 
 def resample2d_sequence(sequence, size, timer=None):
     """Resample a squence of 2d-arrays to size"""
     start_timer(timer,"resample2d_sequence")
-    
-    dtype = sequence.dtype
-    scaled_sequence = np.empty(sequence.shape,dtype=dtype)
-    for i in range(len(sequence)):
-        scaled_sequence[i] = resample2d(sequence[i], size)
+
+    new_shape = sequence.shape[:-2]+tuple(size)
+    logger.info(f"Rescaling {sequence.shape} to {size} -> {new_shape}")
+
+    size.reverse()             # Why is size given in reverse?    
+    return resample2d(sequence,size,timer)
 
     end_timer(timer)
     return scaled_sequence
