@@ -27,7 +27,7 @@ def apply_input_map(image, F):
         F["dbg_size"] = grad.shape
     elif F["type"] == "conv":
         _features = convolve2d(
-            image, F["kernel"], mode='same', boundary="symm")
+            image, F["kernel"], mode=F['mode'], boundary="symm")
         F["dbg_size"] = _features.shape
         _features = normalize(_features.reshape(-1)) * 2 - 1
     elif F["type"] == "random_weights":
@@ -83,7 +83,10 @@ def hidden_size_of(input_shape, F):
     shape = input_shape
     if F["type"] == "conv":
         if F["mode"] == "valid":
-            shape = conv2d_output_shape(input_shape, F["size"])
+#            shape = conv2d_output_shape(input_shape, F["size"])!
+            (m,n) = F["size"]
+            shape = (input_shape[0]-m+1,input_shape[1]-n+1)
+            size  = shape[0] * shape[1]
         elif F["mode"] == "same":
             size  = shape[0] * shape[1]
     elif F["type"] == "random_weights":
@@ -136,18 +139,19 @@ class NumpyMapESNCell(object):
         contains the next hidden state of shape (batch, hidden_size)
     """
 
-    def __init__(self, input_shape, input_map_specs, spectral_radius, density, dtype):
+    def __init__(self, input_shape, input_map_specs, spectral_radius, density, dtype, timer=None):
         self.input_shape = input_shape
         self.spectral_radius = spectral_radius
         self.density = density
         self.dtype = np.dtype(dtype)
         self.input_map_specs = input_map_specs
+        self.timer = timer
 
         self.hidden_size = self.get_hidden_size(input_shape)
         logger.info(f"ESN hidden size: {self.hidden_size}")
         self.weight_hh = dense_esn_reservoir(
             dim=self.hidden_size, spectral_radius=self.spectral_radius,
-            density=self.density, symmetric=False)
+            density=self.density, symmetric=False, timer=timer)
         self.weight_hh = self.weight_hh.astype(self.dtype)
 
         self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)
@@ -180,12 +184,13 @@ class NumpyMapESNCell(object):
 
 
 class NumpyMapSparseESNCell(object):
-    def __init__(self, input_shape, input_map_specs, spectral_radius, density, dtype):
+    def __init__(self, input_shape, input_map_specs, spectral_radius, density, dtype, timer=None):
         self.input_shape = input_shape
         self.input_map_specs = input_map_specs
         self.spectral_radius = spectral_radius
         self.density = density
         self.dtype = np.dtype(dtype)
+        self.timer = timer
 
         self.hidden_size = self.get_hidden_size(input_shape)
         logger.info(f"ESN hidden size: {self.hidden_size}")
@@ -194,13 +199,13 @@ class NumpyMapSparseESNCell(object):
             dim=self.hidden_size,
             spectral_radius=self.spectral_radius,
             nonzeros_per_row=nonzeros_per_row,
-            dtype=self.dtype)
+            dtype=self.dtype, timer=timer)
         #self.weight_hh = sparse_esn_reservoir(
         #    dim=self.hidden_size,
         #    spectral_radius=self.spectral_radius,
         #    #nonzeros_per_row=nonzeros_per_row,
         #    density=density,
-        #    symmetric=True)
+        #    symmetric=True) 
         #    #dtype=self.dtype)
 
         self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)
@@ -216,7 +221,10 @@ class NumpyMapSparseESNCell(object):
         return input_map(image, self.input_map_specs, self.timer)
 
     def state_map(self, state):
-        return self.weight_hh.sparse_dense_mv(state)
+        start_timer(self.timer,"state_map")
+        new_state = self.weight_hh.sparse_dense_mv(state)
+        end_timer(self.timer)
+        return new_state
 
     def forward(self, image, state):
         start_timer(self.timer,"forward")
@@ -226,7 +234,8 @@ class NumpyMapSparseESNCell(object):
         input_stack = self.input_map(to_np(image))       # np
         x_input     = to_bh(np.concatenate(input_stack)) # np -> bh
         x_state     = self.state_map(to_bh(state))       # bh
-        new_state   = bh.tanh(x_input + x_state)         # bh
-
-        end_timer(self.timer)
+        start_timer(self.timer,"tanh")
+        new_state   = bh.tanh(x_input+x_state)      # bh
+        end_timer(self.timer) # /tanh
+        end_timer(self.timer) # /forward
         return new_state

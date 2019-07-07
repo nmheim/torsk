@@ -12,17 +12,12 @@ np.random.seed(0)
 params = torsk.Params()
 params.input_map_specs = [
     {"type": "pixels", "size": [30, 30], "input_scale": 3.},
-    {"type": "conv", "mode": "same", "size": [5, 5],
-        "kernel_type":"gauss", "input_scale": 4.},
-    {"type": "conv", "mode": "same", "size": [10, 10],
-        "kernel_type":"gauss", "input_scale": 3.},
-    {"type": "conv", "mode": "same", "size": [15, 15],
-        "kernel_type":"gauss", "input_scale": 4.},
-    {"type": "conv", "mode": "same", "size": [5, 5],
-        "kernel_type":"random", "input_scale": 4.},
-    {"type": "conv", "mode": "same", "size": [10, 10],
-        "kernel_type":"random", "input_scale": 4.},
-    {"type": "conv", "mode": "same", "size": [20, 20],
+    {"type": "conv", "mode": "valid", "size": [5, 5],     "kernel_type":"gauss", "input_scale": 4.},
+    {"type": "conv", "mode": "valid", "size": [10, 10],   "kernel_type":"gauss", "input_scale": 3.},
+    {"type": "conv", "mode": "valid", "size": [15, 15],   "kernel_type":"gauss", "input_scale": 4.},
+    {"type": "conv", "mode": "valid", "size": [5, 5],     "kernel_type":"random", "input_scale": 4.},
+    {"type": "conv", "mode": "valid", "size": [10, 10],   "kernel_type":"random", "input_scale": 4.},
+    {"type": "conv", "mode": "valid", "size": [20, 20],
         "kernel_type":"random", "input_scale": 4.},
     {"type": "dct", "size": [15, 15], "input_scale": 1.},
     {"type": "gradient", "input_scale": 4.},
@@ -42,6 +37,7 @@ params.train_method = "pinv_lstsq"
 params.imed_loss = False
 params.tikhonov_beta = None
 params.debug = False
+params.imed_loss = False;
 
 params.update(sys.argv[1:])
 
