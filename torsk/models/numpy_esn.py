@@ -46,12 +46,14 @@ class NumpyESN(object):
         elif params.reservoir_representation == "sparse":
             ESNCell = NumpyMapSparseESNCell
 
+        self.timer  = Timer(timing_depth=4,flush=True) # TODO: params.timing_depth with default value 4. Ask Niklas how.            
+            
         self.esn_cell = ESNCell(
             input_shape=params.input_shape,
             input_map_specs=params.input_map_specs,
             spectral_radius=params.spectral_radius,
             density=params.density,
-            dtype=params.dtype)
+            dtype=params.dtype, timer=self.timer)
 
         input_size = params.input_shape[0] * params.input_shape[1]
         wout_shape = [input_size, self.esn_cell.hidden_size + input_size + 1]
@@ -61,9 +63,6 @@ class NumpyESN(object):
         self.imed_G = None
         self.imed_w = None
         self.imed_V = None
-
-        self.timer          = Timer(timing_depth=4) # TODO: params.timing_depth with default value 4. Ask Niklas how.
-        self.esn_cell.timer = self.timer
         
     def forward(self, inputs, state=None, states_only=True):
         if state is None:
@@ -89,7 +88,6 @@ class NumpyESN(object):
             states[i] = to_bh(state)
 
         self.timer.end()
-        logger.info(self.timer.pretty_print())
         return None, states
 
     def _forward(self, inputs, state):
@@ -106,7 +104,6 @@ class NumpyESN(object):
             states[i]  = state
 
         self.timer.end()
-        logger.info(self.timer.pretty_print())
         return outputs, states
 
     def _forward_debug(self, inputs, state):
@@ -157,7 +154,6 @@ class NumpyESN(object):
             states[i]  = to_bh(state)
 
         self.timer.end()
-        logger.info(self.timer.pretty_print())
         return outputs, states
 
     def optimize(self, inputs, states, labels):

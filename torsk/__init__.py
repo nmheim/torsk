@@ -270,6 +270,8 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
         logger.warning("If shuffle is True `step_length` has no effect!")
 
     for ii in range(steps):
+        model.timer.reset()
+        
         logger.info(f"--- Train/Predict Step Nr. {ii+1} ---")
         if shuffle:
             idx = np.random.randint(low=0, high=len(dataset))
@@ -306,6 +308,8 @@ def train_predict_esn(model, dataset, outdir=None, shuffle=False, steps=1,
         t2 = time.time()
         logger.info(f"Predicting the next {model.params.pred_length} frames took: {t2-t1}")
 
+        logger.info(model.timer.pretty_print())        
+        
         if outdir is not None:
             outfile = outdir / f"pred_data_idx{idx}.nc"
             logger.info(f"Saving prediction to {outfile}")
