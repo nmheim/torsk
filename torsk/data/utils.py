@@ -68,10 +68,6 @@ def resample2d_sequence(sequence, size, timer=None):
     """Resample a squence of 2d-arrays to size"""
     start_timer(timer,"resample2d_sequence")
 
-    new_shape = sequence.shape[:-2]+tuple(size)
-    logger.info(f"Rescaling {sequence.shape} to {size} -> {new_shape}")
-
-    size.reverse()             # Why is size given in reverse?    
     return resample2d(sequence,size,timer)
 
     end_timer(timer)
