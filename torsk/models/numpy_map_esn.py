@@ -8,7 +8,7 @@ from torsk.data.utils import resample2d, normalize
 from torsk.data.dct import dct2
 from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir, sparse_nzpr_esn_reservoir
 from torsk.timing import start_timer, end_timer
-from torsk.numpy_accelerate import bh, to_np, to_bh
+from torsk.numpy_accelerate import bh, to_np, to_bh, bh_dot
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def apply_input_map(image, F):
         F["dbg_size"] = _features.shape
         _features = normalize(_features.reshape(-1)) * 2 - 1
     elif F["type"] == "random_weights":
-        _features = np.dot(F["weight_ih"], image.reshape(-1))
+        _features = bh_dot(F["weight_ih"], image.reshape(-1))
         _features += F["bias_ih"]
         F["dbg_size"] = F["size"]
     elif F["type"] == "compose":

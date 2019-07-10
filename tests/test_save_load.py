@@ -1,5 +1,5 @@
-import bohrium as bh
 import torsk
+from torsk.numpy_accelerate import bh
 from torsk.models.numpy_esn import NumpyESN
 
 
@@ -21,7 +21,8 @@ def test_numpy_save_load(tmpdir):
       "dtype": "float64",
       "backend": "numpy",
       "debug": false,
-      "imed_loss": true
+      "imed_loss": true,
+      "timing_depth": 1
     }
     """
     params_json = tmpdir.join("params.json")
@@ -60,7 +61,8 @@ def test_numpy_sparse_save_load(tmpdir):
       "dtype": "float64",
       "backend": "numpy",
       "debug": false,
-      "imed_loss": true
+      "imed_loss": true,
+      "timing_depth": 1
     }
     """
     params_json = tmpdir.join("params.json")

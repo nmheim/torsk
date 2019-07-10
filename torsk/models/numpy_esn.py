@@ -1,7 +1,6 @@
 # coding: future_fstrings
 import logging
 import numpy as np
-from torsk.numpy_accelerate import bh
 
 from torsk.models.initialize import dense_esn_reservoir
 from torsk.models.numpy_map_esn import NumpyMapESNCell, NumpyMapSparseESNCell
@@ -9,7 +8,7 @@ from torsk.imed import metric_matrix
 from torsk.timing import Timer
 from torsk.data.utils import eigh
 import torsk.models.numpy_optimize as opt
-from torsk.numpy_accelerate import to_bh, to_np, bh_dot
+from torsk.numpy_accelerate import bh, to_bh, to_np, bh_dot
 
 logger = logging.getLogger(__name__)
 

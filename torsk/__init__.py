@@ -4,12 +4,11 @@ import pathlib
 
 import joblib
 import numpy as np
-import bohrium as bh
 import netCDF4 as nc
 
 from torsk.params import Params, default_params
 from torsk.imed import imed_metric, eucd_metric
-from torsk.numpy_accelerate import to_np
+from torsk.numpy_accelerate import bh, to_np
 from torsk.numpy_accelerate import before_storage, after_storage, numpyize
 
 __all__ = ["Params", "default_params", "load_model", "save_model"]

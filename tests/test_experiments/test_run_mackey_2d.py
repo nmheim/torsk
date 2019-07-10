@@ -10,7 +10,7 @@ from torsk.data.utils import gauss2d_sequence, mackey_anomaly_sequence, normaliz
 def test_mackey_2d(tmpdir):
     np.random.seed(0)
     
-    params = torsk.Params()
+    params = torsk.default_params()
     factor = 2.
     params.input_map_specs = [
         {"type": "pixels", "size": [30, 30], "input_scale": 3.},

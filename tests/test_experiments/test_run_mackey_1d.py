@@ -9,7 +9,7 @@ def test_run_1dmackey(tmpdir):
 
     np.random.seed(0)
 
-    params = torsk.Params()
+    params = torsk.default_params()
     params.input_map_specs = [
         {"type": "random_weights", "size": [1000], "input_scale": 1.}
     ]

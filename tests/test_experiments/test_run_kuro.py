@@ -12,7 +12,7 @@ def test_kuro():
     logger = logging.getLogger(__file__)
     logging.basicConfig(level=logging.INFO)
 
-    params = torsk.Params()
+    params = torsk.default_params()
     params.input_map_specs = [
         {"type": "pixels", "size": [30, 30], "input_scale": 3.},
         {"type": "conv", "mode": "same", "size": [5, 5],

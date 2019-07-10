@@ -1,42 +1,42 @@
-import numpy as np
+from torsk.numpy_accelerate import bh
 from torsk.sparse import SparseMatrix
 
 
 def test_square_sparse():
 
-    values = np.arange(1, 11)
-    col_idx = np.arange(10)
+    values = bh.arange(1, 11)
+    col_idx = bh.arange(10)
     nonzeros_per_row = 1
     dense_shape = (10, 10)
 
-    dense = np.eye(10) * values
+    dense = bh.eye(10) * values
 
     mat = SparseMatrix(values, col_idx, nonzeros_per_row, dense_shape)
     dmat = SparseMatrix.from_dense(dense, nonzeros_per_row)
-    assert np.all(mat.values == dmat.values)
-    assert np.all(mat.col_idx == dmat.col_idx)
-    assert np.all(mat.dense_shape == dense_shape)
-    assert np.all(dmat.dense_shape == dense_shape)
+    assert bh.all(mat.values == dmat.values)
+    assert bh.all(mat.col_idx == dmat.col_idx)
+    assert bh.all(mat.dense_shape == dense_shape)
+    assert bh.all(dmat.dense_shape == dense_shape)
 
-    X = np.ones([10, 10])
+    x = bh.ones(10)
+    y = mat.sparse_dense_mv(x)
+    assert bh.all(y == bh.arange(1, 11))
+
+    X = bh.ones([10, 10])
     Y = mat.sparse_dense_mm(X)
     for ii, y in enumerate(Y):
-        assert np.all(ii + 1 == y)
-
-    x = np.ones(10)
-    y = mat.sparse_dense_mv(x)
-    assert np.all(y == np.arange(1, 11))
+        assert bh.all(ii + 1 == y)
 
 
 def test_rect_sparse():
 
-    array = np.array([
+    array = bh.array([
         [0, 0, 1, 0],
         [1, 0, 0, 0],
         [0, 1, 0, 0]])
 
     mat = SparseMatrix.from_dense(array, nonzeros_per_row=1)
 
-    vec = np.array([1, 2, 3, 4])
+    vec = bh.array([1, 2, 3, 4])
 
-    assert np.all(mat.sparse_dense_mv(vec) == np.array([3, 1, 2]))
+    assert bh.all(mat.sparse_dense_mv(vec) == bh.array([3, 1, 2]))

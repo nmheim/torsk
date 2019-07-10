@@ -7,7 +7,7 @@ def sparse_dense_mm(A, X, timer=None):
 #    start_timer(timer,"spmm")
 
     assert A.dense_shape[1] == X.shape[0]
-    AXv = A.values[:, None] * X[A.col_idx, :]
+    AXv = A.values[:, None] * X[A.col_idx]
     result = bh.sum(AXv.reshape((-1, X.shape[1], A.nonzeros_per_row)), axis=2)
     
 #    end_timer(timer)

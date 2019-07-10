@@ -10,7 +10,7 @@ from torsk.data.utils import gauss2d_sequence
 def test_lissajous(tmpdir):
     np.random.seed(0)
 
-    params = torsk.Params()
+    params = torsk.default_params()
     params.input_map_specs = [
         {"type": "pixels", "size": [30, 30], "input_scale": 3.},
         {"type": "conv", "mode": "same", "size": [5, 5],
