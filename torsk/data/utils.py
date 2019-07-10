@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import skimage.transform as skt
 import scipy as sp
-from scipy.fftpack import dct, idct, fft, ifft, fftshift, ifftshift;
+from scipy.fftpack import dct, idct, fft, ifft, fftshift
 from torsk.timing import start_timer, end_timer
 from torsk.numpy_accelerate import to_np
 
@@ -69,7 +69,7 @@ def resample2d_sequence(sequence, size, timer=None):
     """Resample a squence of 2d-arrays to size"""
     start_timer(timer,"resample2d_sequence")
 
-    return resample2d(sequence,size,timer)
+    scaled_sequence = resample2d(sequence,size,timer)
 
     end_timer(timer)
     return scaled_sequence
@@ -96,9 +96,9 @@ def fft_derivative_1d(fx,order=1):
     N  = len(fx)
     ks = np.linspace(-N/2,N/2,N,endpoint=False)**order;    
     Fk = ifft(fx);
-    fftpack.fftshift(Fk)
-    DFk = fftpack.ifftshift((2j*pi/N)*ks*Fk)
-    DFx = fftpack.fft((2j*np.pi/N)*ks*Fk)
+    fftshift(Fk)
+    # DFk = ifftshift((2j*np.pi/N)*ks*Fk)
+    DFx = fft((2j*np.pi/N)*ks*Fk)
     
     return DFx;
 
@@ -191,5 +191,3 @@ def sine_sequence(periods=30, N=20):
     y = np.sin(x)
     y = np.tile(y, periods)
     return y
-
-

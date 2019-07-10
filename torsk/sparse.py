@@ -1,5 +1,4 @@
 # coding: future_fstrings
-import numpy as np
 import bohrium as bh
 
 from torsk.numpy_accelerate import to_bh
@@ -43,7 +42,7 @@ class SparseMatrix:
         assert values.shape == col_idx.shape
 
         (m,n,n_nz) = (dense_shape[0],dense_shape[1],nonzeros_per_row)
-        
+
         self.values  = to_bh(values).reshape((m,n_nz))
         self.col_idx = to_bh(col_idx).reshape((m,n_nz))
         self.nonzeros_per_row = nonzeros_per_row

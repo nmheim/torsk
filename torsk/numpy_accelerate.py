@@ -5,7 +5,8 @@ from torsk import config
 
 logger = logging.getLogger(__name__)
 
-Id = lambda A: A
+def Id(A):
+    return A
 
 def void():
     return
@@ -25,7 +26,6 @@ if config.numpy_acceleration == "bohrium":
             return A.copy2numpy()
         else:
             return A
-
     accel_capabilities = ["streaming"]
         
 elif config.numpy_acceleration == "bh107":
@@ -66,7 +66,7 @@ def after_storage(model,old_state=None):
     bohriumize(model,old_state)        
 
 def bohriumize(model,old_state=None):
-    logger.info("Bohriumizing...")
+    logger.debug("Bohriumizing...")
     if old_state is None:
         if model.params.reservoir_representation == "dense":
             model.esn_cell.weight_hh = to_bh(model.esn_cell.weight_hh)
@@ -83,10 +83,10 @@ def bohriumize(model,old_state=None):
             model.esn_cell.weight_hh.col_idx = old_state["esn_cell.weight_hh.col_idx"]
         model.ones = old_state["ones"] 
         model.wout = old_state["wout"]
-    logger.info("Done bohriumizing...")
+    logger.debug("Done bohriumizing...")
 
 def numpyize(model):
-    logger.info("Numpyizing...")
+    logger.debug("Numpyizing...")
     old_state = {};
 
     if model.params.reservoir_representation == "dense":
@@ -103,14 +103,10 @@ def numpyize(model):
     model.ones = to_np(model.ones)
     model.wout = to_np(model.wout)
     
-    #E = {}
-    #for D in [model.__dict__, model.esn_cell.__dict__, model.esn_cell.weight_hh.__dict__]:
     for D in [model.__dict__, model.esn_cell.__dict__]:
         for k,v in D.items():
             if isinstance(v,bh_type):
-                logger.info(f"Numpyizing `{k}`")
-                #E[k] = v
+                logger.debug(f"Numpyizing `{k}`")
                 D[k] = to_np(v)                        
-    #return E
 
     return old_state

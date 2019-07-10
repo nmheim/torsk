@@ -43,7 +43,6 @@ def plot_iteration(model, idx, inp, state):
         17: (3, 6),
         18: (3, 6)}
     nr_plots = len(input_stack) + 5
-    size = int(np.ceil(nr_plots**.5))
     if nr_plots not in nr_plots_to_dims:
         raise ValueError("Too many input_map_specs to plot")
 

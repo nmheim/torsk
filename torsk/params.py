@@ -111,6 +111,7 @@ class Params:
     def __str__(self):
         ps = self.__dict__.copy()
         maps = ps.pop("input_map_specs")
+
         def maps_table_row(imap):
             if 'input_scale' in imap:
                 scale = f"{imap['input_scale']:.2f}"

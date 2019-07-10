@@ -1,10 +1,8 @@
 # coding: future_fstrings
-from time import time
 import logging
 import numpy as np
-import scipy as sp
 
-from torsk.data.utils import svd, eigh, lstsq
+from torsk.data.utils import svd, lstsq
 from torsk.numpy_accelerate import to_bh, to_np, bh_dot
 
 logger = logging.getLogger(__name__)
