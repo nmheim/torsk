@@ -9,7 +9,7 @@ from torsk.data.utils import gauss2d_sequence
 
 def test_lissajous(tmpdir):
     np.random.seed(0)
-    
+
     params = torsk.Params()
     params.input_map_specs = [
         {"type": "pixels", "size": [30, 30], "input_scale": 3.},
@@ -29,7 +29,7 @@ def test_lissajous(tmpdir):
         {"type": "gradient", "input_scale": 4.},
         {"type": "gradient", "input_scale": 4.}
     ]
-    
+
     params.spectral_radius = 2.0
     params.density = 0.001
     params.input_shape = [30, 30]
@@ -43,25 +43,25 @@ def test_lissajous(tmpdir):
     params.imed_loss = False
     params.tikhonov_beta = None
     params.debug = False
-    
+
     logger = logging.getLogger(__file__)
     level = "DEBUG" if params.debug else "INFO"
     logging.basicConfig(level=level)
     logging.getLogger("matplotlib").setLevel("INFO")
-    
+
     logger.info("Running with NUMPY backend")
-    
+
     logger.info("Creating circle dataset ...")
     t = np.arange(0, 200 * np.pi, 0.02 * np.pi)
     x, y = np.sin(0.3 * t), np.cos(t)
-    
+
     center = np.array([y, x]).T
     images = gauss2d_sequence(center, sigma=0.5, size=params.input_shape)
     dataset = ImageDataset(images, params, scale_images=True)
-    
+
     logger.info("Building model ...")
     model = ESN(params)
-    
+
     logger.info("Training + predicting ...")
     model, outputs, pred_labels = torsk.train_predict_esn(model, dataset)
 

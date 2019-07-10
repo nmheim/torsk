@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 import torsk
-from torsk.imed import imed_metric
+# from torsk.imed import imed_metric
 from torsk.data.numpy_dataset import NumpyImageDataset as ImageDataset
 from torsk.models.numpy_esn import NumpyESN as ESN
 
@@ -11,7 +11,7 @@ def test_kuro():
     np.random.seed(0)
     logger = logging.getLogger(__file__)
     logging.basicConfig(level=logging.INFO)
-    
+
     params = torsk.Params()
     params.input_map_specs = [
         {"type": "pixels", "size": [30, 30], "input_scale": 3.},
@@ -44,18 +44,18 @@ def test_kuro():
     params.train_method = "pinv_lstsq"
     params.tikhonov_beta = 3e1
     params.debug = False
-    params.imed_loss = True
+    params.imed_loss = False
     params.imed_sigma = 1.0
-    
+
     images = np.load(pathlib.Path(__file__).parent / "kuro_test_sequence.npy")
     dataset = ImageDataset(images, params, scale_images=True)
-    
+
     logger.info("Building model ...")
     model = ESN(params)
-    
+
     logger.info("Training + predicting ...")
     model, outputs, pred_labels = torsk.train_predict_esn(model, dataset)
-    
+
     # logger.info("Visualizing results ...")
     # import matplotlib.pyplot as plt
     # from torsk.visualize import animate_double_imshow

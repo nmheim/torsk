@@ -63,3 +63,16 @@ which makes it possible to run the prediction with different backends like
 this:
 
     python experiments/chaotic_lissajous/conv_run.py backend torch dtype float32
+
+
+## Tests
+
+To run the tests, install `torsk` via `pip install -e ".[test]"`and run the
+test by executing `pytest` in the main repo directory.
+To see logging call during testing you can do:
+
+    pytest --log-cli-level=INFO
+
+To run the tests with flake8:
+
+    pytest --flake8

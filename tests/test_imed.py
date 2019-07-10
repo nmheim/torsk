@@ -18,7 +18,7 @@ def gauss_kernel(kernel_shape, sigma=None):
 
 def test_imed():
     np.random.seed(0)
-    
+
     img1 = np.random.normal(size=[5,5])
     img2 = np.random.normal(size=[5,5])
     diff = img1 - img2

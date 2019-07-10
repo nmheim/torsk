@@ -5,7 +5,6 @@ from torsk.sparse import SparseMatrix
 def test_square_sparse():
 
     values = np.arange(1, 11)
-    row_idx = np.arange(10)
     col_idx = np.arange(10)
     nonzeros_per_row = 1
     dense_shape = (10, 10)
@@ -13,9 +12,8 @@ def test_square_sparse():
     dense = np.eye(10) * values
 
     mat = SparseMatrix(values, col_idx, nonzeros_per_row, dense_shape)
-    dmat = SparseMatrix.from_dense(dense)
+    dmat = SparseMatrix.from_dense(dense, nonzeros_per_row)
     assert np.all(mat.values == dmat.values)
-    assert np.all(mat.row_idx == dmat.row_idx)
     assert np.all(mat.col_idx == dmat.col_idx)
     assert np.all(mat.dense_shape == dense_shape)
     assert np.all(dmat.dense_shape == dense_shape)

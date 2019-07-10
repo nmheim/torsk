@@ -30,6 +30,7 @@ setup(
         "test": [
             "pytest",
             "pytest-cov"
+            "pytest-flake8"
         ],
         "recommended": [
             "torch",

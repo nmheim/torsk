@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 
 import torsk
@@ -34,7 +33,7 @@ def test_run_1dmackey(tmpdir):
     mackey = normalize(mackey) * 2 - 1
     mackey = mackey[:, np.newaxis, np.newaxis]
     dataset = ImageDataset(mackey, params, scale_images=False)
-    
+
     model, outputs, pred_labels = torsk.train_predict_esn(
         model, dataset, tmpdir.mkdir("mackey_output"))
 
