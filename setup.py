@@ -29,7 +29,7 @@ setup(
     extras_require={
         "test": [
             "pytest",
-            "pytest-cov"
+            "pytest-cov",
             "pytest-flake8"
         ],
         "recommended": [
