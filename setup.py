@@ -8,9 +8,10 @@ setup(
     packages=find_packages(),
     version=0.1,
     install_requires=[
+        "bohrium",
         "click",
-        "joblib",
         "future-fstrings",
+        "joblib",
         "marshmallow>=3.0.0b12",
         "matplotlib",
         "netCDF4",
