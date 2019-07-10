@@ -1,5 +1,5 @@
 from time import time
-from torsk.numpy_accelerate import *
+from torsk.numpy_accelerate import bh_flush
 
 class Timer(object):
 

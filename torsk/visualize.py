@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib import cm
 from torsk.data.utils import normalize
-from torsk.numpy_accelerate import *
+from torsk.numpy_accelerate import to_np
 import contextlib
 import imageio
 

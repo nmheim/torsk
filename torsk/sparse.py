@@ -1,8 +1,9 @@
 # coding: future_fstrings
 import numpy as np
+import bohrium as bh
 
-from torsk.numpy_accelerate import *
-from torsk.timing import *
+from torsk.numpy_accelerate import to_bh
+#from torsk.timing import *
     
 def sparse_dense_mm(A, X, timer=None):
     """Matrix-matrix multiplication for fixed nonzero per row sparse matrix"""

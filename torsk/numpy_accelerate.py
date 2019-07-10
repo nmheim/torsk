@@ -1,11 +1,16 @@
+# coding: future_fstrings
+import logging
 import numpy as np
-from torsk.config import *
+from torsk import config
+
+logger = logging.getLogger(__name__)
 
 Id = lambda A: A
+
 def void():
     return
 
-if numpy_acceleration == "bohrium":
+if config.numpy_acceleration == "bohrium":
     import bohrium 
 
     bh = bohrium
@@ -23,7 +28,7 @@ if numpy_acceleration == "bohrium":
 
     accel_capabilities = ["streaming"]
         
-elif numpy_acceleration == "bh107":
+elif config.numpy_acceleration == "bh107":
     import bh107
 
     bh       = bh107

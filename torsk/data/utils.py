@@ -3,7 +3,8 @@ import numpy as np
 import skimage.transform as skt
 import scipy as sp
 from scipy.fftpack import dct, idct, fft, ifft, fftshift, ifftshift;
-from torsk.timing import *
+from torsk.timing import start_timer, end_timer
+from torsk.numpy_accelerate import to_np
 
 logger = logging.getLogger(__name__)
 
