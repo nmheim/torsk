@@ -46,7 +46,7 @@ def resample2d_numpy(image,size,timer=None):
     xminus,jminus= np.modf(xs-0.5);
     xplus, jplus = np.modf(xs+0.5);     
 
-    I = image.reshape((-1,M*N))
+    I = to_np(image.reshape((-1,M*N)))
     
     LD = (iminus*M + jminus).astype(np.uint64); # x-,y-
     LU = (iplus *M + jminus).astype(np.uint64); # x-,y+
