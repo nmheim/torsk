@@ -44,7 +44,7 @@ def test_kuro():
     params.train_method = "pinv_lstsq"
     params.tikhonov_beta = 3e1
     params.debug = False
-    params.imed_loss = False
+    params.imed_loss = True
     params.imed_sigma = 1.0
 
     images = np.load(pathlib.Path(__file__).parent / "kuro_test_sequence.npy")

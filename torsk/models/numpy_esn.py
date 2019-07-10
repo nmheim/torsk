@@ -5,8 +5,9 @@ import bohrium as bh
 
 from torsk.models.initialize import dense_esn_reservoir
 from torsk.models.numpy_map_esn import NumpyMapESNCell, NumpyMapSparseESNCell
+from torsk.imed import metric_matrix
 from torsk.timing import Timer
-from torsk.data.utils import svd, eigh
+from torsk.data.utils import eigh
 import torsk.models.numpy_optimize as opt
 from torsk.numpy_accelerate import to_bh, to_np, bh_dot
 
@@ -178,8 +179,6 @@ class NumpyESN(object):
         flat_labels = labels.reshape([train_length, -1])
         
         if self.params.imed_loss:
-            from torsk.imed import metric_matrix
-            import scipy as sp
             if self.imed_G is None:
                 self.timer.begin("IMED initialize")
                 self.imed_G              = metric_matrix(inputs.shape[1:])
@@ -218,9 +217,9 @@ class NumpyESN(object):
 
         if self.params.imed_loss:
             self.timer.begin("IMED matmul on wout")
-            s      = 1/np.sqrt(w) 
-            invG12 = np.dot(V,s[:,None]*V.T) 
-            wout   = np.dot(invG12,wout)
+            s      = 1/bh.sqrt(w) 
+            invG12 = bh_dot(V,s[:,None]*V.T) 
+            wout   = bh_dot(invG12,wout)
             self.timer.end()
 
         if(wout.shape != self.wout.shape):

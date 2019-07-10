@@ -44,7 +44,7 @@ def test_mackey_2d(tmpdir):
     params.reservoir_representation = "sparse"
     params.backend = "numpy"
     params.train_method = "pinv_svd"
-    params.imed_loss = False
+    params.imed_loss = True
     params.imed_sigma = 1.
     params.tikhonov_beta = None
     params.debug = False
