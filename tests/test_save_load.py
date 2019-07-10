@@ -48,7 +48,8 @@ def test_numpy_sparse_save_load(tmpdir):
     params_string = """{
       "input_shape": [10, 10],
       "input_map_specs": [
-        {"type":"conv", "size":[3, 3], "input_scale":3, "mode":"same", "kernel_type":"gauss"}],
+        {"type":"conv", "size":[3, 3], "input_scale":3, "mode":"same",
+            "kernel_type":"gauss"}],
       "reservoir_representation": "sparse",
       "spectral_radius" : 2.0,
       "density": 1e-1,

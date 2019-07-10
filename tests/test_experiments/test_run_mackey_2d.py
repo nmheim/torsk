@@ -85,4 +85,4 @@ def test_mackey_2d(tmpdir):
     logger.info(error.mean())
     logger.info(error.max())
     assert error.mean() < 0.09
-    assert error.max() < 1.3
+    assert error.max() < 1.5

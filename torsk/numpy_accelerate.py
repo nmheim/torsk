@@ -65,48 +65,69 @@ def before_storage(model):
 def after_storage(model,old_state=None):
     bohriumize(model,old_state)        
 
+def _get_all_class_attrs(model):
+    """Returns a list of dicts with most of the model attribute/value pairs."""
+    attrs = [model.__dict__, model.esn_cell.__dict__]
+    attrs += model.esn_cell.input_map_specs
+    if model.params.reservoir_representation == "sparse":
+        attrs += [model.esn_cell.weight_hh.__dict__]
+    return attrs
+
+
 def bohriumize(model,old_state=None):
     logger.debug("Bohriumizing...")
-    if old_state is None:
-        if model.params.reservoir_representation == "dense":
-            model.esn_cell.weight_hh = to_bh(model.esn_cell.weight_hh)
-        else:
-            model.esn_cell.weight_hh.values  = to_bh(model.esn_cell.weight_hh.values)
-            model.esn_cell.weight_hh.col_idx = to_bh(model.esn_cell.weight_hh.col_idx)
-        model.ones = to_bh(model.ones)
-        model.wout = to_bh(model.wout)
-    else:
-        if model.params.reservoir_representation == "dense":
-            model.esn_cell.weight_hh = old_state["esn_cell.weight_hh"]
-        else:
-            model.esn_cell.weight_hh.values  = old_state["esn_cell.weight_hh.values"]
-            model.esn_cell.weight_hh.col_idx = old_state["esn_cell.weight_hh.col_idx"]
-        model.ones = old_state["ones"] 
-        model.wout = old_state["wout"]
+    # TODO: is the old_state still needed?
+    #if old_state is None:
+    #    if model.params.reservoir_representation == "dense":
+    #        model.esn_cell.weight_hh = to_bh(model.esn_cell.weight_hh)
+    #    else:
+    #        model.esn_cell.weight_hh.values  = to_bh(model.esn_cell.weight_hh.values)
+    #        model.esn_cell.weight_hh.col_idx = to_bh(model.esn_cell.weight_hh.col_idx)
+    #    model.ones = to_bh(model.ones)
+    #    model.wout = to_bh(model.wout)
+    #else:
+    #    if model.params.reservoir_representation == "dense":
+    #        model.esn_cell.weight_hh = old_state["esn_cell.weight_hh"]
+    #    else:
+    #        model.esn_cell.weight_hh.values  = old_state["esn_cell.weight_hh.values"]
+    #        model.esn_cell.weight_hh.col_idx = old_state["esn_cell.weight_hh.col_idx"]
+    #    model.ones = old_state["ones"] 
+    #    model.wout = old_state["wout"]
+
+    attrs = _get_all_class_attrs(model)
+    for D in attrs:
+        for k, v in D.items():
+            if isinstance(v, np.ndarray):
+                if old_state is None:
+                    D[k] = to_bh(v)
+                else:
+                    D[k] = old_state[k]
+
     logger.debug("Done bohriumizing...")
 
 def numpyize(model):
     logger.debug("Numpyizing...")
-    old_state = {};
+    #old_state = {};
+    # TODO: is the old_state still needed?
+    #if model.params.reservoir_representation == "dense":
+    #    old_state["esn_cell.weight_hh"] = model.esn_cell.weight_hh
+    #    model.esn_cell.weight_hh = to_np(model.esn_cell.weight_hh)
+    #else:
+    #    old_state["esn_cell.weight_hh.values"]  = model.esn_cell.weight_hh.values;
+    #    old_state["esn_cell.weight_hh.col_idx"] = model.esn_cell.weight_hh.col_idx;
+    #    model.esn_cell.weight_hh.values  = to_np(model.esn_cell.weight_hh.values)
+    #    model.esn_cell.weight_hh.col_idx = to_np(model.esn_cell.weight_hh.col_idx)
 
-    if model.params.reservoir_representation == "dense":
-        old_state["esn_cell.weight_hh"] = model.esn_cell.weight_hh
-        model.esn_cell.weight_hh = to_np(model.esn_cell.weight_hh)
-    else:
-        old_state["esn_cell.weight_hh.values"]  = model.esn_cell.weight_hh.values;
-        old_state["esn_cell.weight_hh.col_idx"] = model.esn_cell.weight_hh.col_idx;
-        model.esn_cell.weight_hh.values  = to_np(model.esn_cell.weight_hh.values)
-        model.esn_cell.weight_hh.col_idx = to_np(model.esn_cell.weight_hh.col_idx)
-
-    old_state["ones"] = model.ones; 
-    old_state["wout"] = model.wout;
-    model.ones = to_np(model.ones)
-    model.wout = to_np(model.wout)
+    #old_state["ones"] = model.ones; 
+    #old_state["wout"] = model.wout;
+    #model.ones = to_np(model.ones)
+    #model.wout = to_np(model.wout)
     
-    for D in [model.__dict__, model.esn_cell.__dict__]:
+    attrs = _get_all_class_attrs(model)
+
+    for D in attrs:
         for k,v in D.items():
             if isinstance(v,bh_type):
                 logger.debug(f"Numpyizing `{k}`")
                 D[k] = to_np(v)                        
-
-    return old_state
+    #return old_state

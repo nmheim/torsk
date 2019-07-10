@@ -21,7 +21,7 @@ def apply_input_map(image, F):
         _features = dct2(image, *F["size"]).reshape(-1)
         F["dbg_size"] = F["size"]
     elif F["type"] == "gradient":
-        grad = np.concatenate(np.gradient(image))
+        grad = bh.concatenate(bh.gradient(image))
         _features = normalize(grad.reshape(-1)) * 2 - 1
         F["dbg_size"] = grad.shape
     elif F["type"] == "conv":
@@ -67,9 +67,9 @@ def init_input_map_specs(input_map_specs, input_shape, dtype):
             spec["kernel"] = get_kernel(spec["size"], spec["kernel_type"], dtype)
         elif spec["type"] == "random_weights":
             assert len(spec["size"]) == 1
-            weight_ih = np.random.uniform(low=-1., high=1.,
+            weight_ih = bh.random.uniform(low=-1., high=1.,
                 size=[spec["size"][0], input_shape[0] * input_shape[1]])
-            bias_ih = np.random.uniform(low=-1., high=1.,
+            bias_ih = bh.random.uniform(low=-1., high=1.,
                 size=spec["size"])
             spec["weight_ih"] = weight_ih.astype(dtype)
             spec["bias_ih"] = bias_ih.astype(dtype)
@@ -142,7 +142,7 @@ class NumpyMapESNCell(object):
         self.input_shape = input_shape
         self.spectral_radius = spectral_radius
         self.density = density
-        self.dtype = np.dtype(dtype)
+        self.dtype = bh.dtype(dtype)
         self.input_map_specs = input_map_specs
         self.timer = timer
 
@@ -166,7 +166,7 @@ class NumpyMapESNCell(object):
         return input_map(image, self.input_map_specs)
 
     def cat_input_map(self, input_stack):
-        return np.concatenate(input_stack, axis=0)
+        return bh.concatenate(input_stack, axis=0)
 
     def state_map(self, state):
         return bh.dot(self.weight_hh, state)
@@ -188,7 +188,7 @@ class NumpyMapSparseESNCell(object):
         self.input_map_specs = input_map_specs
         self.spectral_radius = spectral_radius
         self.density = density
-        self.dtype = np.dtype(dtype)
+        self.dtype = bh.dtype(dtype)
         self.timer = timer
 
         self.hidden_size = self.get_hidden_size(input_shape)
@@ -231,7 +231,7 @@ class NumpyMapSparseESNCell(object):
         self.check_dtypes(image, state)
 
         input_stack = self.input_map(to_np(image))       # np
-        x_input     = to_bh(np.concatenate(input_stack)) # np -> bh
+        x_input     = to_bh(bh.concatenate(input_stack)) # np -> bh
         x_state     = self.state_map(to_bh(state))       # bh
         start_timer(self.timer,"tanh")
         new_state   = bh.tanh(x_input+x_state)      # bh

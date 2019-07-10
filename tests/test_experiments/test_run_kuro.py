@@ -9,8 +9,6 @@ from torsk.models.numpy_esn import NumpyESN as ESN
 
 def test_kuro():
     np.random.seed(0)
-    logger = logging.getLogger(__file__)
-    logging.basicConfig(level=logging.INFO)
 
     params = torsk.default_params()
     params.input_map_specs = [
@@ -47,6 +45,11 @@ def test_kuro():
     params.imed_loss = True
     params.imed_sigma = 1.0
 
+    logger = logging.getLogger(__file__)
+    level = "DEBUG" if params.debug else "INFO"
+    logging.basicConfig(level=level)
+    logging.getLogger("matplotlib").setLevel("INFO")
+
     images = np.load(pathlib.Path(__file__).parent / "kuro_test_sequence.npy")
     dataset = ImageDataset(images, params, scale_images=True)
 
@@ -63,7 +66,7 @@ def test_kuro():
     # plt.show()
 
     error = np.abs(outputs - pred_labels)
-    assert error.mean() < 0.2
-    assert error.max() < 1.3
     logger.info(error.mean())
     logger.info(error.max())
+    assert error.mean() < 0.2
+    assert error.max() < 1.3

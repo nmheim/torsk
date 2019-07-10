@@ -49,8 +49,6 @@ def test_lissajous(tmpdir):
     logging.basicConfig(level=level)
     logging.getLogger("matplotlib").setLevel("INFO")
 
-    logger.info("Running with NUMPY backend")
-
     logger.info("Creating circle dataset ...")
     t = np.arange(0, 200 * np.pi, 0.02 * np.pi)
     x, y = np.sin(0.3 * t), np.cos(t)
@@ -72,5 +70,7 @@ def test_lissajous(tmpdir):
     # plt.show()
 
     error = np.abs(outputs - pred_labels)
-    assert error.mean() < 1e-4
-    assert error.max() < 3e-3
+    logger.info(error.mean())
+    logger.info(error.max())
+    assert error.mean() < 3e-4
+    assert error.max() < 9e-3
