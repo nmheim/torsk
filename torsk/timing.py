@@ -52,8 +52,9 @@ class Timer(object):
         keys_r = list(self.times.keys()); keys_r.reverse()
         for k in keys_r:
             prefix   = k.rfind("/")+1
-            pretty_k = (' '*4*k.count("/")) + k[prefix:]
-            s += f"{pretty_k:<2} {self.times[k]:.3f}\n"
+            pad      = ' ' * 4 * (k.count('/') - 1)
+            pretty_k = k[prefix:]
+            s += f"{pad}{self.times[k]:9.3f} {pretty_k}\n"
         return s
 
 
