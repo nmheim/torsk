@@ -25,7 +25,15 @@ def _save_numpy_model(model_pth, model, prefix):
 
 
 def _load_numpy_model(model_pth):
-    model = joblib.load(model_pth)
+    from torsk.models.numpy_esn import NumpyESN
+    loaded = joblib.load(model_pth)
+    model = NumpyESN(loaded.params)
+    numpyize(model)
+    if model.params.reservoir_representation == "dense":
+        model.esn_cell.weight_hh[:] = loaded.esn_cell.weight_hh[:]
+    else:
+        model.esn_cell.weight_hh.values[:] = loaded.esn_cell.weight_hh.values[:]
+        model.esn_cell.weight_hh.col_idx[:] = loaded.esn_cell.weight_hh.col_idx[:]
     after_storage(model)
     return model
 

@@ -55,7 +55,7 @@ class SparseMatrix:
         row_idx, col_idx = bh.nonzero(dense_matrix)
         #FIXME: Assumes nonzeros are *exactly* nonzeros_per_row, not at most.
         values = dense_matrix[row_idx, col_idx]
-        return cls(values, row_idx, col_idx, nonzeros_per_row, dense_matrix.shape)
+        return cls(values, col_idx, nonzeros_per_row, dense_matrix.shape)
 
     def sparse_dense_mm(self, X):
         return sparse_dense_mm(self, X, self.timer)

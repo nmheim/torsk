@@ -66,37 +66,49 @@ def after_storage(model,old_state=None):
     bohriumize(model,old_state)        
 
 def bohriumize(model,old_state=None):
-    print("Bohriumizing...")
+    logger.info("Bohriumizing...")
     if old_state is None:
-        model.esn_cell.weight_hh.values  = to_bh(model.esn_cell.weight_hh.values)
-        model.esn_cell.weight_hh.col_idx = to_bh(model.esn_cell.weight_hh.col_idx)
+        if model.params.reservoir_representation == "dense":
+            model.esn_cell.weight_hh = to_bh(model.esn_cell.weight_hh)
+        else:
+            model.esn_cell.weight_hh.values  = to_bh(model.esn_cell.weight_hh.values)
+            model.esn_cell.weight_hh.col_idx = to_bh(model.esn_cell.weight_hh.col_idx)
         model.ones = to_bh(model.ones)
         model.wout = to_bh(model.wout)
     else:
-        model.esn_cell.weight_hh.values  = old_state["esn_cell.weight_hh.values"]
-        model.esn_cell.weight_hh.col_idx = old_state["esn_cell.weight_hh.col_idx"]
+        if model.params.reservoir_representation == "dense":
+            model.esn_cell.weight_hh = old_state["esn_cell.weight_hh"]
+        else:
+            model.esn_cell.weight_hh.values  = old_state["esn_cell.weight_hh.values"]
+            model.esn_cell.weight_hh.col_idx = old_state["esn_cell.weight_hh.col_idx"]
         model.ones = old_state["ones"] 
         model.wout = old_state["wout"]
-    print("Done bohriumizing...")
+    logger.info("Done bohriumizing...")
 
 def numpyize(model):
-    print("Numpyizing...")
+    logger.info("Numpyizing...")
     old_state = {};
-    old_state["esn_cell.weight_hh.values"]  = model.esn_cell.weight_hh.values;
-    old_state["esn_cell.weight_hh.col_idx"] = model.esn_cell.weight_hh.col_idx;
+
+    if model.params.reservoir_representation == "dense":
+        old_state["esn_cell.weight_hh"] = model.esn_cell.weight_hh
+        model.esn_cell.weight_hh = to_np(model.esn_cell.weight_hh)
+    else:
+        old_state["esn_cell.weight_hh.values"]  = model.esn_cell.weight_hh.values;
+        old_state["esn_cell.weight_hh.col_idx"] = model.esn_cell.weight_hh.col_idx;
+        model.esn_cell.weight_hh.values  = to_np(model.esn_cell.weight_hh.values)
+        model.esn_cell.weight_hh.col_idx = to_np(model.esn_cell.weight_hh.col_idx)
+
     old_state["ones"] = model.ones; 
     old_state["wout"] = model.wout;
-    
-    model.esn_cell.weight_hh.values  = to_np(model.esn_cell.weight_hh.values)
-    model.esn_cell.weight_hh.col_idx = to_np(model.esn_cell.weight_hh.col_idx)
     model.ones = to_np(model.ones)
     model.wout = to_np(model.wout)
     
     #E = {}
-    for D in [model.__dict__, model.esn_cell.__dict__, model.esn_cell.weight_hh.__dict__]:
+    #for D in [model.__dict__, model.esn_cell.__dict__, model.esn_cell.weight_hh.__dict__]:
+    for D in [model.__dict__, model.esn_cell.__dict__]:
         for k,v in D.items():
             if isinstance(v,bh_type):
-                print("Numpyizing ",k)
+                logger.info(f"Numpyizing `{k}`")
                 #E[k] = v
                 D[k] = to_np(v)                        
     #return E
