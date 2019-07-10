@@ -152,7 +152,7 @@ class NumpyMapESNCell(object):
         logger.info(f"ESN hidden size: {self.hidden_size}")
         self.weight_hh = dense_esn_reservoir(
             dim=self.hidden_size, spectral_radius=self.spectral_radius,
-            density=self.density, symmetric=False, timer=timer)
+            density=self.density, symmetric=False)
         self.weight_hh = self.weight_hh.astype(self.dtype)
 
         self.input_map_specs = init_input_map_specs(input_map_specs, input_shape, dtype)

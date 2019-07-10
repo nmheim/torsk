@@ -53,7 +53,7 @@ def scale_weight(weight, value):
     return weight
 
 
-def sparse_esn_reservoir(dim, spectral_radius, density, symmetric, timer=None):
+def sparse_esn_reservoir(dim, spectral_radius, density, symmetric):
     """Creates a CSR representation of a sparse ESN reservoir.
     Params:
         dim: int, dimension of the square reservoir matrix
