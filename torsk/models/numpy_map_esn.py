@@ -1,7 +1,6 @@
 # coding: future_fstrings
 import logging
 import numpy as np
-import bohrium as bh
 from scipy.signal import convolve2d
 
 from torsk.data.conv import get_kernel
@@ -9,7 +8,7 @@ from torsk.data.utils import resample2d, normalize
 from torsk.data.dct import dct2
 from torsk.models.initialize import dense_esn_reservoir, sparse_esn_reservoir, sparse_nzpr_esn_reservoir
 from torsk.timing import start_timer, end_timer
-from torsk.numpy_accelerate import to_np, to_bh
+from torsk.numpy_accelerate import bh, to_np, to_bh
 
 logger = logging.getLogger(__name__)
 

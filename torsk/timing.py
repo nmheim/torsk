@@ -1,14 +1,15 @@
+# coding: future_fstrings
 from time import time
 from torsk.numpy_accelerate import bh_flush
 
 class Timer(object):
 
-    def __init__(self,timing_depth=3,flush=True):
+    def __init__(self, timing_depth=3, flush=True, root_context="root"):
         self.depth         = 0
         self.times         = {}        
         self.time_stack    = []
-        self.context_stack    = ["/"]
-        self.flush = flush
+        self.context_stack = [f"/{root_context}"]
+        self.flush         = flush
         self.timing_depth  = timing_depth
         
     def begin(self,ctx):
@@ -50,9 +51,9 @@ class Timer(object):
         s = "Accumulated timing:\n"
         keys_r = list(self.times.keys()); keys_r.reverse()
         for k in keys_r:
-            prefix    = k.rfind("/")+1
-            pretty_k  = (' '*prefix) + k[prefix:]
-            s += "%s:\t%.3fs\n" % (pretty_k,self.times[k])
+            prefix   = k.rfind("/")+1
+            pretty_k = (' '*4*k.count("/")) + k[prefix:]
+            s += f"{pretty_k:<2} {self.times[k]:.3f}\n"
         return s
 
 

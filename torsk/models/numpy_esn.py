@@ -1,7 +1,7 @@
 # coding: future_fstrings
 import logging
 import numpy as np
-import bohrium as bh
+from torsk.numpy_accelerate import bh
 
 from torsk.models.initialize import dense_esn_reservoir
 from torsk.models.numpy_map_esn import NumpyMapESNCell, NumpyMapSparseESNCell
@@ -48,7 +48,9 @@ class NumpyESN(object):
         elif params.reservoir_representation == "sparse":
             ESNCell = NumpyMapSparseESNCell
 
-        self.timer  = Timer(timing_depth=4,flush=True) # TODO: params.timing_depth with default value 4. Ask Niklas how.            
+        self.timer  = Timer(
+            timing_depth=params.timing_depth,
+            root_context="numpy_esn", flush=True)
             
         self.esn_cell = ESNCell(
             input_shape=params.input_shape,
@@ -78,11 +80,11 @@ class NumpyESN(object):
             return self._forward(inputs, state)
 
     def _forward_states_only(self, inputs, state):
-        self.timer.begin("forward_States_only")
+        self.timer.begin("forward_states_only")
         (T, H) = (inputs.shape[0], state.shape[0])
 
         inputs = to_bh(inputs)
-        states = bh.empty((T,H),dtype=state.dtype) # TODO: Pull-request "Bohrium does not support the dtype 'float64'" fix, talk to Mads
+        states = bh.empty((T,H),dtype=state.dtype)
         state  = to_bh(state)
 
         for i in range(T):
