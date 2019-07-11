@@ -44,7 +44,7 @@ def test_lissajous(tmpdir):
     params.tikhonov_beta = None
     params.debug = False
 
-    logger = logging.getLogger(__file__)
+    logger = logging.getLogger(__name__)
     level = "DEBUG" if params.debug else "INFO"
     logging.basicConfig(level=level)
     logging.getLogger("matplotlib").setLevel("INFO")

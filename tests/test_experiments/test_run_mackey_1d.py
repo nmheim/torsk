@@ -28,7 +28,7 @@ def test_run_1dmackey():
     params.debug = False
     params.imed_loss = False
 
-    logger = logging.getLogger(__file__)
+    logger = logging.getLogger(__name__)
     level = "DEBUG" if params.debug else "INFO"
     logging.basicConfig(level=level)
     logging.getLogger("matplotlib").setLevel("INFO")

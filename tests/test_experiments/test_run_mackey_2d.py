@@ -44,14 +44,13 @@ def test_mackey_2d(tmpdir):
     params.reservoir_representation = "sparse"
     params.backend = "numpy"
     params.train_method = "pinv_svd"
-    params.imed_loss = True
-    params.imed_sigma = 1.
+    params.imed_loss = False
     params.tikhonov_beta = None
     params.debug = False
     params.anomaly_start = 2300
     params.anomaly_step = 300
     
-    logger = logging.getLogger(__file__)
+    logger = logging.getLogger(__name__)
     level = "DEBUG" if params.debug else "INFO"
     logging.basicConfig(level=level)
     logging.getLogger("matplotlib").setLevel("INFO")
@@ -75,14 +74,14 @@ def test_mackey_2d(tmpdir):
     logger.info("Training + predicting ...")
     model, outputs, pred_labels = torsk.train_predict_esn(model, dataset)
 
-    # logger.info("Visualizing results ...")
-    # import matplotlib.pyplot as plt
-    # from torsk.visualize import animate_double_imshow
-    # anim = animate_double_imshow(pred_labels, outputs)
-    # plt.show()
+    logger.info("Visualizing results ...")
+    import matplotlib.pyplot as plt
+    from torsk.visualize import animate_double_imshow
+    anim = animate_double_imshow(pred_labels, outputs)
+    plt.show()
 
     error = np.abs(outputs - pred_labels)
     logger.info(error.mean())
     logger.info(error.max())
-    assert error.mean() < 0.09
-    assert error.max() < 1.5
+    assert error.mean() < 0.11
+    assert error.max() < 1.7

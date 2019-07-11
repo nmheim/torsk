@@ -45,7 +45,7 @@ def test_kuro():
     params.imed_loss = True
     params.imed_sigma = 1.0
 
-    logger = logging.getLogger(__file__)
+    logger = logging.getLogger(__name__)
     level = "DEBUG" if params.debug else "INFO"
     logging.basicConfig(level=level)
     logging.getLogger("matplotlib").setLevel("INFO")
