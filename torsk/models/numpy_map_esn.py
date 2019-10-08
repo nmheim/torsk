@@ -34,9 +34,8 @@ def apply_input_map(image, F):
         _features += F["bias_ih"]
         F["dbg_size"] = F["size"]
     elif F["type"] == "compose":
-        _features = image
         for f in F["operations"]:
-            _features = apply_input_map(_features, f)
+            _features = apply_input_map(image, f)
         F["dbg_size"] = hidden_size_of(image.shape,F["operations"][-1])
     else:
         raise ValueError(F)
