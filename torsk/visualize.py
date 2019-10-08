@@ -203,7 +203,7 @@ def animate_quad_imshow(frames1, frames2, frames3, frames4,
 
 def animate_double_imshow(frames1, frames2,
                           time=None, vmin=None, vmax=None,
-                          cmap_name="inferno", figsize=(12, 4), title=None):
+                          cmap_name="inferno", figsize=(12, 4), title=None, labels=None):
     def _blit_draw(self, artists, bg_cache):
         # Handles blitted drawing, which renders only the artists given instead
         # of the entire figure.
@@ -227,6 +227,9 @@ def animate_double_imshow(frames1, frames2,
     fig, ax = plt.subplots(1, 2, figsize=figsize)
     if title is not None:
         fig.suptitle(title)
+    if labels is not None:
+        ax[0].set_title(labels[0])
+        ax[1].set_title(labels[1])
 
     im1 = ax[0].imshow(
         to_np(frames1[0]), animated=True, vmin=vmin, vmax=vmax,
@@ -242,21 +245,24 @@ def animate_double_imshow(frames1, frames2,
     plt.colorbar(im1, ax=ax[0], fraction=0.046, pad=0.04)
     plt.colorbar(im2, ax=ax[1], fraction=0.046, pad=0.04)
 #    plt.colorbar(im3, ax=ax[2], fraction=0.046, pad=0.04)
-    text = ax[0].text(.5, 1.05, '', transform=ax[0].transAxes, va='center')
+    t1 = ax[0].text(0.9, 0.05, '', transform=ax[0].transAxes, va='center')
+    t2 = ax[1].text(0.9, 0.05, '', transform=ax[1].transAxes, va='center')
     if time is None:
         time = np.arange(len(frames1))
 
     def init():
-        text.set_text("")
+        t1.set_text("")
+        t2.set_text("")
         im1.set_data(to_np(frames1[0]))
         im2.set_data(to_np(frames2[0]))
-        return im1, im2, text
+        return im1, im2, t1, t2
 
     def animate(i):
-        text.set_text(str(time[i]))
+        t1.set_text(str(time[i]))
+        t2.set_text(str(time[i]))
         im1.set_data(to_np(frames1[i]))
         im2.set_data(to_np(frames2[i]))
-        return im1, im2, text
+        return im1, im2, t1, t2
 
     anim = animation.FuncAnimation(fig, animate, init_func=init,
                                    frames=len(frames1), interval=20, blit=True)
