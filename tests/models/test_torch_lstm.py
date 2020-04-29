@@ -23,9 +23,9 @@ def test_convlstm():
     B, T, C, H, W = 32, 10, 1, 30, 30
 
     m = ConvLSTM(W, H, hidden_size, kernel_size)
-    x = torch.rand((B, T, C, H, W))
+    x = torch.rand((B, T, H, W))
     y = m(x)
-    assert y.size() == torch.Size([B, H, W])
+    assert y.size() == torch.Size([B, T, H, W])
 
 if __name__ == "__main__":
     test_lstm()

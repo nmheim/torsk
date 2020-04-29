@@ -48,9 +48,39 @@ class ConvLSTM(nn.Module):
         self.out = nn.Linear(hidden_size, input_size)
 
     def forward(self, inputs):
-        _, last_states = self.lstm(inputs)
-        x = last_states[0][0]
-        x = torch.reshape(x, (inputs.size(0), -1))
+        B, T, H, W = inputs.size()
+        x = torch.reshape(inputs, (B,T,1,H,W))
+        x = self.lstm(x)[0][0]
+        x = torch.reshape(x, (B,T,-1))
         x = self.out(x)
-        x = torch.reshape(x, (inputs.size(0), self.input_height, self.input_width))
+        x = torch.reshape(x, (B,T,H,W))
         return x
+
+    def predict(self, inputs, steps):
+        B, T, H, W = inputs.size()
+        x = torch.reshape(inputs, (B,T,1,H,W))
+        output, state = self.lstm(x)
+        output = output[0]
+
+        output = torch.reshape(output, (B,T,-1))
+        output = self.out(output)
+        output = torch.reshape(output, (B,T,H,W))
+
+        x = output[:, -1].unsqueeze(dim=1)
+        B, T, H, W = x.size()
+        pred = []
+        for ii in range(steps):
+            x = torch.reshape(x, (B,T,1,H,W))
+            output, state = self.lstm(x, state)
+            output = output[0]
+
+            output = torch.reshape(output, (B,T,-1))
+            output = self.out(output)
+            output = torch.reshape(output, (B,T,H,W))
+
+            x = output
+            pred.append(output)
+        pred = torch.cat(pred, dim=1)
+        return pred
+
+
