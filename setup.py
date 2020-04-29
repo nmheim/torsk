@@ -22,6 +22,7 @@ setup(
         "scikit-optimize",
         "imageio",
         "imageio-ffmpeg",
+        "convlstm @ git+https://github.com/nmheim/ConvLSTM_pytorch@master"
     ],
     entry_points='''
         [console_scripts]
