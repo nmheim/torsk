@@ -6,7 +6,7 @@ from torsk.data.numpy_dataset import split_train_label_pred
 logger = logging.getLogger(__name__)
 
 
-class TorchImageDataset(Dataset):
+class TorchFlatImageDataset(Dataset):
     """Dataset that contains the raw images and does nothing but providing
     convenient access to inputs/labels/pred_labels
     """
@@ -58,6 +58,65 @@ class TorchImageDataset(Dataset):
 
     def __len__(self):
         return self.nr_sequences
+
+
+class TorchImageDataset(Dataset):
+    """Dataset that contains the raw images and does nothing but providing
+    convenient access to inputs/labels/pred_labels
+    """
+    def __init__(self, images, params, scale_images=True, return_pred_labels=False):
+        # if images.ndim == 3:
+        #     T,H,W = images.shape
+        #     images = images.reshape(T,1,H,W)
+        # else:
+        #     raise ValueError("images should be a 3d array!")
+        self.train_length = params.train_length
+        self.pred_length = params.pred_length
+        self.nr_sequences = images.shape[0] - self.train_length - self.pred_length
+        self.max = None
+        self.min = None
+
+        self.dtype = getattr(torch, params.dtype)
+        _images = torch.tensor(images, dtype=self.dtype)
+        if scale_images:
+            logger.debug("Scaling input images to (-1, 1)")
+            self._images = self.scale(_images)
+        self.image_shape = images.shape[1:]
+        self.plbls = return_pred_labels
+
+    def scale(self, images):
+        self.min = torch.min(images)
+        self.max = torch.max(images)
+        normalized = (images - self.min) / (self.max - self.min)
+        scaled = normalized * 2 - 1
+        return scaled
+
+    def unscale(self, images):
+        if self.max is None or self.min is None:
+            raise ValueError("Min/max not set. Call 'scale' first.")
+        normalized = (images + 1) * 0.5
+        orig = normalized * (self.max - self.min) + self.min
+        return orig
+
+    def __getitem__(self, index):
+        if (index < 0) or (index >= self.nr_sequences):
+            raise IndexError('ImageDataset index out of range.')
+
+        images = self._images[
+            index:index + self.train_length + self.pred_length + 1]
+
+        inputs, labels, pred_labels = split_train_label_pred(
+            images, self.train_length, self.pred_length)
+
+        if self.plbls:
+            return inputs, labels, pred_labels
+        else:
+            return inputs, labels
+
+    def __len__(self):
+        return self.nr_sequences
+
+
 
 
 # class TorchImageDataset(Dataset):
